@@ -25,6 +25,15 @@ import hrRoutes from './routes/hr/index.js'
 import attendanceRoutes from './routes/attendance/index.js'
 import payrollRoutes from './routes/payroll/index.js'
 
+// Rotas — Sprint 3
+import locksRoutes from './routes/locks/index.js'
+import guestRoutes from './routes/guest/index.js'
+import serviceOrderRoutes from './routes/service-orders/index.js'
+import chatRoutes from './routes/chat/index.js'
+import reviewsRoutes from './routes/reviews/index.js'
+import dashboardRoutes from './routes/dashboard/index.js'
+import notificationsRoutes from './routes/notifications/index.js'
+
 const app = Fastify({
   logger: {
     transport: {
@@ -97,14 +106,14 @@ await app.register(hrRoutes,           { prefix: '/v1/hr' })
 await app.register(attendanceRoutes,   { prefix: '/v1/attendance' })
 await app.register(payrollRoutes,      { prefix: '/v1/payroll' })
 
-// ── ROTAS — Sprint 3 (TODO) ──────────────────
-// await app.register(locksRoutes,       { prefix: '/v1/locks' })
-// await app.register(guestRoutes,       { prefix: '/v1/guest' })
-// await app.register(serviceOrderRoutes,{ prefix: '/v1/service-orders' })
-// await app.register(chatRoutes,        { prefix: '/v1/chat' })
-// await app.register(reviewsRoutes,     { prefix: '/v1/reviews' })
-// await app.register(dashboardRoutes,   { prefix: '/v1/dashboard' })
-// await app.register(notificationsRoutes,{prefix: '/v1/notifications' })
+// ── ROTAS — Sprint 3 ─────────────────────────
+await app.register(locksRoutes,          { prefix: '/v1/locks' })
+await app.register(guestRoutes,          { prefix: '/v1/guest' })
+await app.register(serviceOrderRoutes,   { prefix: '/v1/service-orders' })
+await app.register(chatRoutes,           { prefix: '/v1/chat' })
+await app.register(reviewsRoutes,        { prefix: '/v1/reviews' })
+await app.register(dashboardRoutes,      { prefix: '/v1/dashboard' })
+await app.register(notificationsRoutes,  { prefix: '/v1/notifications' })
 
 // ── Webhooks (TODO) ──────────────────────────
 // await app.register(seamWebhookRoutes, { prefix: '/webhooks/seam' })
