@@ -1452,7 +1452,101 @@ model Harvest {
 }
 
 // ══════════════════════════════════════════════
-// MÓDULO: RETALHO & MANUFATURA
+// MÓDULO: ATIVIDADES & EXPERIÊNCIAS
+// ══════════════════════════════════════════════
+
+model Activity {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  category      String               // ADVENTURE, WATER, NATURE, CULTURAL, SPORTS, WELLNESS, GASTRONOMY, OTHER
+  description   String?
+  location      String?
+  duration      Int?                 // minutos
+  maxParticipants Int?
+  minAge        Int?
+  price         Decimal? @db.Decimal(15, 2)
+  equipmentIncluded String[]
+  difficulty    String   @default("EASY")  // EASY, MODERATE, HARD, EXTREME
+  status        String   @default("ACTIVE")  // ACTIVE, INACTIVE, SEASONAL, CANCELLED
+  seasonStart   DateTime?
+  seasonEnd     DateTime?
+  photos        String[]
+  bookings      ActivityBooking[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, category])
+}
+
+model ActivityBooking {
+  id            String   @id @default(cuid())
+  tenantId      String
+  activityId    String
+  activity      Activity @relation(fields: [activityId], references: [id])
+  clientName    String
+  clientPhone   String?
+  clientEmail   String?
+  participants  Int      @default(1)
+  date          DateTime
+  status        String   @default("BOOKED")  // BOOKED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+  totalPrice    Decimal  @db.Decimal(15, 2)
+  guide         String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, activityId])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: RETALHO
+// ══════════════════════════════════════════════
+
+model RetailStore {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  code        String?
+  address     String?
+  city        String?
+  phone       String?
+  manager     String?
+  status      String   @default("ACTIVE")  // ACTIVE, INACTIVE, RENOVATION
+  openTime    String?                      // "08:00"
+  closeTime   String?                      // "22:00"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model RetailSale {
+  id          String   @id @default(cuid())
+  tenantId    String
+  storeId     String?
+  saleNumber  String?
+  clientName  String?
+  clientNif   String?
+  items       Json                        // [{name, qty, price, total}]
+  subtotal    Decimal  @db.Decimal(15, 2)
+  taxAmount   Decimal  @db.Decimal(15, 2)
+  discount    Decimal  @db.Decimal(15, 2) @default(0)
+  totalAmount Decimal  @db.Decimal(15, 2)
+  paymentMethod String @default("CASH")   // CASH, CARD, TRANSFER, MULTICAIXA
+  status      String   @default("COMPLETED")  // COMPLETED, REFUNDED, CANCELLED
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, storeId])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: MANUFATURA
 // ══════════════════════════════════════════════
 
 model ProductionOrder {

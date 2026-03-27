@@ -58,6 +58,8 @@ import {
   Radio,
   Scale,
   Calculator,
+  Compass,
+  Store,
   type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/lib/auth'
@@ -146,6 +148,10 @@ const allNavItems: NavItem[] = [
   { href: '/dashboard/legal', label: 'Jurídico', icon: Scale, module: 'legal' },
   // Contabilidade
   { href: '/dashboard/accounting', label: 'Contabilidade', icon: Calculator, module: 'accounting' },
+  // Atividades & Experiências
+  { href: '/dashboard/activities', label: 'Atividades', icon: Compass, module: 'activities' },
+  // Retalho
+  { href: '/dashboard/retail', label: 'Retalho', icon: Store, module: 'retail' },
   // Admin (SUPER_ADMIN)
   { href: '/dashboard/tenants', label: 'Tenants', icon: Building2, module: 'admin' },
   { href: '/dashboard/settings', label: 'Configurações', icon: Settings, module: 'admin' },

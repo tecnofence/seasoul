@@ -64,6 +64,8 @@ import consultingRoutes from './routes/consulting/index.js'
 import telecomRoutes from './routes/telecom/index.js'
 import legalRoutes from './routes/legal/index.js'
 import accountingRoutes from './routes/accounting/index.js'
+import activitiesRoutes from './routes/activities/index.js'
+import retailRoutes from './routes/retail/index.js'
 
 const app = Fastify({
   logger: {
@@ -178,6 +180,8 @@ await app.register(consultingRoutes,    { prefix: '/v1/consulting' })
 await app.register(telecomRoutes,       { prefix: '/v1/telecom' })
 await app.register(legalRoutes,         { prefix: '/v1/legal' })
 await app.register(accountingRoutes,    { prefix: '/v1/accounting' })
+await app.register(activitiesRoutes,   { prefix: '/v1/activities' })
+await app.register(retailRoutes,       { prefix: '/v1/retail' })
 
 // ── Webhooks (TODO) ──────────────────────────
 // await app.register(seamWebhookRoutes, { prefix: '/webhooks/seam' })
