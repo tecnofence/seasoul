@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatKwanza } from '@/lib/utils'
@@ -12,6 +13,7 @@ import { Card } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
 export default function HrPage() {
+  const router = useRouter()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
 
@@ -56,7 +58,7 @@ export default function HrPage() {
             </TableHeader>
             <TableBody>
               {data?.data?.map((emp: any) => (
-                <TableRow key={emp.id}>
+                <TableRow key={emp.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.push(`/dashboard/hr/${emp.id}`)}>
                   <TableCell className="font-medium">{emp.name}</TableCell>
                   <TableCell>{emp.nif}</TableCell>
                   <TableCell>{emp.role}</TableCell>

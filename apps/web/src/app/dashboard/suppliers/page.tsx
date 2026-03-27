@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +12,7 @@ import { Card } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
 export default function SuppliersPage() {
+  const router = useRouter()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
 
@@ -53,7 +55,7 @@ export default function SuppliersPage() {
             </TableHeader>
             <TableBody>
               {data?.data?.map((s: any) => (
-                <TableRow key={s.id}>
+                <TableRow key={s.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.push(`/dashboard/suppliers/${s.id}`)}>
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell>{s.nif || '—'}</TableCell>
                   <TableCell>{s.contact || '—'}</TableCell>

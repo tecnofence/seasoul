@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatKwanza } from '@/lib/utils'
@@ -12,6 +13,7 @@ import { Card } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
 export default function ProductsPage() {
+  const router = useRouter()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
 
@@ -56,7 +58,7 @@ export default function ProductsPage() {
             </TableHeader>
             <TableBody>
               {data?.data?.map((p: any) => (
-                <TableRow key={p.id}>
+                <TableRow key={p.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.push(`/dashboard/products/${p.id}`)}>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>{p.category}</TableCell>
                   <TableCell>{p.department}</TableCell>

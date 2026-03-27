@@ -43,7 +43,7 @@ export default function RoomsPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {data?.data?.map((room: any) => (
-          <Card key={room.id} className="flex flex-col justify-between">
+          <Card key={room.id} className="flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow" onClick={() => window.location.href = `/dashboard/rooms/${room.id}`}>
             <div>
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold">#{room.number}</h3>

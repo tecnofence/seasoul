@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +11,7 @@ import { Card } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
 export default function StockPage() {
+  const router = useRouter()
   const [page, setPage] = useState(1)
   const [lowStock, setLowStock] = useState(false)
 
@@ -54,7 +56,7 @@ export default function StockPage() {
             </TableHeader>
             <TableBody>
               {data?.data?.map((item: any) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.push(`/dashboard/stock/${item.id}`)}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.department}</TableCell>
                   <TableCell>{item.unit}</TableCell>
