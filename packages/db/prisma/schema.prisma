@@ -1,4 +1,5 @@
-// Sea and Soul ERP — Prisma Schema
+// ENGERIS ONE — Prisma Schema
+// Plataforma ERP Modular Multi-Indústria
 // ENGERIS — engeris.co.ao
 
 generator client {
@@ -10,7 +11,128 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── RESORTS ──────────────────────────────────
+// ══════════════════════════════════════════════
+// MULTI-TENANT & MÓDULOS
+// ══════════════════════════════════════════════
+
+// ── TENANT (Empresa/Cliente) ──────────────────
+model Tenant {
+  id           String     @id @default(cuid())
+  name         String
+  slug         String     @unique
+  nif          String?    @unique     // NIF da empresa
+  plan         TenantPlan @default(STARTER)
+  logo         String?               // URL do logo
+  primaryColor String?    @default("#0A5C8A")
+  domain       String?    @unique    // domínio personalizado (White Label)
+  maxUsers     Int        @default(5)
+  maxBranches  Int        @default(1)
+  trainingMode Boolean    @default(false)
+  active       Boolean    @default(true)
+  expiresAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  modules  TenantModule[]
+  branches Branch[]
+  users    User[]
+
+  invoiceSeries     InvoiceSeries[]
+  invoices          Invoice[]
+  securityContracts SecurityContract[]
+  securityInstallations SecurityInstallation[]
+  securityIncidents SecurityIncident[]
+  securityPatrols   SecurityPatrol[]
+  engineeringProjects EngineeringProject[]
+  constructionWorks ConstructionWork[]
+  budgetItems       BudgetItem[]
+  workMeasurements  WorkMeasurement[]
+  electricalProjects ElectricalProject[]
+  electricalInspections ElectricalInspection[]
+  electricalCertifications ElectricalCertification[]
+  clients           Client[]
+  deals             Deal[]
+  vehicles          Vehicle[]
+  fuelLogs          FuelLog[]
+  serviceContracts  ServiceContract[]
+  spaServices       SpaService[]
+  spaBookings       SpaBooking[]
+  events            Event[]
+  properties        Property[]
+  shipments         Shipment[]
+  courses           Course[]
+  enrollments       Enrollment[]
+  patients          Patient[]
+  appointments      Appointment[]
+  farms             Farm[]
+  crops             Crop[]
+  harvests          Harvest[]
+  activities        Activity[]
+  activityBookings  ActivityBooking[]
+  retailStores      RetailStore[]
+  retailSales       RetailSale[]
+  productionOrders  ProductionOrder[]
+  consultingProjects ConsultingProject[]
+  timeLogs          TimeLog[]
+  telecomSubscriptions TelecomSubscription[]
+  legalCases        LegalCase[]
+  accountingEntries AccountingEntry[]
+  alertRules        AlertRule[]
+
+  @@index([slug])
+  @@index([active])
+}
+
+enum TenantPlan {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
+// ── MÓDULOS DO TENANT ────────────────────────
+model TenantModule {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  moduleId  String   // 'core', 'pms', 'pos', 'finance', etc.
+  active    Boolean  @default(true)
+  activatedAt DateTime @default(now())
+  expiresAt DateTime?
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, moduleId])
+  @@index([tenantId])
+}
+
+// ── FILIAL / UNIDADE ─────────────────────────
+// Substitui "Resort" — agora genérico para qualquer tipo de negócio
+model Branch {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  address        String?
+  city           String?
+  country        String?  @default("AO")
+  lat            Float?
+  lng            Float?
+  geofenceRadius Int      @default(300)
+  phone          String?
+  email          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, active])
+}
+
+// ══════════════════════════════════════════════
+// ENTIDADES DE NEGÓCIO
+// ══════════════════════════════════════════════
+
+// ── RESORTS (compatibilidade — alias para Branch hoteleiro) ──
 model Resort {
   id             String   @id @default(cuid())
   name           String
@@ -36,6 +158,8 @@ model Resort {
 // ── UTILIZADORES (Staff / Admin) ──────────────
 model User {
   id           String   @id @default(cuid())
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
   name         String
   email        String   @unique
   passwordHash String
@@ -49,6 +173,8 @@ model User {
 
   refreshTokens RefreshToken[]
   notifications Notification[]
+
+  @@index([tenantId, active])
 }
 
 enum UserRole {
@@ -60,7 +186,6 @@ enum UserRole {
   HR_MANAGER
   STAFF
 }
-
 // ── REFRESH TOKENS ────────────────────────────
 // FIX: permite revogar tokens sem esperar expiração (segurança)
 model RefreshToken {
@@ -119,9 +244,18 @@ model Room {
   @@index([resortId, type])
 }
 
-enum RoomType   { STANDARD SUPERIOR SUITE VILLA }
-enum RoomStatus { AVAILABLE OCCUPIED MAINTENANCE CLEANING }
-
+enum RoomType {
+  STANDARD
+  SUPERIOR
+  SUITE
+  VILLA
+}
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  CLEANING
+}
 // ── TARIFAS ───────────────────────────────────
 // NOVO: gestão de preços sazonais e categorias tarifárias
 model Tariff {
@@ -182,10 +316,28 @@ model Reservation {
   @@index([guestEmail])
 }
 
-enum ReservationStatus        { CONFIRMED CHECKED_IN CHECKED_OUT CANCELLED NO_SHOW }
-enum ReservationPaymentStatus { PENDING PARTIAL PAID REFUNDED }
-enum BookingSource            { DIRECT WEBSITE PHONE BOOKING_COM EXPEDIA AIRBNB OTHER }
-
+enum ReservationStatus {
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+enum ReservationPaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  REFUNDED
+}
+enum BookingSource {
+  DIRECT
+  WEBSITE
+  PHONE
+  BOOKING_COM
+  EXPEDIA
+  AIRBNB
+  OTHER
+}
 // ── PRODUTOS ─────────────────────────────────
 model Product {
   id         String     @id @default(cuid())
@@ -234,7 +386,7 @@ model Sale {
 model SaleItem {
   id        String  @id @default(cuid())
   saleId    String
-  sale      Sale    @relation(fields: [saleId], references: [id])
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
   productId String
   product   Product @relation(fields: [productId], references: [id])
   qty       Int
@@ -245,9 +397,17 @@ model SaleItem {
   @@index([saleId])
 }
 
-enum PaymentMethod { CASH CARD ROOM_CHARGE TRANSFER }
-enum SaleStatus    { PENDING INVOICED CANCELLED }
-
+enum PaymentMethod {
+  CASH
+  CARD
+  ROOM_CHARGE
+  TRANSFER
+}
+enum SaleStatus {
+  PENDING
+  INVOICED
+  CANCELLED
+}
 // ── STOCK ─────────────────────────────────────
 model StockItem {
   id         String          @id @default(cuid())
@@ -282,8 +442,11 @@ model StockMovement {
   @@index([stockItemId, createdAt])
 }
 
-enum MovementType { IN OUT ADJUSTMENT }
-
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
 // ── FORNECEDORES ──────────────────────────────
 // NOVO: necessário para gestão de compras e rastreabilidade
 model Supplier {
@@ -352,8 +515,12 @@ model AttendanceRecord {
   @@index([employeeId, createdAt])
 }
 
-enum AttendanceType { ENTRY EXIT BREAK_START BREAK_END }
-
+enum AttendanceType {
+  ENTRY
+  EXIT
+  BREAK_START
+  BREAK_END
+}
 // ── SALÁRIOS ──────────────────────────────────
 model Payroll {
   id            String    @id @default(cuid())
@@ -394,9 +561,18 @@ model MaintenanceTicket {
   @@index([roomId, status])
 }
 
-enum TicketPriority { LOW MEDIUM HIGH URGENT }
-enum TicketStatus   { OPEN IN_PROGRESS RESOLVED CLOSED }
-
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
 // ── AVALIAÇÕES ────────────────────────────────
 // NOVO: pedido no Sprint 3, agora no schema
 model GuestReview {
@@ -449,9 +625,22 @@ model RoomServiceOrder {
   @@index([reservationId])
 }
 
-enum ServiceOrderType   { ROOM_SERVICE HOUSEKEEPING SPA RESTAURANT ACTIVITY TRANSPORT OTHER }
-enum ServiceOrderStatus { PENDING CONFIRMED IN_PROGRESS COMPLETED CANCELLED }
-
+enum ServiceOrderType {
+  ROOM_SERVICE
+  HOUSEKEEPING
+  SPA
+  RESTAURANT
+  ACTIVITY
+  TRANSPORT
+  OTHER
+}
+enum ServiceOrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
 // ── CHAT ──────────────────────────────────────
 // NOVO: WebSocket chat hóspede ↔ receção (Sprint 3)
 model ChatMessage {
@@ -469,8 +658,10 @@ model ChatMessage {
   @@index([reservationId, createdAt])
 }
 
-enum SenderType { GUEST STAFF }
-
+enum SenderType {
+  GUEST
+  STAFF
+}
 // ── NOTIFICAÇÕES ─────────────────────────────
 // NOVO: rastreio de push/SMS/email enviados
 model Notification {
@@ -490,15 +681,57 @@ model Notification {
   sentAt    DateTime?
   readAt    DateTime?
   createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   @@index([userId, status])
   @@index([guestId, status])
   @@index([createdAt])
 }
 
-enum NotificationType    { RESERVATION_CONFIRMED RESERVATION_REMINDER CHECKIN_READY PIN_GENERATED CHECKOUT_REMINDER INVOICE_READY STOCK_ALERT ATTENDANCE_MISSING PAYROLL_PROCESSED MAINTENANCE_ASSIGNED }
-enum NotificationChannel { PUSH SMS EMAIL IN_APP }
-enum NotificationStatus  { PENDING SENT DELIVERED READ FAILED }
+enum NotificationType {
+  RESERVATION_CONFIRMED
+  RESERVATION_REMINDER
+  CHECKIN_READY
+  PIN_GENERATED
+  CHECKOUT_REMINDER
+  INVOICE_READY
+  STOCK_ALERT
+  ATTENDANCE_MISSING
+  PAYROLL_PROCESSED
+  MAINTENANCE_ASSIGNED
+}
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+  IN_APP
+}
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+// ── REGRAS DE ALERTAS ─────────────────────────
+model AlertRule {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  name        String
+  module      String   // 'contracts', 'stock', 'invoicing', 'security', 'fleet', 'hr', 'maintenance', 'pms'
+  alertType   String?  // Tipo predefinido: CONTRACT_EXPIRING_30D, STOCK_BELOW_MINIMUM, etc.
+  condition   String
+  threshold   Float?
+  channels    String[] // ['email', 'sms', 'push', 'in_app']
+  active      Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, active])
+  @@index([module])
+}
 
 // ── AUDITORIA ─────────────────────────────────
 // NOVO: obrigatório para conformidade fiscal AGT
@@ -533,8 +766,1266 @@ model Document {
   sizeBytes   Int
   uploadedBy  String       // userId
   createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([entityType, entityId])
 }
 
-enum DocumentType { ID_CARD PASSPORT CONTRACT INVOICE MEDICAL VISA OTHER }
+enum DocumentType {
+  ID_CARD
+  PASSPORT
+  CONTRACT
+  INVOICE
+  MEDICAL
+  VISA
+  OTHER
+}
+// ══════════════════════════════════════════════
+// FATURAÇÃO UNIVERSAL & MODO FORMAÇÃO
+// ══════════════════════════════════════════════
+
+// ── SÉRIES DE FATURAÇÃO ─────────────────────
+// Cada tenant tem as suas séries; modo formação usa série separada
+model InvoiceSeries {
+  id           String      @id @default(cuid())
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  resortId     String?             // filial (opcional)
+  documentType InvoiceDocType
+  series       String              // "A", "B", "TREINO"
+  prefix       String              // "FT", "FR", "NC", etc.
+  lastNumber   Int         @default(0)
+  isTraining   Boolean     @default(false)
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  invoices     Invoice[]
+
+  @@unique([tenantId, documentType, series])
+  @@index([tenantId])
+}
+
+// ── FATURAS / DOCUMENTOS FISCAIS ─────────────
+// Genérico para qualquer indústria
+model Invoice {
+  id              String         @id @default(cuid())
+  tenantId        String
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  resortId        String?
+  seriesId        String
+  series          InvoiceSeries  @relation(fields: [seriesId], references: [id])
+  documentType    InvoiceDocType
+  number          Int                     // número sequencial
+  fullNumber      String         @unique  // "FT A/00001" ou "FT-TREINO T/00001"
+  isTraining      Boolean        @default(false) // modo formação
+  // Cliente
+  clientName      String
+  clientNif       String?
+  clientAddress   String?
+  clientEmail     String?
+  clientPhone     String?
+  // Valores
+  subtotal        Decimal        @db.Decimal(15, 2)
+  taxAmount       Decimal        @db.Decimal(15, 2)
+  totalAmount     Decimal        @db.Decimal(15, 2)
+  currency        String         @default("AOA")
+  exchangeRate    Decimal?       @db.Decimal(10, 4) // câmbio para multi-moeda
+  // Pagamento
+  paymentMethod   PaymentMethod?
+  paidAt          DateTime?
+  dueDate         DateTime?
+  // AGT
+  agtHash         String?                 // hash RSA do documento
+  agtPreviousHash String?                 // hash do documento anterior (cadeia)
+  agtStatus       String?                 // pending, submitted, accepted, rejected
+  agtQrCode       String?
+  agtSubmittedAt  DateTime?
+  // Referências
+  relatedInvoiceId String?                // para NC referenciando FT
+  saleId          String?                 // ligação a Sale (POS)
+  reservationId   String?                 // ligação a Reservation (PMS)
+  notes           String?
+  pdfUrl          String?
+  // Meta
+  createdBy       String?                 // userId
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  items InvoiceItem[]
+
+  @@index([tenantId, documentType])
+  @@index([tenantId, isTraining])
+  @@index([tenantId, createdAt])
+  @@index([clientNif])
+  @@index([fullNumber])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal @db.Decimal(10, 3)
+  unitPrice   Decimal @db.Decimal(15, 2)
+  taxRate     Decimal @db.Decimal(5, 2)  @default(14)
+  discount    Decimal @db.Decimal(5, 2)  @default(0)
+  total       Decimal @db.Decimal(15, 2)
+  productId   String?
+  unit        String? // "un", "kg", "m", "h", "m²", etc.
+
+  @@index([invoiceId])
+}
+
+enum InvoiceDocType {
+  FT    // Fatura
+  FR    // Fatura-Recibo
+  NC    // Nota de Crédito
+  ND    // Nota de Débito
+  ORC   // Orçamento
+  PF    // Proforma
+  RC    // Recibo
+  GT    // Guia de Transporte
+  AM    // Auto de Medição
+  CS    // Contrato de Serviço
+}
+// ══════════════════════════════════════════════
+// MÓDULO: SEGURANÇA ELETRÓNICA (SEC)
+// ══════════════════════════════════════════════
+
+// ── CONTRATOS DE SEGURANÇA ──────────────────
+model SecurityContract {
+  id            String              @id @default(cuid())
+  tenantId      String
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId      String?
+  clientName    String
+  clientNif     String?
+  clientAddress String?
+  clientPhone   String?
+  clientEmail   String?
+  contractType  SecurityContractType
+  startDate     DateTime
+  endDate       DateTime?
+  renewAuto     Boolean             @default(true)
+  monthlyValue  Decimal             @db.Decimal(15, 2)
+  currency      String              @default("AOA")
+  status        ContractStatus      @default(ACTIVE)
+  notes         String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  installations SecurityInstallation[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, endDate])
+}
+
+enum SecurityContractType {
+  MONITORING
+  PATROL
+  CCTV
+  ALARM
+  ACCESS_CONTROL
+  MIXED
+}
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  CANCELLED
+}
+// ── INSTALAÇÕES DE EQUIPAMENTOS ─────────────
+model SecurityInstallation {
+  id           String              @id @default(cuid())
+  tenantId     String
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contractId   String?
+  contract     SecurityContract?   @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  clientName   String
+  address      String
+  lat          Float?
+  lng          Float?
+  installationType SecurityInstallationType
+  equipmentList Json               // [{ name, brand, model, serial, qty }]
+  status       InstallationStatus  @default(PLANNED)
+  scheduledDate DateTime?
+  completedDate DateTime?
+  assignedTo   String?             // employeeId / técnico
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([tenantId, status])
+  @@index([contractId])
+}
+
+enum SecurityInstallationType {
+  CCTV
+  ALARM
+  INTERCOM
+  ACCESS_CONTROL
+  FIRE_DETECTION
+  ELECTRIC_FENCE
+  MIXED
+}
+enum InstallationStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+// ── INCIDENTES / OCORRÊNCIAS ────────────────
+model SecurityIncident {
+  id           String            @id @default(cuid())
+  tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId     String?
+  contractId   String?
+  type         IncidentType
+  severity     IncidentSeverity  @default(MEDIUM)
+  title        String
+  description  String
+  location     String?
+  lat          Float?
+  lng          Float?
+  reportedBy   String?
+  assignedTo   String?
+  status       IncidentStatus    @default(OPEN)
+  resolvedAt   DateTime?
+  resolution   String?
+  photos       String[]          // URLs de fotos
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, severity])
+  @@index([tenantId, createdAt])
+}
+
+enum IncidentType {
+  INTRUSION
+  THEFT
+  VANDALISM
+  FIRE
+  EQUIPMENT_FAILURE
+  ALARM_TRIGGER
+  ACCESS_VIOLATION
+  OTHER
+}
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+// ── RONDAS DE SEGURANÇA ──────────────────────
+model SecurityPatrol {
+  id           String        @id @default(cuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId     String?
+  guardId      String                // employeeId
+  guardName    String
+  route        String?               // nome da rota
+  startedAt    DateTime
+  endedAt      DateTime?
+  status       PatrolStatus  @default(IN_PROGRESS)
+  checkpoints  Json          @default("[]") // [{ name, lat, lng, checkedAt, notes, photo }]
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+enum PatrolStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  INTERRUPTED
+}
+// ══════════════════════════════════════════════
+// MÓDULO: ENGENHARIA & CONSTRUÇÃO (ENG)
+// ══════════════════════════════════════════════
+
+// ── PROJETOS ────────────────────────────────
+model EngineeringProject {
+  id            String          @id @default(cuid())
+  tenantId      String
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId      String?
+  name          String
+  code          String?                  // código interno do projeto
+  clientName    String
+  clientNif     String?
+  clientPhone   String?
+  clientEmail   String?
+  projectType   ProjectType
+  description   String?
+  address       String?
+  lat           Float?
+  lng           Float?
+  budget        Decimal?        @db.Decimal(15, 2)
+  currency      String          @default("AOA")
+  startDate     DateTime?
+  estimatedEnd  DateTime?
+  actualEnd     DateTime?
+  status        ProjectStatus   @default(PLANNING)
+  managerId     String?                  // employeeId — gestor de projeto
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  works         ConstructionWork[]
+  budgetItems   BudgetItem[]
+  measurements  WorkMeasurement[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, projectType])
+}
+
+enum ProjectType {
+  CONSTRUCTION
+  RENOVATION
+  MAINTENANCE
+  DESIGN
+  CONSULTATION
+  INSPECTION
+  OTHER
+}
+enum ProjectStatus {
+  PLANNING
+  APPROVED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+// ── OBRAS ───────────────────────────────────
+model ConstructionWork {
+  id           String         @id @default(cuid())
+  tenantId     String
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projectId    String
+  project      EngineeringProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  phase        String?                 // "Fundação", "Estrutura", "Acabamentos"
+  startDate    DateTime?
+  endDate      DateTime?
+  progress     Int            @default(0) // 0-100%
+  status       WorkStatus     @default(PENDING)
+  assignedTeam String?                 // nome da equipa
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([tenantId, projectId])
+  @@index([status])
+}
+
+enum WorkStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
+// ── ORÇAMENTOS TÉCNICOS (BQ) ────────────────
+model BudgetItem {
+  id           String  @id @default(cuid())
+  tenantId     String
+  tenant       Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projectId    String
+  project      EngineeringProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code         String?                // código do item (ex: "1.2.3")
+  description  String
+  unit         String                 // "m²", "m³", "un", "kg", "ml", etc.
+  quantity     Decimal @db.Decimal(10, 3)
+  unitPrice    Decimal @db.Decimal(15, 2)
+  total        Decimal @db.Decimal(15, 2)
+  category     String?                // "Material", "Mão de Obra", "Equipamento"
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId, projectId])
+}
+
+// ── AUTOS DE MEDIÇÃO ────────────────────────
+model WorkMeasurement {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projectId    String
+  project      EngineeringProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number       Int                     // número sequencial do auto
+  period       String                  // "Março 2026"
+  measuredBy   String?                 // técnico responsável
+  approvedBy   String?
+  approvedAt   DateTime?
+  items        Json                    // [{ budgetItemId, description, unit, qty, unitPrice, total }]
+  subtotal     Decimal  @db.Decimal(15, 2)
+  taxAmount    Decimal  @db.Decimal(15, 2)
+  totalAmount  Decimal  @db.Decimal(15, 2)
+  status       MeasurementStatus @default(DRAFT)
+  invoiceId    String?                 // ligação à fatura gerada
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId, projectId])
+  @@index([status])
+}
+
+enum MeasurementStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  INVOICED
+  REJECTED
+}
+// ══════════════════════════════════════════════
+// MÓDULO: ELETRICIDADE & ENERGIA (ELEC)
+// ══════════════════════════════════════════════
+
+// ── PROJETOS ELÉTRICOS ──────────────────────
+model ElectricalProject {
+  id            String          @id @default(cuid())
+  tenantId      String
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId      String?
+  name          String
+  clientName    String
+  clientNif     String?
+  clientPhone   String?
+  projectType   ElecProjectType
+  voltageLevel  VoltageLevel    @default(LOW)
+  address       String?
+  description   String?
+  budget        Decimal?        @db.Decimal(15, 2)
+  currency      String          @default("AOA")
+  startDate     DateTime?
+  estimatedEnd  DateTime?
+  status        ProjectStatus   @default(PLANNING)
+  assignedTo    String?
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  inspections   ElectricalInspection[]
+  certifications ElectricalCertification[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, projectType])
+}
+
+enum ElecProjectType {
+  NEW_INSTALLATION
+  RENOVATION
+  EXPANSION
+  MAINTENANCE
+  EMERGENCY
+}
+enum VoltageLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+// ── INSPEÇÕES ELÉTRICAS ─────────────────────
+model ElectricalInspection {
+  id           String            @id @default(cuid())
+  tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      ElectricalProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  address      String
+  clientName   String
+  inspectorId  String?                  // employeeId
+  inspectorName String?
+  inspectionType InspectionType
+  scheduledDate DateTime?
+  completedDate DateTime?
+  result       InspectionResult?
+  checklist    Json              @default("[]") // [{ item, passed, notes }]
+  findings     String?
+  photos       String[]
+  status       InspectionStatus  @default(SCHEDULED)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, scheduledDate])
+}
+
+enum InspectionType {
+  INITIAL
+  PERIODIC
+  EXTRAORDINARY
+  POST_INCIDENT
+}
+enum InspectionResult {
+  APPROVED
+  APPROVED_WITH_CONDITIONS
+  REJECTED
+}
+enum InspectionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+// ── CERTIFICAÇÕES ELÉTRICAS ─────────────────
+model ElectricalCertification {
+  id             String            @id @default(cuid())
+  tenantId       String
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        ElectricalProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientName     String
+  address        String
+  certNumber     String?           @unique
+  certType       CertificationType
+  issuedAt       DateTime?
+  expiresAt      DateTime?
+  issuedBy       String?                 // técnico responsável
+  status         CertificationStatus @default(PENDING)
+  pdfUrl         String?
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, expiresAt])
+}
+
+enum CertificationType {
+  INSTALLATION_CERT
+  INSPECTION_CERT
+  COMPLIANCE_CERT
+  ENERGY_CERT
+}
+enum CertificationStatus {
+  PENDING
+  ISSUED
+  EXPIRED
+  REVOKED
+}
+// ══════════════════════════════════════════════
+// MÓDULO: CRM & CLIENTES
+// ══════════════════════════════════════════════
+
+model Client {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  nif         String?
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  country     String?  @default("AO")
+  type        ClientType @default(INDIVIDUAL)
+  source      String?             // como conheceu
+  notes       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deals       Deal[]
+
+  @@index([tenantId, active])
+  @@index([tenantId, name])
+  @@index([tenantId, nif])
+}
+
+enum ClientType {
+  INDIVIDUAL
+  COMPANY
+  GOVERNMENT
+}
+// ── PIPELINE DE VENDAS ──────────────────────
+model Deal {
+  id          String     @id @default(cuid())
+  tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title       String
+  value       Decimal?   @db.Decimal(15, 2)
+  currency    String     @default("AOA")
+  stage       DealStage  @default(LEAD)
+  probability Int        @default(0)    // 0-100%
+  assignedTo  String?                   // userId
+  expectedClose DateTime?
+  closedAt    DateTime?
+  lostReason  String?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([tenantId, stage])
+  @@index([tenantId, clientId])
+}
+
+enum DealStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+// ══════════════════════════════════════════════
+// MÓDULO: FROTAS & LOGÍSTICA
+// ══════════════════════════════════════════════
+
+model Vehicle {
+  id           String        @id @default(cuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId     String?
+  plate        String
+  brand        String
+  model        String
+  year         Int?
+  type         VehicleType
+  fuelType     FuelType      @default(DIESEL)
+  mileage      Int           @default(0)
+  status       VehicleStatus @default(AVAILABLE)
+  assignedTo   String?                  // driverId
+  insuranceExp DateTime?
+  inspectionExp DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  fuelLogs     FuelLog[]
+
+  @@unique([tenantId, plate])
+  @@index([tenantId, status])
+}
+
+enum VehicleType {
+  CAR
+  VAN
+  TRUCK
+  MOTORCYCLE
+  BUS
+  EQUIPMENT
+}
+enum FuelType {
+  DIESEL
+  GASOLINE
+  ELECTRIC
+  HYBRID
+}
+enum VehicleStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  DECOMMISSIONED
+}
+model FuelLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicleId  String
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId   String?
+  driverName String?
+  date       DateTime
+  liters     Decimal  @db.Decimal(8, 2)
+  pricePerLiter Decimal @db.Decimal(10, 2)
+  totalCost  Decimal  @db.Decimal(15, 2)
+  mileage    Int
+  station    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId, vehicleId])
+  @@index([tenantId, date])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: CONTRATOS & JURÍDICO
+// ══════════════════════════════════════════════
+
+model ServiceContract {
+  id            String          @id @default(cuid())
+  tenantId      String
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientName    String
+  clientNif     String?
+  title         String
+  description   String?
+  contractType  String                // "Manutenção", "Segurança", "Limpeza", etc.
+  startDate     DateTime
+  endDate       DateTime?
+  renewAuto     Boolean         @default(false)
+  renewDaysBefore Int           @default(30)
+  monthlyValue  Decimal?        @db.Decimal(15, 2)
+  totalValue    Decimal?        @db.Decimal(15, 2)
+  currency      String          @default("AOA")
+  status        ContractStatus  @default(ACTIVE)
+  pdfUrl        String?
+  alertSent     Boolean         @default(false)
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, endDate])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: SPA & BEM-ESTAR
+// ══════════════════════════════════════════════
+
+model SpaService {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  category    String               // MASSAGE, FACIAL, BODY, HAIR, NAILS, OTHER
+  duration    Int                   // minutos
+  price       Decimal  @db.Decimal(15, 2)
+  description String?
+  active      Boolean  @default(true)
+  bookings    SpaBooking[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, active])
+}
+
+model SpaBooking {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceId   String
+  service     SpaService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  clientName  String
+  clientPhone String?
+  therapist   String?
+  date        DateTime
+  status      String   @default("SCHEDULED")  // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+  notes       String?
+  totalPrice  Decimal  @db.Decimal(15, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, status])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: EVENTOS & ATIVIDADES
+// ══════════════════════════════════════════════
+
+model Event {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  eventType     String               // CONFERENCE, WEDDING, PARTY, WORKSHOP, MEETING, SPORTS, CULTURAL, OTHER
+  location      String?
+  startDate     DateTime
+  endDate       DateTime?
+  maxCapacity   Int?
+  currentGuests Int      @default(0)
+  price         Decimal? @db.Decimal(15, 2)
+  status        String   @default("PLANNED")  // PLANNED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+  organizer     String?
+  contactPhone  String?
+  contactEmail  String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, startDate])
+  @@index([tenantId, status])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: IMOBILIÁRIO
+// ══════════════════════════════════════════════
+
+model Property {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title         String
+  propertyType  String               // APARTMENT, HOUSE, LAND, COMMERCIAL, WAREHOUSE, OFFICE
+  purpose       String   @default("SALE")  // SALE, RENT, BOTH
+  address       String?
+  city          String?
+  area          Decimal? @db.Decimal(10, 2)  // m²
+  bedrooms      Int?
+  bathrooms     Int?
+  price         Decimal? @db.Decimal(15, 2)
+  rentPrice     Decimal? @db.Decimal(15, 2)
+  status        String   @default("AVAILABLE")  // AVAILABLE, RESERVED, SOLD, RENTED, UNAVAILABLE
+  description   String?
+  features      String[]             // piscina, garagem, varanda, etc.
+  photos        String[]
+  ownerName     String?
+  ownerPhone    String?
+  lat           Float?
+  lng           Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, propertyType])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: LOGÍSTICA & TRANSPORTE
+// ══════════════════════════════════════════════
+
+model Shipment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  trackingCode    String?
+  origin          String
+  destination     String
+  clientName      String?
+  clientPhone     String?
+  weight          Decimal? @db.Decimal(10, 2)  // kg
+  volume          Decimal? @db.Decimal(10, 3)  // m³
+  shipmentType    String               // PACKAGE, PALLET, CONTAINER, DOCUMENT, BULK
+  status          String   @default("PENDING")  // PENDING, PICKED_UP, IN_TRANSIT, DELIVERED, RETURNED, CANCELLED
+  estimatedDelivery DateTime?
+  deliveredAt     DateTime?
+  cost            Decimal? @db.Decimal(15, 2)
+  driverId        String?
+  vehicleId       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, trackingCode])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: EDUCAÇÃO & FORMAÇÃO
+// ══════════════════════════════════════════════
+
+model Course {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  code        String?
+  category    String?              // TECHNICAL, SAFETY, MANAGEMENT, LANGUAGE, CERTIFICATION, OTHER
+  instructor  String?
+  duration    Int?                 // horas
+  maxStudents Int?
+  price       Decimal? @db.Decimal(15, 2)
+  status      String   @default("ACTIVE")  // ACTIVE, INACTIVE, ARCHIVED
+  description String?
+  enrollments Enrollment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model Enrollment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  courseId     String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  studentName String
+  studentEmail String?
+  studentPhone String?
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+  grade       Decimal? @db.Decimal(5, 2)
+  status      String   @default("ENROLLED")  // ENROLLED, IN_PROGRESS, COMPLETED, DROPPED, FAILED
+  certificateUrl String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, courseId])
+  @@index([tenantId, status])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: SAÚDE & CLÍNICA
+// ══════════════════════════════════════════════
+
+model Patient {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  nif         String?
+  birthDate   DateTime?
+  gender      String?              // M, F, OTHER
+  phone       String?
+  email       String?
+  address     String?
+  bloodType   String?
+  allergies   String?
+  notes       String?
+  appointments Appointment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, name])
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorName  String?
+  specialty   String?              // GENERAL, CARDIOLOGY, DERMATOLOGY, DENTAL, PHYSIOTHERAPY, OTHER
+  date        DateTime
+  duration    Int      @default(30)  // minutos
+  status      String   @default("SCHEDULED")  // SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+  diagnosis   String?
+  prescription String?
+  notes       String?
+  cost        Decimal? @db.Decimal(15, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, patientId])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: AGRICULTURA
+// ══════════════════════════════════════════════
+
+model Farm {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  location    String?
+  totalArea   Decimal? @db.Decimal(10, 2)  // hectares
+  crops       Crop[]
+  harvests    Harvest[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Crop {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  farmId      String
+  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  name        String               // Milho, Café, Banana, Mandioca, etc.
+  variety     String?
+  area        Decimal? @db.Decimal(10, 2)  // hectares
+  plantedDate DateTime?
+  expectedHarvest DateTime?
+  status      String   @default("PLANTED")  // PLANTED, GROWING, READY, HARVESTED, FAILED
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, farmId])
+}
+
+model Harvest {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  farmId      String
+  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  cropName    String
+  quantity    Decimal  @db.Decimal(10, 2)  // kg ou toneladas
+  unit        String   @default("kg")
+  quality     String?              // A, B, C
+  harvestDate DateTime
+  revenue     Decimal? @db.Decimal(15, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, farmId])
+  @@index([tenantId, harvestDate])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: ATIVIDADES & EXPERIÊNCIAS
+// ══════════════════════════════════════════════
+
+model Activity {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  category      String               // ADVENTURE, WATER, NATURE, CULTURAL, SPORTS, WELLNESS, GASTRONOMY, OTHER
+  description   String?
+  location      String?
+  duration      Int?                 // minutos
+  maxParticipants Int?
+  minAge        Int?
+  price         Decimal? @db.Decimal(15, 2)
+  equipmentIncluded String[]
+  difficulty    String   @default("EASY")  // EASY, MODERATE, HARD, EXTREME
+  status        String   @default("ACTIVE")  // ACTIVE, INACTIVE, SEASONAL, CANCELLED
+  seasonStart   DateTime?
+  seasonEnd     DateTime?
+  photos        String[]
+  bookings      ActivityBooking[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, category])
+}
+
+model ActivityBooking {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  activityId    String
+  activity      Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  clientName    String
+  clientPhone   String?
+  clientEmail   String?
+  participants  Int      @default(1)
+  date          DateTime
+  status        String   @default("BOOKED")  // BOOKED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+  totalPrice    Decimal  @db.Decimal(15, 2)
+  guide         String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, activityId])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: RETALHO
+// ══════════════════════════════════════════════
+
+model RetailStore {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  code        String?
+  address     String?
+  city        String?
+  phone       String?
+  manager     String?
+  status      String   @default("ACTIVE")  // ACTIVE, INACTIVE, RENOVATION
+  openTime    String?                      // "08:00"
+  closeTime   String?                      // "22:00"
+  sales       RetailSale[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model RetailSale {
+  id          String       @id @default(cuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  storeId     String?
+  store       RetailStore? @relation(fields: [storeId], references: [id])
+  saleNumber  String?
+  clientName  String?
+  clientNif   String?
+  items       Json                        // [{name, qty, price, total}]
+  subtotal    Decimal  @db.Decimal(15, 2)
+  taxAmount   Decimal  @db.Decimal(15, 2)
+  discount    Decimal  @db.Decimal(15, 2) @default(0)
+  totalAmount Decimal  @db.Decimal(15, 2)
+  paymentMethod String @default("CASH")   // CASH, CARD, TRANSFER, MULTICAIXA
+  status      String   @default("COMPLETED")  // COMPLETED, REFUNDED, CANCELLED
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, storeId])
+  @@index([tenantId, saleNumber])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: MANUFATURA
+// ══════════════════════════════════════════════
+
+model ProductionOrder {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderNumber   String?
+  productName   String
+  quantity      Decimal  @db.Decimal(10, 2)
+  unit          String   @default("un")
+  priority      String   @default("NORMAL")  // LOW, NORMAL, HIGH, URGENT
+  status        String   @default("PLANNED")  // PLANNED, IN_PRODUCTION, QUALITY_CHECK, COMPLETED, CANCELLED
+  startDate     DateTime?
+  expectedEnd   DateTime?
+  completedAt   DateTime?
+  cost          Decimal? @db.Decimal(15, 2)
+  supervisor    String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, orderNumber])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: CONSULTORIA & SERVIÇOS PROFISSIONAIS
+// ══════════════════════════════════════════════
+
+model ConsultingProject {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title         String
+  clientName    String
+  projectType   String               // STRATEGY, TECHNOLOGY, MANAGEMENT, FINANCIAL, LEGAL, AUDIT, OTHER
+  startDate     DateTime
+  endDate       DateTime?
+  budget        Decimal? @db.Decimal(15, 2)
+  hourlyRate    Decimal? @db.Decimal(10, 2)
+  totalHours    Decimal? @db.Decimal(10, 2)
+  status        String   @default("ACTIVE")  // ACTIVE, ON_HOLD, COMPLETED, CANCELLED
+  teamLead      String?
+  deliverables  String[]
+  notes         String?
+  timeLogs      TimeLog[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model TimeLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     ConsultingProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userName    String
+  date        DateTime
+  hours       Decimal  @db.Decimal(5, 2)
+  description String?
+  billable    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, projectId])
+  @@index([tenantId, date])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: TELECOMUNICAÇÕES
+// ══════════════════════════════════════════════
+
+model TelecomSubscription {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientName    String
+  clientPhone   String?
+  planName      String
+  planType      String               // MOBILE, FIXED, INTERNET, TV, BUNDLE
+  monthlyValue  Decimal  @db.Decimal(15, 2)
+  startDate     DateTime
+  endDate       DateTime?
+  status        String   @default("ACTIVE")  // ACTIVE, SUSPENDED, CANCELLED, EXPIRED
+  simNumber     String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: JURÍDICO & COMPLIANCE
+// ══════════════════════════════════════════════
+
+model LegalCase {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  caseNumber  String?
+  title       String
+  caseType    String               // CIVIL, CRIMINAL, LABOR, TAX, COMMERCIAL, ADMINISTRATIVE, CONTRACT, OTHER
+  clientName  String
+  clientNif   String?
+  court       String?
+  judge       String?
+  lawyer      String
+  status      String   @default("OPEN")  // OPEN, IN_PROGRESS, HEARING, APPEALED, CLOSED, ARCHIVED
+  priority    String   @default("NORMAL")  // LOW, NORMAL, HIGH, URGENT
+  filingDate  DateTime?
+  nextHearing DateTime?
+  outcome     String?
+  fees        Decimal? @db.Decimal(15, 2)
+  notes       String?
+  documents   String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, caseNumber])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: CONTABILIDADE
+// ══════════════════════════════════════════════
+
+model AccountingEntry {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entryNumber String?
+  date        DateTime
+  description String
+  account     String               // código da conta (ex: "71.1.1")
+  debit       Decimal  @db.Decimal(15, 2) @default(0)
+  credit      Decimal  @db.Decimal(15, 2) @default(0)
+  category    String?              // REVENUE, EXPENSE, ASSET, LIABILITY, EQUITY
+  reference   String?              // FT, FR, RC, etc.
+  referenceId String?
+  reconciled  Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, account])
+  @@index([tenantId, entryNumber])
+}

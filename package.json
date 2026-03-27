@@ -1,8 +1,8 @@
 {
-  "name": "sea-and-soul",
-  "version": "1.0.0",
+  "name": "engeris-one",
+  "version": "2.0.0",
   "private": true,
-  "description": "Sea and Soul Resorts — ERP Completo | ENGERIS",
+  "description": "ENGERIS ONE — Plataforma ERP Modular Multi-Indústria | ENGERIS",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

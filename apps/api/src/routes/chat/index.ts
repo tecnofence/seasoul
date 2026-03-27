@@ -4,6 +4,22 @@ import { sendMessageSchema, listMessagesQuery } from './schemas.js'
 export default async function chatRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
 
+  // ── GET /unread — Contar mensagens não lidas (antes de /:params) ──
+  app.get('/unread', async (request, reply) => {
+    const { reservationId } = request.query as { reservationId?: string }
+    const isGuest = request.user.type === 'guest'
+
+    const where: Record<string, unknown> = {
+      senderType: isGuest ? 'STAFF' : 'GUEST',
+      readAt: null,
+    }
+    if (reservationId) where.reservationId = reservationId
+
+    const count = await app.prisma.chatMessage.count({ where })
+
+    return reply.send({ data: { unread: count } })
+  })
+
   // ── GET / — Listar mensagens de uma reserva ──
   app.get('/', async (request, reply) => {
     const parsed = listMessagesQuery.safeParse(request.query)
@@ -38,7 +54,7 @@ export default async function chatRoutes(app: FastifyInstance) {
     }
 
     const { reservationId, content } = parsed.data
-    const user = request.user as any
+    const isGuest = request.user.type === 'guest'
 
     // Verificar reserva
     const reservation = await app.prisma.reservation.findUnique({ where: { id: reservationId } })
@@ -46,17 +62,12 @@ export default async function chatRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Reserva não encontrada' })
     }
 
-    // Determinar tipo de remetente
-    const isGuest = user.type === 'guest'
-    const senderType = isGuest ? 'GUEST' : 'STAFF'
-    const senderId = user.id
-
     const message = await app.prisma.chatMessage.create({
       data: {
         reservationId,
-        guestId: isGuest ? senderId : null,
-        senderType,
-        senderId,
+        guestId: isGuest ? request.user.id : null,
+        senderType: isGuest ? 'GUEST' : 'STAFF',
+        senderId: request.user.id,
         content,
       },
       include: {
@@ -76,10 +87,8 @@ export default async function chatRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'reservationId obrigatório' })
     }
 
-    const user = request.user as any
-    const isGuest = user.type === 'guest'
+    const isGuest = request.user.type === 'guest'
 
-    // Marcar como lidas as mensagens do outro lado
     await app.prisma.chatMessage.updateMany({
       where: {
         reservationId,
@@ -90,22 +99,5 @@ export default async function chatRoutes(app: FastifyInstance) {
     })
 
     return reply.send({ message: 'Mensagens marcadas como lidas' })
-  })
-
-  // ── GET /unread — Contar mensagens não lidas ──
-  app.get('/unread', async (request, reply) => {
-    const { reservationId } = request.query as { reservationId?: string }
-    const user = request.user as any
-    const isGuest = user.type === 'guest'
-
-    const where: Record<string, unknown> = {
-      senderType: isGuest ? 'STAFF' : 'GUEST',
-      readAt: null,
-    }
-    if (reservationId) where.reservationId = reservationId
-
-    const count = await app.prisma.chatMessage.count({ where })
-
-    return reply.send({ data: { unread: count } })
   })
 }

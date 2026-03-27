@@ -1,0 +1,38 @@
+{
+  "common": {
+    "loading": "A carregar...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Criar",
+    "search": "Pesquisar",
+    "filter": "Filtrar",
+    "actions": "Ações",
+    "back": "Voltar",
+    "confirm": "Confirmar",
+    "yes": "Sim",
+    "no": "Não",
+    "noResults": "Sem resultados"
+  },
+  "nav": {
+    "dashboard": "Painel",
+    "reservations": "Reservas",
+    "rooms": "Quartos",
+    "pos": "POS",
+    "stock": "Stock",
+    "products": "Produtos",
+    "hr": "RH",
+    "reviews": "Avaliações",
+    "settings": "Definições"
+  },
+  "dashboard": {
+    "title": "Painel de Controlo",
+    "occupancy": "Taxa de Ocupação",
+    "revenue": "Receita",
+    "checkIns": "Check-ins Hoje",
+    "checkOuts": "Check-outs Hoje",
+    "lowStock": "Alertas de Stock",
+    "pendingOrders": "Pedidos Pendentes"
+  }
+}

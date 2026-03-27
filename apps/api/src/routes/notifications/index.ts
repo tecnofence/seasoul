@@ -55,7 +55,7 @@ export default async function notificationsRoutes(app: FastifyInstance) {
 
   // ── POST / — Criar notificação (interno) ──
   app.post('/', async (request, reply) => {
-    if (!['SUPER_ADMIN', 'RESORT_MANAGER'].includes(request.user.role)) {
+    if (!['SUPER_ADMIN', 'RESORT_MANAGER'].includes(request.user.role!)) {
       return reply.code(403).send({ error: 'Sem permissão' })
     }
 

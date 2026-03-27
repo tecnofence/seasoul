@@ -71,8 +71,13 @@ export default async function serviceOrderRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Reserva não encontrada ou não está em check-in' })
     }
 
-    // Calcular total
-    const totalAmount = items.reduce((sum, item) => sum + (item.price || 0) * item.qty, 0)
+    // Calcular total com Decimal
+    let totalAmount = new Decimal('0')
+    for (const item of items) {
+      if (item.price) {
+        totalAmount = totalAmount.plus(new Decimal(String(item.price)).times(item.qty))
+      }
+    }
 
     const order = await app.prisma.roomServiceOrder.create({
       data: {
@@ -80,10 +85,10 @@ export default async function serviceOrderRoutes(app: FastifyInstance) {
         reservationId,
         guestId: reservation.guestId,
         type,
-        items: items as any, // JSON field
+        items: items as unknown as Record<string, unknown>[], // JSON field
         notes,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        totalAmount: totalAmount > 0 ? new Decimal(Math.round(totalAmount * 100) / 100) : null,
+        totalAmount: totalAmount.greaterThan(0) ? totalAmount.toDecimalPlaces(2) : null,
       },
       include: {
         reservation: { select: { id: true, guestName: true, room: { select: { number: true } } } },

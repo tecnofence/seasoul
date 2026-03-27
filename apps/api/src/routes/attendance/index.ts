@@ -109,8 +109,18 @@ export default async function attendanceRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'employeeId, month e year são obrigatórios' })
     }
 
-    const from = new Date(parseInt(year), parseInt(month) - 1, 1)
-    const to = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999)
+    const monthNum = parseInt(month)
+    const yearNum = parseInt(year)
+
+    if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      return reply.code(400).send({ error: 'Mês inválido (1-12)' })
+    }
+    if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
+      return reply.code(400).send({ error: 'Ano inválido' })
+    }
+
+    const from = new Date(yearNum, monthNum - 1, 1)
+    const to = new Date(yearNum, monthNum, 0, 23, 59, 59, 999)
 
     const records = await app.prisma.attendanceRecord.findMany({
       where: {
@@ -143,8 +153,8 @@ export default async function attendanceRoutes(app: FastifyInstance) {
     return reply.send({
       data: {
         employeeId,
-        month: parseInt(month),
-        year: parseInt(year),
+        month: monthNum,
+        year: yearNum,
         totalRecords: records.length,
         daysPresent: daysPresent.size,
         totalHours: Math.round(totalHours * 100) / 100,

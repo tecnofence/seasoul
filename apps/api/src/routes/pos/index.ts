@@ -93,20 +93,22 @@ export default async function posRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Um ou mais produtos não encontrados ou inativos' })
     }
 
-    // Calcular totais por item
-    let totalAmount = 0
-    let taxAmount = 0
+    // Calcular totais por item com Decimal para precisão financeira
+    let totalAmount = new Decimal('0')
+    let taxAmount = new Decimal('0')
     const saleItems = items.map((item) => {
-      const total = item.qty * item.unitPrice
-      const tax = total * (item.taxRate / 100)
-      totalAmount += total + tax
-      taxAmount += tax
+      const unitPrice = new Decimal(String(item.unitPrice))
+      const taxRate = new Decimal(String(item.taxRate))
+      const itemTotal = unitPrice.times(item.qty)
+      const itemTax = itemTotal.times(taxRate).dividedBy(100)
+      totalAmount = totalAmount.plus(itemTotal).plus(itemTax)
+      taxAmount = taxAmount.plus(itemTax)
       return {
         productId: item.productId,
         qty: item.qty,
-        unitPrice: new Decimal(item.unitPrice),
-        taxRate: new Decimal(item.taxRate),
-        total: new Decimal(Math.round((total + tax) * 100) / 100),
+        unitPrice,
+        taxRate,
+        total: itemTotal.plus(itemTax).toDecimalPlaces(2),
       }
     })
 
@@ -116,8 +118,8 @@ export default async function posRoutes(app: FastifyInstance) {
         reservationId,
         operatorId: request.user.id,
         paymentMethod,
-        totalAmount: new Decimal(Math.round(totalAmount * 100) / 100),
-        taxAmount: new Decimal(Math.round(taxAmount * 100) / 100),
+        totalAmount: totalAmount.toDecimalPlaces(2),
+        taxAmount: taxAmount.toDecimalPlaces(2),
         status: 'PENDING',
         items: { create: saleItems },
       },

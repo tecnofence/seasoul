@@ -1,62 +1,82 @@
-name: CI/CD — Sea and Soul ERP
+name: Deploy
 
 on:
   push:
-    branches: [main, staging]
-  pull_request:
-    branches: [main]
+    branches: [staging, main]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  test:
-    name: Lint + Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
-        with: { version: 9 }
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm test
+  ci:
+    name: CI Checks
+    uses: ./.github/workflows/ci.yml
 
   deploy-staging:
-    name: Deploy Staging
-    needs: test
+    name: Deploy to Staging
+    needs: ci
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
+    environment: staging
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy via SSH
+      - name: Deploy via SSH to staging VPS
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
           script: |
+            set -e
             cd /opt/sea-and-soul
+            git fetch origin staging
+            git checkout staging
             git pull origin staging
-            docker-compose -f docker-compose.prod.yml build
-            docker-compose -f docker-compose.prod.yml up -d
-            docker-compose exec api pnpm db:migrate:prod
+
+            # Build and deploy containers
+            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml up -d
+
+            # Wait for API container to be healthy
+            sleep 10
+
+            # Run database migrations
+            docker compose -f docker-compose.prod.yml exec -T api pnpm db:migrate:prod
+
+            echo "Staging deploy completed successfully"
 
   deploy-production:
-    name: Deploy Produção
-    needs: test
+    name: Deploy to Production
+    needs: ci
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    environment: production
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy via SSH
+      - name: Deploy via SSH to production VPS
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
           script: |
+            set -e
             cd /opt/sea-and-soul
+            git fetch origin main
+            git checkout main
             git pull origin main
-            docker-compose -f docker-compose.prod.yml build
-            docker-compose -f docker-compose.prod.yml up -d --no-downtime
-            docker-compose exec api pnpm db:migrate:prod
-            echo "✅ Deploy produção concluído"
+
+            # Build and deploy containers
+            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml up -d
+
+            # Wait for API container to be healthy
+            sleep 10
+
+            # Run database migrations
+            docker compose -f docker-compose.prod.yml exec -T api pnpm db:migrate:prod
+
+            echo "Production deploy completed successfully"
