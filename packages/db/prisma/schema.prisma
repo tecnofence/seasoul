@@ -1452,6 +1452,7 @@ model Enrollment {
 model Patient {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   nif         String?
   birthDate   DateTime?
@@ -1472,8 +1473,9 @@ model Patient {
 model Appointment {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patientId   String
-  patient     Patient  @relation(fields: [patientId], references: [id])
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctorName  String?
   specialty   String?              // GENERAL, CARDIOLOGY, DERMATOLOGY, DENTAL, PHYSIOTHERAPY, OTHER
   date        DateTime
@@ -1497,6 +1499,7 @@ model Appointment {
 model Farm {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   location    String?
   totalArea   Decimal? @db.Decimal(10, 2)  // hectares
@@ -1511,8 +1514,9 @@ model Farm {
 model Crop {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   farmId      String
-  farm        Farm     @relation(fields: [farmId], references: [id])
+  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
   name        String               // Milho, Café, Banana, Mandioca, etc.
   variety     String?
   area        Decimal? @db.Decimal(10, 2)  // hectares
@@ -1529,8 +1533,9 @@ model Crop {
 model Harvest {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   farmId      String
-  farm        Farm     @relation(fields: [farmId], references: [id])
+  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
   cropName    String
   quantity    Decimal  @db.Decimal(10, 2)  // kg ou toneladas
   unit        String   @default("kg")
@@ -1552,6 +1557,7 @@ model Harvest {
 model Activity {
   id            String   @id @default(cuid())
   tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name          String
   category      String               // ADVENTURE, WATER, NATURE, CULTURAL, SPORTS, WELLNESS, GASTRONOMY, OTHER
   description   String?
@@ -1577,8 +1583,9 @@ model Activity {
 model ActivityBooking {
   id            String   @id @default(cuid())
   tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   activityId    String
-  activity      Activity @relation(fields: [activityId], references: [id])
+  activity      Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   clientName    String
   clientPhone   String?
   clientEmail   String?
@@ -1602,6 +1609,7 @@ model ActivityBooking {
 model RetailStore {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   code        String?
   address     String?
