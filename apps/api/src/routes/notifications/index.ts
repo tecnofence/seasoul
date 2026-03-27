@@ -69,7 +69,7 @@ export default async function notificationsRoutes(app: FastifyInstance) {
     }
 
     const notification = await app.prisma.notification.create({
-      data: parsed.data,
+      data: parsed.data as any,
     })
 
     // TODO: Dispatch via canal (PUSH → Expo, SMS → Africa's Talking, EMAIL → Resend)

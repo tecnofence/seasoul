@@ -45,7 +45,7 @@ function buildApp(user: any = superAdminUser): FastifyInstance {
   })
   app.decorate('jwt', {
     sign: vi.fn().mockReturnValue('mock-jwt-token'),
-  })
+  } as any)
   return app
 }
 

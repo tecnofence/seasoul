@@ -137,11 +137,13 @@ export default async function healthcareRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Tenant não definido' })
     }
 
+    const { dateOfBirth, city, emergencyContact, emergencyPhone, medicalNotes, ...patientRest } = parsed.data
     const patient = await app.prisma.patient.create({
       data: {
-        ...parsed.data,
+        ...patientRest,
         tenantId: user.tenantId,
-        dateOfBirth: parsed.data.dateOfBirth ?? undefined,
+        birthDate: dateOfBirth ?? undefined,
+        notes: medicalNotes ?? undefined,
       },
     })
 
@@ -156,7 +158,7 @@ export default async function healthcareRoutes(app: FastifyInstance) {
       where: { id: request.params.id, tenantId: user.tenantId },
       include: {
         _count: { select: { appointments: true } },
-        appointments: { orderBy: { scheduledAt: 'desc' }, take: 20 },
+        appointments: { orderBy: { date: 'desc' }, take: 20 },
       },
     })
 
@@ -210,7 +212,7 @@ export default async function healthcareRoutes(app: FastifyInstance) {
     if (patientId) where.patientId = patientId
     if (specialty) where.specialty = specialty
     if (dateFrom || dateTo) {
-      where.scheduledAt = {
+      where.date = {
         ...(dateFrom ? { gte: dateFrom } : {}),
         ...(dateTo ? { lte: dateTo } : {}),
       }
@@ -222,7 +224,7 @@ export default async function healthcareRoutes(app: FastifyInstance) {
         include: { patient: { select: { id: true, name: true, phone: true } } },
         skip,
         take: limit,
-        orderBy: { scheduledAt: 'desc' },
+        orderBy: { date: 'desc' },
       }),
       app.prisma.appointment.count({ where }),
     ])
@@ -256,13 +258,14 @@ export default async function healthcareRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Paciente não encontrado neste tenant' })
     }
 
-    const { price, ...rest } = parsed.data
+    const { price, scheduledAt, doctorId, reason, ...appointmentRest } = parsed.data
 
     const appointment = await app.prisma.appointment.create({
       data: {
-        ...rest,
+        ...appointmentRest,
         tenantId: user.tenantId,
-        price: price !== undefined ? new Decimal(String(price)) : undefined,
+        date: scheduledAt,
+        cost: price !== undefined ? new Decimal(String(price)) : undefined,
       },
       include: { patient: { select: { id: true, name: true } } },
     })

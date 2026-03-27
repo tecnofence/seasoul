@@ -31,6 +31,16 @@ async function authPlugin(app: FastifyInstance) {
       reply.code(401).send({ error: 'Token inválido ou expirado' })
     }
   })
+
+  app.decorate('adminAuthenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+    await app.authenticate(request, reply)
+    if (reply.sent) return
+
+    const user = request.user as { role?: string }
+    if (user?.role !== 'SUPER_ADMIN') {
+      return reply.code(403).send({ error: 'Acesso restrito a administradores do sistema' })
+    }
+  })
 }
 
 export default fp(authPlugin, {

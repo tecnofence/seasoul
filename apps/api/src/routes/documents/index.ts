@@ -12,7 +12,7 @@ const listQuery = z.object({
 const createSchema = z.object({
   entityType: z.string().min(1),
   entityId: z.string().min(1),
-  type: z.enum(['ID_DOCUMENT', 'CONTRACT', 'INVOICE', 'PHOTO', 'MEDICAL', 'VISA', 'OTHER']),
+  type: z.enum(['ID_CARD', 'PASSPORT', 'CONTRACT', 'INVOICE', 'MEDICAL', 'VISA', 'OTHER']),
   name: z.string().min(1),
   fileUrl: z.string().url(),
   mimeType: z.string().min(1),

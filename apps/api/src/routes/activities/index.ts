@@ -237,16 +237,15 @@ export default async function activitiesRoutes(app: FastifyInstance) {
     // Calcular preço total se não fornecido
     const totalPrice = parsed.data.totalPrice
       ? new Decimal(String(parsed.data.totalPrice))
-      : activity.price.times(parsed.data.participants).toDecimalPlaces(2)
+      : (activity.price ?? new Decimal(0)).times(parsed.data.participants).toDecimalPlaces(2)
 
     const booking = await app.prisma.activityBooking.create({
       data: {
         tenantId: user.tenantId,
         activityId: parsed.data.activityId,
-        guestName: parsed.data.guestName,
-        guestEmail: parsed.data.guestEmail || null,
-        guestPhone: parsed.data.guestPhone || null,
-        reservationId: parsed.data.reservationId || null,
+        clientName: parsed.data.guestName,
+        clientEmail: parsed.data.guestEmail || null,
+        clientPhone: parsed.data.guestPhone || null,
         date: new Date(parsed.data.date),
         participants: parsed.data.participants,
         totalPrice,

@@ -28,7 +28,7 @@ const regularUser = {
   type: 'staff' as const,
 }
 
-function buildApp(user = superAdminUser): FastifyInstance {
+function buildApp(user: any = superAdminUser): FastifyInstance {
   const app = Fastify()
   app.decorate('prisma', mockPrisma as any)
   app.decorate('authenticate', async (request: any, _reply: any) => {
@@ -58,7 +58,7 @@ describe('Documents API — /v1/documents', () => {
 
   it('GET / — should list documents with pagination (200)', async () => {
     const docs = [
-      { id: 'doc-1', name: 'passport.pdf', type: 'ID_DOCUMENT', entityType: 'Guest', entityId: 'g1', createdAt: new Date() },
+      { id: 'doc-1', name: 'passport.pdf', type: 'ID_CARD', entityType: 'Guest', entityId: 'g1', createdAt: new Date() },
       { id: 'doc-2', name: 'contract.pdf', type: 'CONTRACT', entityType: 'Employee', entityId: 'emp-1', createdAt: new Date() },
     ]
     mockPrisma.document.findMany.mockResolvedValue(docs)
@@ -118,7 +118,7 @@ describe('Documents API — /v1/documents', () => {
   // ── GET /:id — Get document by ID ──
 
   it('GET /:id — should return document detail (200)', async () => {
-    const doc = { id: 'doc-1', name: 'passport.pdf', type: 'ID_DOCUMENT', fileUrl: 'https://minio.local/docs/passport.pdf' }
+    const doc = { id: 'doc-1', name: 'passport.pdf', type: 'ID_CARD', fileUrl: 'https://minio.local/docs/passport.pdf' }
     mockPrisma.document.findUnique.mockResolvedValue(doc)
 
     const res = await app.inject({ method: 'GET', url: '/v1/documents/doc-1' })
@@ -143,7 +143,7 @@ describe('Documents API — /v1/documents', () => {
       id: 'doc-new',
       entityType: 'Guest',
       entityId: 'g1',
-      type: 'ID_DOCUMENT',
+      type: 'ID_CARD',
       name: 'passport.pdf',
       fileUrl: 'https://minio.local/docs/passport.pdf',
       mimeType: 'application/pdf',
@@ -158,7 +158,7 @@ describe('Documents API — /v1/documents', () => {
       payload: {
         entityType: 'Guest',
         entityId: 'g1',
-        type: 'ID_DOCUMENT',
+        type: 'ID_CARD',
         name: 'passport.pdf',
         fileUrl: 'https://minio.local/docs/passport.pdf',
         mimeType: 'application/pdf',
@@ -192,7 +192,7 @@ describe('Documents API — /v1/documents', () => {
       payload: {
         entityType: 'Guest',
         entityId: 'g1',
-        type: 'ID_DOCUMENT',
+        type: 'ID_CARD',
         name: 'passport.pdf',
         fileUrl: 'not-a-url',
         mimeType: 'application/pdf',

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vites
 import Fastify, { FastifyInstance } from 'fastify'
 import reservationsRoutes from '../index.js'
 
-const mockPrisma = {
+const mockPrisma: Record<string, any> = {
   reservation: {
     findMany: vi.fn(),
     findUnique: vi.fn(),
@@ -15,7 +15,7 @@ const mockPrisma = {
     findUnique: vi.fn(),
     update: vi.fn(),
   },
-  $transaction: vi.fn(async (fn: any) => fn(mockPrisma)),
+  $transaction: vi.fn(async (fn: (tx: any) => Promise<any>) => fn(mockPrisma as any)),
 }
 
 // Valid CUIDs for test payloads
@@ -38,7 +38,7 @@ const regularUser = {
   type: 'staff' as const,
 }
 
-function buildApp(user = superAdminUser): FastifyInstance {
+function buildApp(user: any = superAdminUser): FastifyInstance {
   const app = Fastify()
   app.decorate('prisma', mockPrisma as any)
   app.decorate('authenticate', async (request: any, _reply: any) => {

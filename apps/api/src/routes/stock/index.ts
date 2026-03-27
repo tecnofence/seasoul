@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
-import { Prisma, Decimal } from '@prisma/client/runtime/library'
+import { Decimal } from '@prisma/client/runtime/library'
+import { Prisma } from '@prisma/client'
 import { createStockItemSchema, updateStockItemSchema, stockMovementSchema, listStockQuery } from './schemas.js'
 
 export default async function stockRoutes(app: FastifyInstance) {

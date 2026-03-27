@@ -104,16 +104,16 @@ export default async function manufacturingRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Tenant não definido' })
     }
 
-    const { estimatedCost, quantity, ...rest } = parsed.data
+    const { estimatedCost, quantity, dueDate, ...rest } = parsed.data
 
     const order = await app.prisma.productionOrder.create({
       data: {
         ...rest,
         tenantId: user.tenantId,
         quantity: new Decimal(String(quantity)),
-        estimatedCost: estimatedCost !== undefined ? new Decimal(String(estimatedCost)) : undefined,
+        cost: estimatedCost !== undefined ? new Decimal(String(estimatedCost)) : undefined,
         startDate: rest.startDate ?? undefined,
-        dueDate: rest.dueDate ?? undefined,
+        expectedEnd: dueDate ?? undefined,
       },
     })
 

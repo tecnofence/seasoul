@@ -204,7 +204,7 @@ export default async function invoicingRoutes(app: FastifyInstance) {
           subtotal,
           taxAmount,
           totalAmount,
-          currency: body.currency || 'AOA',
+          currency: (body.currency || 'AOA') as any,
           paymentMethod: body.paymentMethod as any || null,
           dueDate: body.dueDate ? new Date(body.dueDate) : null,
           relatedInvoiceId: body.relatedInvoiceId || null,

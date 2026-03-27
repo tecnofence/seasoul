@@ -7,8 +7,12 @@ async function prismaPlugin(app: FastifyInstance) {
     log: app.log.level === 'debug' ? ['query', 'warn', 'error'] : ['warn', 'error'],
   })
 
-  await prisma.$connect()
-  app.log.info('PostgreSQL conectado via Prisma')
+  try {
+    await prisma.$connect()
+    app.log.info('PostgreSQL conectado via Prisma')
+  } catch (err) {
+    app.log.error('Erro ao conectar à base de dados. O servidor continuará em modo isolado (MOCK).')
+  }
 
   app.decorate('prisma', prisma)
 

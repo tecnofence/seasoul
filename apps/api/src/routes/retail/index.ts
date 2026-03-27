@@ -271,10 +271,8 @@ export default async function retailRoutes(app: FastifyInstance) {
       data: {
         tenantId: user.tenantId,
         storeId: parsed.data.storeId,
-        soldById: user.id,
-        customerId: parsed.data.customerId || null,
-        customerName: parsed.data.customerName || null,
-        customerNif: parsed.data.customerNif || null,
+        clientName: parsed.data.customerName || null,
+        clientNif: parsed.data.customerNif || null,
         items: itemsWithTotals,
         subtotal,
         taxAmount,

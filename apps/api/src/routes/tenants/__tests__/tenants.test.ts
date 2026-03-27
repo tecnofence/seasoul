@@ -42,7 +42,7 @@ const regularUser = {
 }
 
 // ── Helpers ──────────────────────────────────────
-function buildApp(user = superAdminUser): FastifyInstance {
+function buildApp(user: any = superAdminUser): FastifyInstance {
   const app = Fastify()
 
   // Decorar com prisma mock

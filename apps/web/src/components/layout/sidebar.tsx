@@ -73,92 +73,102 @@ const iconMap: Record<string, LucideIcon> = {
   Shield, FolderOpen, Building2, Settings, GraduationCap,
 }
 
-// Itens organizados por módulo
-type NavItem = { href: string; label: string; icon: LucideIcon; module: string }
+// Categorias lógicas para organização do menu
+type CategoryId = 'core' | 'finance' | 'hr' | 'pms' | 'pos' | 'ops' | 'eng' | 'vertical_health' | 'vertical_ind' | 'admin'
+
+interface Category {
+  id: CategoryId
+  label: string
+  isCore?: boolean
+}
+
+const categories: Category[] = [
+  { id: 'core', label: 'Plataforma Core', isCore: true },
+  { id: 'finance', label: 'Gestão Financeira', isCore: true },
+  { id: 'hr', label: 'Gestão de Pessoal & RH', isCore: true },
+  { id: 'pms', label: 'Hospitalidade & Reservas' },
+  { id: 'pos', label: 'Vendas & POS' },
+  { id: 'eng', label: 'Engenharia & Manutenção' },
+  { id: 'vertical_health', label: 'Saúde & Clínicas' },
+  { id: 'vertical_ind', label: 'Indústria & Produção' },
+  { id: 'ops', label: 'Operações & Logística' },
+  { id: 'admin', label: 'Administração' },
+]
+
+// Itens organizados por módulo e categoria
+type NavItem = { href: string; label: string; icon: LucideIcon; module: string; category: CategoryId }
 
 const allNavItems: NavItem[] = [
-  // Core (sempre visível)
-  { href: '/dashboard', label: 'Painel', icon: LayoutDashboard, module: 'core' },
-  { href: '/dashboard/users', label: 'Utilizadores', icon: UserCircle, module: 'core' },
-  { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare, module: 'core' },
-  { href: '/dashboard/notifications', label: 'Notificações', icon: Bell, module: 'core' },
-  { href: '/dashboard/documents', label: 'Documentos', icon: FolderOpen, module: 'core' },
-  { href: '/dashboard/audit-log', label: 'Auditoria', icon: Shield, module: 'core' },
-  // PMS — Hotelaria
-  { href: '/dashboard/reservations', label: 'Reservas', icon: CalendarDays, module: 'pms' },
-  { href: '/dashboard/rooms', label: 'Quartos', icon: BedDouble, module: 'pms' },
-  { href: '/dashboard/tariffs', label: 'Tarifas', icon: Tag, module: 'pms' },
-  { href: '/dashboard/guests', label: 'Hóspedes', icon: UserCheck, module: 'pms' },
-  { href: '/dashboard/locks', label: 'Smart Locks', icon: Key, module: 'pms' },
-  { href: '/dashboard/reviews', label: 'Avaliações', icon: Star, module: 'pms' },
-  { href: '/dashboard/service-orders', label: 'Serviços', icon: ConciergeBell, module: 'pms' },
-  // POS — Restauração
-  { href: '/dashboard/pos', label: 'POS', icon: ShoppingCart, module: 'pos' },
-  { href: '/dashboard/products', label: 'Produtos', icon: Package, module: 'pos' },
-  // Manutenção
-  { href: '/dashboard/maintenance', label: 'Manutenção', icon: Wrench, module: 'maintenance' },
-  // Finanças
-  { href: '/dashboard/invoices', label: 'Faturas', icon: FileText, module: 'finance' },
-  { href: '/dashboard/invoicing', label: 'Faturação Universal', icon: Receipt, module: 'finance' },
-  { href: '/dashboard/payroll', label: 'Salários', icon: Banknote, module: 'finance' },
-  // Stock
-  { href: '/dashboard/stock', label: 'Stock', icon: BoxIcon, module: 'stock' },
-  { href: '/dashboard/suppliers', label: 'Fornecedores', icon: Truck, module: 'stock' },
-  // RH
-  { href: '/dashboard/hr', label: 'RH', icon: Users, module: 'hr' },
-  { href: '/dashboard/attendance', label: 'Assiduidade', icon: ClipboardCheck, module: 'hr' },
-  // Segurança Eletrónica
-  { href: '/dashboard/security-contracts', label: 'Contratos Segurança', icon: ShieldAlert, module: 'security' },
-  { href: '/dashboard/incidents', label: 'Incidentes', icon: AlertTriangle, module: 'security' },
-  { href: '/dashboard/patrols', label: 'Patrulhas', icon: Route, module: 'security' },
-  // Engenharia
-  { href: '/dashboard/projects', label: 'Projetos Engenharia', icon: HardHat, module: 'engineering' },
-  // Eletricidade
-  { href: '/dashboard/electrical-projects', label: 'Projetos Elétricos', icon: Zap, module: 'electrical' },
-  { href: '/dashboard/inspections', label: 'Inspeções', icon: Search, module: 'electrical' },
-  { href: '/dashboard/certifications', label: 'Certificações', icon: Award, module: 'electrical' },
-  // CRM
-  { href: '/dashboard/clients', label: 'Clientes', icon: UserPlus, module: 'crm' },
-  { href: '/dashboard/pipeline', label: 'Pipeline Vendas', icon: TrendingUp, module: 'crm' },
-  // Frotas
-  { href: '/dashboard/vehicles', label: 'Veículos', icon: Car, module: 'fleet' },
-  // Contratos
-  { href: '/dashboard/contracts', label: 'Contratos', icon: FileCheck, module: 'contracts' },
-  // Spa & Bem-Estar
-  { href: '/dashboard/spa', label: 'Spa', icon: Sparkles, module: 'spa' },
-  // Eventos
-  { href: '/dashboard/events', label: 'Eventos', icon: CalendarHeart, module: 'events' },
-  // Imobiliário
-  { href: '/dashboard/properties', label: 'Imóveis', icon: Home, module: 'real_estate' },
-  // Logística
-  { href: '/dashboard/shipments', label: 'Envios', icon: PackageCheck, module: 'logistics' },
-  // Educação
-  { href: '/dashboard/courses', label: 'Cursos', icon: GraduationCap, module: 'education' },
-  // Saúde
-  { href: '/dashboard/patients', label: 'Pacientes', icon: HeartPulse, module: 'healthcare' },
-  { href: '/dashboard/appointments', label: 'Consultas', icon: Stethoscope, module: 'healthcare' },
-  // Agricultura
-  { href: '/dashboard/farms', label: 'Fazendas', icon: Wheat, module: 'agriculture' },
-  // Manufatura
-  { href: '/dashboard/production', label: 'Produção', icon: Factory, module: 'manufacturing' },
-  // Consultoria
-  { href: '/dashboard/consulting', label: 'Consultoria', icon: Briefcase, module: 'consulting' },
-  // Telecomunicações
-  { href: '/dashboard/telecom', label: 'Telecom', icon: Radio, module: 'telecom' },
-  // Jurídico
-  { href: '/dashboard/legal', label: 'Jurídico', icon: Scale, module: 'legal' },
-  // Contabilidade
-  { href: '/dashboard/accounting', label: 'Contabilidade', icon: Calculator, module: 'accounting' },
-  // Relatórios & BI
-  { href: '/dashboard/reports', label: 'Relatórios', icon: BarChart3, module: 'core' },
-  // Atividades & Experiências
-  { href: '/dashboard/activities', label: 'Atividades', icon: Compass, module: 'activities' },
-  // Retalho
-  { href: '/dashboard/retail', label: 'Retalho', icon: Store, module: 'retail' },
-  // Admin (SUPER_ADMIN)
-  { href: '/dashboard/tenants', label: 'Tenants', icon: Building2, module: 'admin' },
-  { href: '/dashboard/settings', label: 'Configurações', icon: Settings, module: 'admin' },
-  { href: '/dashboard/training', label: 'Modo Formação', icon: GraduationCap, module: 'admin' },
+  // CATEGORIA: GERAL (CORE)
+  { href: '/dashboard', label: 'Painel', icon: LayoutDashboard, module: 'core', category: 'core' },
+  { href: '/dashboard/users', label: 'Utilizadores', icon: UserCircle, module: 'core', category: 'core' },
+  { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare, module: 'core', category: 'core' },
+  { href: '/dashboard/notifications', label: 'Notificações', icon: Bell, module: 'core', category: 'core' },
+  { href: '/dashboard/documents', label: 'Documentos', icon: FolderOpen, module: 'core', category: 'core' },
+  { href: '/dashboard/audit-log', label: 'Auditoria', icon: Shield, module: 'core', category: 'core' },
+  { href: '/dashboard/reports', label: 'Relatórios', icon: BarChart3, module: 'core', category: 'core' },
+
+  // CATEGORIA: FINANCEIRO (CORE)
+  { href: '/dashboard/invoicing', label: 'Faturação', icon: Receipt, module: 'finance', category: 'finance' },
+  { href: '/dashboard/invoices', label: 'Documentos Emitidos', icon: FileText, module: 'finance', category: 'finance' },
+  { href: '/dashboard/accounting', label: 'Contabilidade', icon: Calculator, module: 'finance', category: 'finance' },
+  { href: '/dashboard/legal', label: 'Jurídico', icon: Scale, module: 'finance', category: 'finance' },
+
+  // CATEGORIA: GESTÃO & RH (CORE)
+  { href: '/dashboard/hr', label: 'Recursos Humanos', icon: Users, module: 'hr', category: 'hr' },
+  { href: '/dashboard/attendance', label: 'Assiduidade', icon: ClipboardCheck, module: 'hr', category: 'hr' },
+  { href: '/dashboard/payroll', label: 'Processamento Salarial', icon: Banknote, module: 'finance', category: 'hr' },
+  { href: '/dashboard/courses', label: 'Formação', icon: GraduationCap, module: 'education', category: 'hr' },
+
+  // CATEGORIA: HOSPITALIDADE (PMS)
+  { href: '/dashboard/reservations', label: 'Reservas', icon: CalendarDays, module: 'pms', category: 'pms' },
+  { href: '/dashboard/rooms', label: 'Quartos', icon: BedDouble, module: 'pms', category: 'pms' },
+  { href: '/dashboard/tariffs', label: 'Tarifas', icon: Tag, module: 'pms', category: 'pms' },
+  { href: '/dashboard/guests', label: 'Hóspedes', icon: UserCheck, module: 'pms', category: 'pms' },
+  { href: '/dashboard/locks', label: 'Smart Locks', icon: Key, module: 'pms', category: 'pms' },
+  { href: '/dashboard/reviews', label: 'Avaliações', icon: Star, module: 'pms', category: 'pms' },
+  { href: '/dashboard/service-orders', label: 'Pedidos de Quarto', icon: ConciergeBell, module: 'pms', category: 'pms' },
+  { href: '/dashboard/spa', label: 'Spa & Bem-Estar', icon: Sparkles, module: 'spa', category: 'pms' },
+  { href: '/dashboard/events', label: 'Gestão de Eventos', icon: CalendarHeart, module: 'events', category: 'pms' },
+
+  // CATEGORIA: VENDAS & POS
+  { href: '/dashboard/pos', label: 'Frente de Caixa (POS)', icon: ShoppingCart, module: 'pos', category: 'pos' },
+  { href: '/dashboard/retail', label: 'Retalho', icon: Store, module: 'retail', category: 'pos' },
+  { href: '/dashboard/clients', label: 'CRM / Clientes', icon: UserPlus, module: 'crm', category: 'pos' },
+  { href: '/dashboard/pipeline', label: 'Pipeline de Vendas', icon: TrendingUp, module: 'crm', category: 'pos' },
+  { href: '/dashboard/activities', label: 'Atividades / Tours', icon: Compass, module: 'activities', category: 'pos' },
+
+  // CATEGORIA: OPERAÇÕES
+  { href: '/dashboard/stock', label: 'Stock / Armazém', icon: BoxIcon, module: 'stock', category: 'ops' },
+  { href: '/dashboard/products', label: 'Catálogo de Produtos', icon: Package, module: 'pos', category: 'ops' },
+  { href: '/dashboard/suppliers', label: 'Fornecedores', icon: Truck, module: 'stock', category: 'ops' },
+  { href: '/dashboard/vehicles', label: 'Frotas / Veículos', icon: Car, module: 'fleet', category: 'ops' },
+  { href: '/dashboard/shipments', label: 'Logística / Envios', icon: PackageCheck, module: 'logistics', category: 'ops' },
+  { href: '/dashboard/contracts', label: 'Gestão de Contratos', icon: FileCheck, module: 'contracts', category: 'ops' },
+
+  // CATEGORIA: ENGENHARIA & MANUTENÇÃO
+  { href: '/dashboard/maintenance', label: 'Manutenção Preventiva', icon: Wrench, module: 'engineering', category: 'eng' },
+  { href: '/dashboard/projects', label: 'Projetos Civis', icon: HardHat, module: 'engineering', category: 'eng' },
+  { href: '/dashboard/electrical-projects', label: 'Engenharia Elétrica', icon: Zap, module: 'engineering', category: 'eng' },
+  { href: '/dashboard/inspections', label: 'Inspeções Técnicas', icon: Search, module: 'engineering', category: 'eng' },
+  { href: '/dashboard/certifications', label: 'Certificações Qualidade', icon: Award, module: 'engineering', category: 'eng' },
+  { href: '/dashboard/security-contracts', label: 'Segurança Eletrónica', icon: ShieldAlert, module: 'engineering', category: 'eng' },
+  { href: '/dashboard/patrols', label: 'Rondas / Patrulhas', icon: Route, module: 'engineering', category: 'eng' },
+
+  // CATEGORIA: VERTICAL SAÚDE
+  { href: '/dashboard/patients', label: 'Pacientes', icon: HeartPulse, module: 'healthcare', category: 'vertical_health' },
+  { href: '/dashboard/appointments', label: 'Agendamento Consultas', icon: Stethoscope, module: 'healthcare', category: 'vertical_health' },
+
+  // CATEGORIA: INDÚSTRIA & AGRO
+  { href: '/dashboard/farms', label: 'Gestão Agrícola', icon: Wheat, module: 'agriculture', category: 'vertical_ind' },
+  { href: '/dashboard/production', label: 'Produção Industrial', icon: Factory, module: 'manufacturing', category: 'vertical_ind' },
+  { href: '/dashboard/consulting', label: 'Consultoria Especializada', icon: Briefcase, module: 'consulting', category: 'vertical_ind' },
+  { href: '/dashboard/telecom', label: 'Infraestrutura Telecom', icon: Radio, module: 'telecom', category: 'vertical_ind' },
+
+  // CATEGORIA: ADMINISTRAÇÃO
+  { href: '/dashboard/tenants', label: 'Gestão de Clientes (Tenants)', icon: Building2, module: 'admin', category: 'admin' },
+  { href: '/dashboard/settings', label: 'Configurações Globais', icon: Settings, module: 'admin', category: 'admin' },
+  { href: '/dashboard/properties', label: 'Património / Imóveis', icon: Home, module: 'real_estate', category: 'admin' },
 ]
 
 interface SidebarProps {
@@ -228,23 +238,42 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
         )}
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {visibleItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
+        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+          {categories.map((category) => {
+            const categoryItems = visibleItems.filter((item) => item.category === category.id)
+            if (categoryItems.length === 0) return null
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
-                )}
-              >
-                <item.icon className="h-5 w-5 shrink-0" />
-                {item.label}
-              </Link>
+              <div key={category.id} className="space-y-1">
+                {/* Cabeçalho da Categoria */}
+                <h3 className={cn(
+                  "px-3 text-xs font-bold uppercase tracking-wider",
+                  category.isCore ? "text-primary/70" : "text-gray-400"
+                )}>
+                  {category.label}
+                </h3>
+
+                <div className="mt-2 space-y-1">
+                  {categoryItems.map((item) => {
+                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                        )}
+                      >
+                        <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-primary" : "text-gray-400")} />
+                        {item.label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
             )
           })}
         </nav>

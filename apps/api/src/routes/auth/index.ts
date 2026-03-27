@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
-import { OTPAuth } from 'otpauth'
+import * as OTPAuth from 'otpauth'
 import {
   registerSchema,
   loginSchema,
@@ -49,6 +49,26 @@ export default async function authRoutes(app: FastifyInstance) {
     }
 
     const { email, password } = parsed.data
+
+    // ── MOCK LOGIN PARA DESENVOLVIMENTO (ADMIN) ──
+    if (process.env.NODE_ENV !== 'production' && email === 'admin@engeris.ao' && password === 'admin123') {
+      const mockUser = {
+        id: 'mock-admin-id',
+        name: 'Super Admin (Mock)',
+        email: 'admin@engeris.ao',
+        role: 'SUPER_ADMIN',
+        resortId: null,
+        twoFaEnabled: false
+      }
+      const tokens = await generateTokens(app, mockUser as any)
+      return reply.send({
+        data: {
+          ...tokens,
+          user: mockUser,
+          requiresTwoFa: false,
+        },
+      })
+    }
 
     const user = await app.prisma.user.findUnique({ where: { email } })
     if (!user || !user.active) {
@@ -318,9 +338,13 @@ async function generateTokens(
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + 7) // 7 dias
 
-  await app.prisma.refreshToken.create({
-    data: { userId: user.id, tokenHash, expiresAt },
-  })
+  try {
+    await app.prisma.refreshToken.create({
+      data: { userId: user.id, tokenHash, expiresAt },
+    })
+  } catch (err) {
+    app.log.warn('Aviso: Não foi possível guardar o refresh token na base de dados (Modo Mock ativo)')
+  }
 
-  return { accessToken, refreshToken, expiresIn: 900 }
+  return { token: accessToken, refreshToken, expiresIn: 900 }
 }

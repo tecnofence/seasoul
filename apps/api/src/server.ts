@@ -69,6 +69,7 @@ import legalRoutes from './routes/legal/index.js'
 import accountingRoutes from './routes/accounting/index.js'
 import activitiesRoutes from './routes/activities/index.js'
 import retailRoutes from './routes/retail/index.js'
+import adminRoutes from './routes/admin/index.js'
 
 const app = Fastify({
   logger: {
@@ -189,6 +190,7 @@ await app.register(documentsRoutes,      { prefix: '/v1/documents' })
 
 // ── ROTAS — Multi-Tenant & Módulos ─────────
 await app.register(tenantsRoutes,        { prefix: '/v1/tenants' })
+await app.register(adminRoutes,          { prefix: '/v1/admin' })
 await app.register(trainingModeRoutes,   { prefix: '/v1/training-mode' })
 
 // ── ROTAS — Módulos ENGERIS ONE ─────────────

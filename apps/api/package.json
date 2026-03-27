@@ -1,8 +1,9 @@
 {
   "name": "@seasoul/api",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --env-file ../../.env src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "vitest"

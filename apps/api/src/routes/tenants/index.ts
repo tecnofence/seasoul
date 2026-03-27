@@ -193,7 +193,7 @@ export default async function tenantsRoutes(app: FastifyInstance) {
 
     const tenant = await app.prisma.tenant.update({
       where: { id: request.params.id },
-      data: body,
+      data: body as any,
     })
 
     return reply.send({ data: tenant })

@@ -32,6 +32,7 @@ model Tenant {
   expiresAt    DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  defaultCurrency Currency @default(AOA)
 
   modules  TenantModule[]
   branches Branch[]
@@ -89,19 +90,52 @@ enum TenantPlan {
   ENTERPRISE
   CUSTOM
 }
-// ── MÓDULOS DO TENANT ────────────────────────
+// ── MÓDULOS DISPONÍVEIS (Marketplace) ─────────
+model Module {
+  id           String   @id // 'pms', 'pos', 'finance', 'healthcare', etc.
+  name         String
+  description  String?
+  basePrice    Decimal  @default(0) @db.Decimal(18, 2)
+  category     String   @default("Core") // 'Core', 'Vertical', 'Operations'
+  isAvailable  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenants      TenantModule[]
+}
+
+// ── MÓDULOS ATIVOS NO TENANT ─────────────────
 model TenantModule {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  moduleId  String   // 'core', 'pms', 'pos', 'finance', etc.
-  active    Boolean  @default(true)
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id])
+  
+  status      SubscriptionStatus @default(ACTIVE)
+  billingCycle BillingCycle      @default(MONTHLY)
+  priceAtActivation Decimal?      @db.Decimal(18, 2)
+  
+  active      Boolean  @default(true)
   activatedAt DateTime @default(now())
-  expiresAt DateTime?
-  updatedAt DateTime @updatedAt
+  expiresAt   DateTime?
+  updatedAt   DateTime @updatedAt
 
   @@unique([tenantId, moduleId])
   @@index([tenantId])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PENDING_PAYMENT
+  EXPIRED
+  CANCELED
+}
+
+enum BillingCycle {
+  FREE
+  MONTHLY
+  ANNUALLY
 }
 
 // ── FILIAL / UNIDADE ─────────────────────────
@@ -299,6 +333,8 @@ model Reservation {
   pinValidUntil      DateTime?
   totalAmount        Decimal                  @db.Decimal(15, 2) // FIX: Float → Decimal
   depositPaid        Decimal                  @db.Decimal(15, 2) @default(0) // NOVO
+  currency           Currency                 @default(AOA)
+  exchangeRate       Decimal                  @db.Decimal(10, 4) @default(1.0)
   paymentStatus      ReservationPaymentStatus @default(PENDING)  // NOVO
   notes              String?
   internalNotes      String?                  // NOVO: notas internas (não visíveis ao hóspede)
@@ -346,6 +382,7 @@ model Product {
   department String
   unitPrice  Decimal    @db.Decimal(15, 2) // FIX: Float → Decimal
   taxRate    Decimal    @db.Decimal(5, 2)  @default(14) // FIX: Float → Decimal
+  currency   Currency   @default(AOA)
   active     Boolean    @default(true)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
@@ -365,6 +402,8 @@ model Sale {
   operatorId     String?       // userId do caixa — NOVO
   totalAmount    Decimal       @db.Decimal(15, 2) // FIX: Float → Decimal
   taxAmount      Decimal       @db.Decimal(15, 2) @default(0) // FIX: Float → Decimal
+  currency       Currency      @default(AOA)
+  exchangeRate   Decimal       @db.Decimal(10, 4) @default(1.0)
   paymentMethod  PaymentMethod
   status         SaleStatus    @default(PENDING)
   invoiceNumber  String?       @unique
@@ -829,8 +868,8 @@ model Invoice {
   subtotal        Decimal        @db.Decimal(15, 2)
   taxAmount       Decimal        @db.Decimal(15, 2)
   totalAmount     Decimal        @db.Decimal(15, 2)
-  currency        String         @default("AOA")
-  exchangeRate    Decimal?       @db.Decimal(10, 4) // câmbio para multi-moeda
+  currency        Currency       @default(AOA)
+  exchangeRate    Decimal        @db.Decimal(10, 4) @default(1.0) // câmbio para multi-moeda
   // Pagamento
   paymentMethod   PaymentMethod?
   paidAt          DateTime?
@@ -2017,6 +2056,7 @@ model AccountingEntry {
   account     String               // código da conta (ex: "71.1.1")
   debit       Decimal  @db.Decimal(15, 2) @default(0)
   credit      Decimal  @db.Decimal(15, 2) @default(0)
+  currency    Currency @default(AOA)
   category    String?              // REVENUE, EXPENSE, ASSET, LIABILITY, EQUITY
   reference   String?              // FT, FR, RC, etc.
   referenceId String?
@@ -2028,4 +2068,25 @@ model AccountingEntry {
   @@index([tenantId, date])
   @@index([tenantId, account])
   @@index([tenantId, entryNumber])
+}
+
+// ── MULTI-CURRENCY & EXCHANGE RATES ──────────
+model ExchangeRate {
+  id            String   @id @default(cuid())
+  from          Currency
+  to            Currency
+  rate          Decimal  @db.Decimal(10, 6)
+  date          DateTime @default(now())
+  source        String?  // ex: "BNA", "ECB"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([from, to, date])
+}
+
+enum Currency {
+  AOA
+  USD
+  EUR
+  ZAR
 }

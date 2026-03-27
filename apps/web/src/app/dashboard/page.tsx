@@ -8,6 +8,7 @@ import { Card, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { CurrencyDisplay } from '@/components/ui/currency-display'
 import {
   DollarSign,
   FileText,

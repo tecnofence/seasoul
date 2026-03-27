@@ -44,7 +44,7 @@ const regularUser = {
 }
 
 // ── Helper ───────────────────────────────────────
-function buildApp(user = staffUser): FastifyInstance {
+function buildApp(user: any = staffUser): FastifyInstance {
   const app = Fastify()
   app.decorate('prisma', mockPrisma as any)
   app.decorate('authenticate', async (request: any, _reply: any) => {

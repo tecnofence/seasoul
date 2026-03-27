@@ -85,7 +85,7 @@ export default async function serviceOrderRoutes(app: FastifyInstance) {
         reservationId,
         guestId: reservation.guestId,
         type,
-        items: items as unknown as Record<string, unknown>[], // JSON field
+        items: items as any, // JSON field
         notes,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         totalAmount: totalAmount.greaterThan(0) ? totalAmount.toDecimalPlaces(2) : null,

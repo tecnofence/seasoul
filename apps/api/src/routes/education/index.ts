@@ -118,15 +118,16 @@ export default async function educationRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Tenant não definido' })
     }
 
-    const { price, ...rest } = parsed.data
+    const { price, startDate, endDate, instructorId, maxEnrollments, currency, notes, ...courseRest } = parsed.data
 
     const course = await app.prisma.course.create({
       data: {
-        ...rest,
+        ...courseRest,
         tenantId: user.tenantId,
         price: price !== undefined ? new Decimal(String(price)) : undefined,
-        startDate: rest.startDate ?? undefined,
-        endDate: rest.endDate ?? undefined,
+        instructor: instructorId ?? undefined,
+        maxStudents: maxEnrollments ?? undefined,
+        description: notes ?? undefined,
       },
       include: {
         _count: { select: { enrollments: true } },

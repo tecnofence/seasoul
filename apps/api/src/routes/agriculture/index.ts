@@ -137,7 +137,7 @@ export default async function agricultureRoutes(app: FastifyInstance) {
       include: {
         _count: { select: { crops: true, harvests: true } },
         crops: { orderBy: { createdAt: 'desc' }, take: 20 },
-        harvests: { orderBy: { harvestedAt: 'desc' }, take: 20 },
+        harvests: { orderBy: { harvestDate: 'desc' }, take: 20 },
       },
     })
 
@@ -209,10 +209,14 @@ export default async function agricultureRoutes(app: FastifyInstance) {
 
     const crop = await app.prisma.crop.create({
       data: {
-        ...parsed.data,
+        farmId: parsed.data.farmId,
+        name: parsed.data.name,
+        variety: parsed.data.variety,
+        area: parsed.data.areaHectares,
         tenantId: user.tenantId,
-        plantedAt: parsed.data.plantedAt ?? undefined,
+        plantedDate: parsed.data.plantedAt ?? undefined,
         expectedHarvest: parsed.data.expectedHarvest ?? undefined,
+        notes: parsed.data.notes,
       },
       include: { farm: { select: { id: true, name: true } } },
     })
@@ -262,7 +266,7 @@ export default async function agricultureRoutes(app: FastifyInstance) {
     const where: Record<string, unknown> = { tenantId: user.tenantId }
     if (farmId) where.farmId = farmId
     if (dateFrom || dateTo) {
-      where.harvestedAt = {
+      where.harvestDate = {
         ...(dateFrom ? { gte: dateFrom } : {}),
         ...(dateTo ? { lte: dateTo } : {}),
       }
@@ -273,11 +277,10 @@ export default async function agricultureRoutes(app: FastifyInstance) {
         where,
         include: {
           farm: { select: { id: true, name: true } },
-          crop: { select: { id: true, name: true, variety: true } },
         },
         skip,
         take: limit,
-        orderBy: { harvestedAt: 'desc' },
+        orderBy: { harvestDate: 'desc' },
       }),
       app.prisma.harvest.count({ where }),
     ])
@@ -311,17 +314,22 @@ export default async function agricultureRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Fazenda não encontrada neste tenant' })
     }
 
-    const { pricePerUnit, ...rest } = parsed.data
+    const { pricePerUnit, harvestedAt, cropId, ...rest } = parsed.data
 
     const harvest = await app.prisma.harvest.create({
       data: {
-        ...rest,
+        farmId: rest.farmId,
+        cropName: cropId ?? 'Sem cultura',
+        quantity: new Decimal(String(rest.quantity)),
+        unit: rest.unit,
+        quality: rest.quality ?? null,
+        notes: rest.notes ?? null,
         tenantId: user.tenantId,
-        pricePerUnit: pricePerUnit !== undefined ? new Decimal(String(pricePerUnit)) : undefined,
+        harvestDate: harvestedAt,
+        revenue: pricePerUnit !== undefined ? new Decimal(String(pricePerUnit)) : undefined,
       },
       include: {
         farm: { select: { id: true, name: true } },
-        crop: { select: { id: true, name: true, variety: true } },
       },
     })
 

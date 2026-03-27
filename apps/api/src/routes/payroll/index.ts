@@ -93,7 +93,7 @@ export default async function payrollRoutes(app: FastifyInstance) {
     }
 
     return reply.send({
-      data: { processed: results.length, errors: errors.length, results, errors },
+      data: { processed: results.length, errorCount: errors.length, results, errors },
       message: `${results.length} salários processados, ${errors.length} erros`,
     })
   })

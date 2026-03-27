@@ -7,7 +7,7 @@ import { vi } from 'vitest'
 
 // ── Mock Prisma ───────────────────────────────
 
-export function createMockPrisma() {
+export function createMockPrisma(): Record<string, any> {
   return {
     user: {
       findUnique:  vi.fn(),
@@ -93,14 +93,14 @@ export function createMockPrisma() {
       update:      vi.fn(),
       count:       vi.fn(),
     },
-    $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => {
+    $transaction: vi.fn((fn: (tx: Record<string, any>) => Promise<unknown>): Promise<unknown> => {
       return fn(createMockPrisma())
     }),
     $disconnect: vi.fn(),
   }
 }
 
-export type MockPrisma = ReturnType<typeof createMockPrisma>
+export type MockPrisma = Record<string, any>
 
 // ── Factory de App de Teste ───────────────────
 
@@ -113,7 +113,7 @@ export async function buildTestApp(overridePrisma?: Partial<MockPrisma>) {
 
   const mockPrisma = { ...createMockPrisma(), ...overridePrisma }
 
-  app.decorate('prisma', mockPrisma)
+  app.decorate('prisma', mockPrisma as any)
   app.decorate('authenticate', async (request: any, reply: any) => {
     try {
       await request.jwtVerify()
