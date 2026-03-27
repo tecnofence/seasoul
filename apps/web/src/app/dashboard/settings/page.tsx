@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -32,21 +32,23 @@ export default function SettingsPage() {
   const { data: tenant, isLoading } = useQuery({
     queryKey: ['tenant-settings'],
     queryFn: () => api.get('/tenants/me/modules').then((r) => r.data.data),
-    onSuccess: (data: any) => {
-      if (data?.modules) {
-        const modules: Record<string, boolean> = {}
-        data.modules.forEach((m: any) => {
-          modules[m.moduleId] = m.active
-        })
-        setEnabledModules(modules)
-      }
-      if (data?.logoUrl) setBranding((b) => ({ ...b, logoUrl: data.logoUrl }))
-      if (data?.primaryColor) setBranding((b) => ({ ...b, primaryColor: data.primaryColor }))
-      if (data?.nif) setBusiness((b) => ({ ...b, nif: data.nif }))
-      if (data?.address) setBusiness((b) => ({ ...b, address: data.address }))
-      if (data?.contact) setBusiness((b) => ({ ...b, contact: data.contact }))
-    },
   })
+
+  useEffect(() => {
+    if (!tenant) return
+    if (tenant.modules) {
+      const modules: Record<string, boolean> = {}
+      tenant.modules.forEach((m: any) => {
+        modules[m.moduleId] = m.active
+      })
+      setEnabledModules(modules)
+    }
+    if (tenant.logoUrl) setBranding((b) => ({ ...b, logoUrl: tenant.logoUrl }))
+    if (tenant.primaryColor) setBranding((b) => ({ ...b, primaryColor: tenant.primaryColor }))
+    if (tenant.nif) setBusiness((b) => ({ ...b, nif: tenant.nif }))
+    if (tenant.address) setBusiness((b) => ({ ...b, address: tenant.address }))
+    if (tenant.contact) setBusiness((b) => ({ ...b, contact: tenant.contact }))
+  }, [tenant])
 
   const toggleModule = (moduleId: string) => {
     setEnabledModules((prev) => ({ ...prev, [moduleId]: !prev[moduleId] }))

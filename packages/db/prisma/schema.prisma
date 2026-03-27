@@ -1180,3 +1180,418 @@ model ServiceContract {
   @@index([tenantId, status])
   @@index([tenantId, endDate])
 }
+
+// ══════════════════════════════════════════════
+// MÓDULO: SPA & BEM-ESTAR
+// ══════════════════════════════════════════════
+
+model SpaService {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  category    String               // MASSAGE, FACIAL, BODY, HAIR, NAILS, OTHER
+  duration    Int                   // minutos
+  price       Decimal  @db.Decimal(15, 2)
+  description String?
+  active      Boolean  @default(true)
+  bookings    SpaBooking[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, active])
+}
+
+model SpaBooking {
+  id          String   @id @default(cuid())
+  tenantId    String
+  serviceId   String
+  service     SpaService @relation(fields: [serviceId], references: [id])
+  clientName  String
+  clientPhone String?
+  therapist   String?
+  date        DateTime
+  status      String   @default("SCHEDULED")  // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+  notes       String?
+  totalPrice  Decimal  @db.Decimal(15, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, status])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: EVENTOS & ATIVIDADES
+// ══════════════════════════════════════════════
+
+model Event {
+  id            String   @id @default(cuid())
+  tenantId      String
+  title         String
+  description   String?
+  eventType     String               // CONFERENCE, WEDDING, PARTY, WORKSHOP, MEETING, SPORTS, CULTURAL, OTHER
+  location      String?
+  startDate     DateTime
+  endDate       DateTime?
+  maxCapacity   Int?
+  currentGuests Int      @default(0)
+  price         Decimal? @db.Decimal(15, 2)
+  status        String   @default("PLANNED")  // PLANNED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+  organizer     String?
+  contactPhone  String?
+  contactEmail  String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, startDate])
+  @@index([tenantId, status])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: IMOBILIÁRIO
+// ══════════════════════════════════════════════
+
+model Property {
+  id            String   @id @default(cuid())
+  tenantId      String
+  title         String
+  propertyType  String               // APARTMENT, HOUSE, LAND, COMMERCIAL, WAREHOUSE, OFFICE
+  purpose       String   @default("SALE")  // SALE, RENT, BOTH
+  address       String?
+  city          String?
+  area          Decimal? @db.Decimal(10, 2)  // m²
+  bedrooms      Int?
+  bathrooms     Int?
+  price         Decimal? @db.Decimal(15, 2)
+  rentPrice     Decimal? @db.Decimal(15, 2)
+  status        String   @default("AVAILABLE")  // AVAILABLE, RESERVED, SOLD, RENTED, UNAVAILABLE
+  description   String?
+  features      String[]             // piscina, garagem, varanda, etc.
+  photos        String[]
+  ownerName     String?
+  ownerPhone    String?
+  lat           Float?
+  lng           Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, propertyType])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: LOGÍSTICA & TRANSPORTE
+// ══════════════════════════════════════════════
+
+model Shipment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  trackingCode    String?
+  origin          String
+  destination     String
+  clientName      String?
+  clientPhone     String?
+  weight          Decimal? @db.Decimal(10, 2)  // kg
+  volume          Decimal? @db.Decimal(10, 3)  // m³
+  shipmentType    String               // PACKAGE, PALLET, CONTAINER, DOCUMENT, BULK
+  status          String   @default("PENDING")  // PENDING, PICKED_UP, IN_TRANSIT, DELIVERED, RETURNED, CANCELLED
+  estimatedDelivery DateTime?
+  deliveredAt     DateTime?
+  cost            Decimal? @db.Decimal(15, 2)
+  driverId        String?
+  vehicleId       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, trackingCode])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: EDUCAÇÃO & FORMAÇÃO
+// ══════════════════════════════════════════════
+
+model Course {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  code        String?
+  category    String?              // TECHNICAL, SAFETY, MANAGEMENT, LANGUAGE, CERTIFICATION, OTHER
+  instructor  String?
+  duration    Int?                 // horas
+  maxStudents Int?
+  price       Decimal? @db.Decimal(15, 2)
+  status      String   @default("ACTIVE")  // ACTIVE, INACTIVE, ARCHIVED
+  description String?
+  enrollments Enrollment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model Enrollment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  courseId     String
+  course      Course   @relation(fields: [courseId], references: [id])
+  studentName String
+  studentEmail String?
+  studentPhone String?
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+  grade       Decimal? @db.Decimal(5, 2)
+  status      String   @default("ENROLLED")  // ENROLLED, IN_PROGRESS, COMPLETED, DROPPED, FAILED
+  certificateUrl String?
+  notes       String?
+
+  @@index([tenantId, courseId])
+  @@index([tenantId, status])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: SAÚDE & CLÍNICA
+// ══════════════════════════════════════════════
+
+model Patient {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  nif         String?
+  birthDate   DateTime?
+  gender      String?              // M, F, OTHER
+  phone       String?
+  email       String?
+  address     String?
+  bloodType   String?
+  allergies   String?
+  notes       String?
+  appointments Appointment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, name])
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  doctorName  String?
+  specialty   String?              // GENERAL, CARDIOLOGY, DERMATOLOGY, DENTAL, PHYSIOTHERAPY, OTHER
+  date        DateTime
+  duration    Int      @default(30)  // minutos
+  status      String   @default("SCHEDULED")  // SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+  diagnosis   String?
+  prescription String?
+  notes       String?
+  cost        Decimal? @db.Decimal(15, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, patientId])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: AGRICULTURA
+// ══════════════════════════════════════════════
+
+model Farm {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  location    String?
+  totalArea   Decimal? @db.Decimal(10, 2)  // hectares
+  crops       Crop[]
+  harvests    Harvest[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Crop {
+  id          String   @id @default(cuid())
+  tenantId    String
+  farmId      String
+  farm        Farm     @relation(fields: [farmId], references: [id])
+  name        String               // Milho, Café, Banana, Mandioca, etc.
+  variety     String?
+  area        Decimal? @db.Decimal(10, 2)  // hectares
+  plantedDate DateTime?
+  expectedHarvest DateTime?
+  status      String   @default("PLANTED")  // PLANTED, GROWING, READY, HARVESTED, FAILED
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, farmId])
+}
+
+model Harvest {
+  id          String   @id @default(cuid())
+  tenantId    String
+  farmId      String
+  farm        Farm     @relation(fields: [farmId], references: [id])
+  cropName    String
+  quantity    Decimal  @db.Decimal(10, 2)  // kg ou toneladas
+  unit        String   @default("kg")
+  quality     String?              // A, B, C
+  harvestDate DateTime
+  revenue     Decimal? @db.Decimal(15, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, farmId])
+  @@index([tenantId, harvestDate])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: RETALHO & MANUFATURA
+// ══════════════════════════════════════════════
+
+model ProductionOrder {
+  id            String   @id @default(cuid())
+  tenantId      String
+  orderNumber   String?
+  productName   String
+  quantity      Decimal  @db.Decimal(10, 2)
+  unit          String   @default("un")
+  priority      String   @default("NORMAL")  // LOW, NORMAL, HIGH, URGENT
+  status        String   @default("PLANNED")  // PLANNED, IN_PRODUCTION, QUALITY_CHECK, COMPLETED, CANCELLED
+  startDate     DateTime?
+  expectedEnd   DateTime?
+  completedAt   DateTime?
+  cost          Decimal? @db.Decimal(15, 2)
+  supervisor    String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: CONSULTORIA & SERVIÇOS PROFISSIONAIS
+// ══════════════════════════════════════════════
+
+model ConsultingProject {
+  id            String   @id @default(cuid())
+  tenantId      String
+  title         String
+  clientName    String
+  projectType   String               // STRATEGY, TECHNOLOGY, MANAGEMENT, FINANCIAL, LEGAL, AUDIT, OTHER
+  startDate     DateTime
+  endDate       DateTime?
+  budget        Decimal? @db.Decimal(15, 2)
+  hourlyRate    Decimal? @db.Decimal(10, 2)
+  totalHours    Decimal? @db.Decimal(10, 2)
+  status        String   @default("ACTIVE")  // ACTIVE, ON_HOLD, COMPLETED, CANCELLED
+  teamLead      String?
+  deliverables  String[]
+  notes         String?
+  timeLogs      TimeLog[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model TimeLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  projectId   String
+  project     ConsultingProject @relation(fields: [projectId], references: [id])
+  userName    String
+  date        DateTime
+  hours       Decimal  @db.Decimal(5, 2)
+  description String?
+  billable    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, projectId])
+  @@index([tenantId, date])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: TELECOMUNICAÇÕES
+// ══════════════════════════════════════════════
+
+model TelecomSubscription {
+  id            String   @id @default(cuid())
+  tenantId      String
+  clientName    String
+  clientPhone   String?
+  planName      String
+  planType      String               // MOBILE, FIXED, INTERNET, TV, BUNDLE
+  monthlyValue  Decimal  @db.Decimal(15, 2)
+  startDate     DateTime
+  endDate       DateTime?
+  status        String   @default("ACTIVE")  // ACTIVE, SUSPENDED, CANCELLED, EXPIRED
+  simNumber     String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: JURÍDICO & COMPLIANCE
+// ══════════════════════════════════════════════
+
+model LegalCase {
+  id          String   @id @default(cuid())
+  tenantId    String
+  caseNumber  String?
+  title       String
+  caseType    String               // CIVIL, CRIMINAL, LABOR, TAX, COMMERCIAL, ADMINISTRATIVE, CONTRACT, OTHER
+  clientName  String
+  clientNif   String?
+  court       String?
+  judge       String?
+  lawyer      String
+  status      String   @default("OPEN")  // OPEN, IN_PROGRESS, HEARING, APPEALED, CLOSED, ARCHIVED
+  priority    String   @default("NORMAL")  // LOW, NORMAL, HIGH, URGENT
+  filingDate  DateTime?
+  nextHearing DateTime?
+  outcome     String?
+  fees        Decimal? @db.Decimal(15, 2)
+  notes       String?
+  documents   String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, caseNumber])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: CONTABILIDADE
+// ══════════════════════════════════════════════
+
+model AccountingEntry {
+  id          String   @id @default(cuid())
+  tenantId    String
+  entryNumber String?
+  date        DateTime
+  description String
+  account     String               // código da conta (ex: "71.1.1")
+  debit       Decimal  @db.Decimal(15, 2) @default(0)
+  credit      Decimal  @db.Decimal(15, 2) @default(0)
+  category    String?              // REVENUE, EXPENSE, ASSET, LIABILITY, EQUITY
+  reference   String?              // FT, FR, RC, etc.
+  referenceId String?
+  reconciled  Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, account])
+}
