@@ -42,6 +42,15 @@ import documentsRoutes from './routes/documents/index.js'
 import tenantsRoutes from './routes/tenants/index.js'
 import trainingModeRoutes from './routes/training-mode/index.js'
 
+// Rotas — Módulos ENGERIS ONE
+import invoicingRoutes from './routes/invoicing/index.js'
+import securityRoutes from './routes/security/index.js'
+import engineeringRoutes from './routes/engineering/index.js'
+import electricalRoutes from './routes/electrical/index.js'
+import crmRoutes from './routes/crm/index.js'
+import fleetRoutes from './routes/fleet/index.js'
+import contractsRoutes from './routes/contracts/index.js'
+
 const app = Fastify({
   logger: {
     transport: {
@@ -132,6 +141,15 @@ await app.register(documentsRoutes,      { prefix: '/v1/documents' })
 // ── ROTAS — Multi-Tenant & Módulos ─────────
 await app.register(tenantsRoutes,        { prefix: '/v1/tenants' })
 await app.register(trainingModeRoutes,   { prefix: '/v1/training-mode' })
+
+// ── ROTAS — Módulos ENGERIS ONE ─────────────
+await app.register(invoicingRoutes,     { prefix: '/v1/invoicing' })
+await app.register(securityRoutes,      { prefix: '/v1/security' })
+await app.register(engineeringRoutes,   { prefix: '/v1/engineering' })
+await app.register(electricalRoutes,    { prefix: '/v1/electrical' })
+await app.register(crmRoutes,           { prefix: '/v1/crm' })
+await app.register(fleetRoutes,         { prefix: '/v1/fleet' })
+await app.register(contractsRoutes,     { prefix: '/v1/contracts' })
 
 // ── Webhooks (TODO) ──────────────────────────
 // await app.register(seamWebhookRoutes, { prefix: '/webhooks/seam' })

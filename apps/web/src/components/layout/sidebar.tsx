@@ -34,6 +34,18 @@ import {
   GraduationCap,
   LogOut,
   X,
+  Receipt,
+  ShieldAlert,
+  AlertTriangle,
+  Route,
+  HardHat,
+  Zap,
+  Search,
+  Award,
+  UserPlus,
+  TrendingUp,
+  Car,
+  FileCheck,
   type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/lib/auth'
@@ -72,6 +84,7 @@ const allNavItems: NavItem[] = [
   { href: '/dashboard/maintenance', label: 'Manutenção', icon: Wrench, module: 'maintenance' },
   // Finanças
   { href: '/dashboard/invoices', label: 'Faturas', icon: FileText, module: 'finance' },
+  { href: '/dashboard/invoicing', label: 'Faturação Universal', icon: Receipt, module: 'finance' },
   { href: '/dashboard/payroll', label: 'Salários', icon: Banknote, module: 'finance' },
   // Stock
   { href: '/dashboard/stock', label: 'Stock', icon: BoxIcon, module: 'stock' },
@@ -79,6 +92,23 @@ const allNavItems: NavItem[] = [
   // RH
   { href: '/dashboard/hr', label: 'RH', icon: Users, module: 'hr' },
   { href: '/dashboard/attendance', label: 'Assiduidade', icon: ClipboardCheck, module: 'hr' },
+  // Segurança Eletrónica
+  { href: '/dashboard/security-contracts', label: 'Contratos Segurança', icon: ShieldAlert, module: 'security' },
+  { href: '/dashboard/incidents', label: 'Incidentes', icon: AlertTriangle, module: 'security' },
+  { href: '/dashboard/patrols', label: 'Patrulhas', icon: Route, module: 'security' },
+  // Engenharia
+  { href: '/dashboard/projects', label: 'Projetos Engenharia', icon: HardHat, module: 'engineering' },
+  // Eletricidade
+  { href: '/dashboard/electrical-projects', label: 'Projetos Elétricos', icon: Zap, module: 'electrical' },
+  { href: '/dashboard/inspections', label: 'Inspeções', icon: Search, module: 'electrical' },
+  { href: '/dashboard/certifications', label: 'Certificações', icon: Award, module: 'electrical' },
+  // CRM
+  { href: '/dashboard/clients', label: 'Clientes', icon: UserPlus, module: 'crm' },
+  { href: '/dashboard/pipeline', label: 'Pipeline Vendas', icon: TrendingUp, module: 'crm' },
+  // Frotas
+  { href: '/dashboard/vehicles', label: 'Veículos', icon: Car, module: 'fleet' },
+  // Contratos
+  { href: '/dashboard/contracts', label: 'Contratos', icon: FileCheck, module: 'contracts' },
   // Admin (SUPER_ADMIN)
   { href: '/dashboard/tenants', label: 'Tenants', icon: Building2, module: 'admin' },
   { href: '/dashboard/settings', label: 'Configurações', icon: Settings, module: 'admin' },

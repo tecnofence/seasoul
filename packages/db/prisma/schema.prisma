@@ -727,3 +727,456 @@ enum InvoiceDocType {
   AM    // Auto de Medição
   CS    // Contrato de Serviço
 }
+
+// ══════════════════════════════════════════════
+// MÓDULO: SEGURANÇA ELETRÓNICA (SEC)
+// ══════════════════════════════════════════════
+
+// ── CONTRATOS DE SEGURANÇA ──────────────────
+model SecurityContract {
+  id            String              @id @default(cuid())
+  tenantId      String
+  branchId      String?
+  clientName    String
+  clientNif     String?
+  clientAddress String?
+  clientPhone   String?
+  clientEmail   String?
+  contractType  SecurityContractType
+  startDate     DateTime
+  endDate       DateTime?
+  renewAuto     Boolean             @default(true)
+  monthlyValue  Decimal             @db.Decimal(15, 2)
+  currency      String              @default("AOA")
+  status        ContractStatus      @default(ACTIVE)
+  notes         String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  installations SecurityInstallation[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, endDate])
+}
+
+enum SecurityContractType { MONITORING PATROL CCTV ALARM ACCESS_CONTROL MIXED }
+enum ContractStatus { DRAFT ACTIVE SUSPENDED EXPIRED CANCELLED }
+
+// ── INSTALAÇÕES DE EQUIPAMENTOS ─────────────
+model SecurityInstallation {
+  id           String              @id @default(cuid())
+  tenantId     String
+  contractId   String?
+  contract     SecurityContract?   @relation(fields: [contractId], references: [id])
+  clientName   String
+  address      String
+  lat          Float?
+  lng          Float?
+  installationType SecurityInstallationType
+  equipmentList Json               // [{ name, brand, model, serial, qty }]
+  status       InstallationStatus  @default(PLANNED)
+  scheduledDate DateTime?
+  completedDate DateTime?
+  assignedTo   String?             // employeeId / técnico
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([tenantId, status])
+  @@index([contractId])
+}
+
+enum SecurityInstallationType { CCTV ALARM INTERCOM ACCESS_CONTROL FIRE_DETECTION ELECTRIC_FENCE MIXED }
+enum InstallationStatus { PLANNED IN_PROGRESS COMPLETED CANCELLED }
+
+// ── INCIDENTES / OCORRÊNCIAS ────────────────
+model SecurityIncident {
+  id           String            @id @default(cuid())
+  tenantId     String
+  branchId     String?
+  contractId   String?
+  type         IncidentType
+  severity     IncidentSeverity  @default(MEDIUM)
+  title        String
+  description  String
+  location     String?
+  lat          Float?
+  lng          Float?
+  reportedBy   String?
+  assignedTo   String?
+  status       IncidentStatus    @default(OPEN)
+  resolvedAt   DateTime?
+  resolution   String?
+  photos       String[]          // URLs de fotos
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, severity])
+  @@index([tenantId, createdAt])
+}
+
+enum IncidentType { INTRUSION THEFT VANDALISM FIRE EQUIPMENT_FAILURE ALARM_TRIGGER ACCESS_VIOLATION OTHER }
+enum IncidentSeverity { LOW MEDIUM HIGH CRITICAL }
+enum IncidentStatus { OPEN INVESTIGATING IN_PROGRESS RESOLVED CLOSED }
+
+// ── RONDAS DE SEGURANÇA ──────────────────────
+model SecurityPatrol {
+  id           String        @id @default(cuid())
+  tenantId     String
+  branchId     String?
+  guardId      String                // employeeId
+  guardName    String
+  route        String?               // nome da rota
+  startedAt    DateTime
+  endedAt      DateTime?
+  status       PatrolStatus  @default(IN_PROGRESS)
+  checkpoints  Json          @default("[]") // [{ name, lat, lng, checkedAt, notes, photo }]
+  notes        String?
+  createdAt    DateTime      @default(now())
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+enum PatrolStatus { SCHEDULED IN_PROGRESS COMPLETED INTERRUPTED }
+
+// ══════════════════════════════════════════════
+// MÓDULO: ENGENHARIA & CONSTRUÇÃO (ENG)
+// ══════════════════════════════════════════════
+
+// ── PROJETOS ────────────────────────────────
+model EngineeringProject {
+  id            String          @id @default(cuid())
+  tenantId      String
+  branchId      String?
+  name          String
+  code          String?                  // código interno do projeto
+  clientName    String
+  clientNif     String?
+  clientPhone   String?
+  clientEmail   String?
+  projectType   ProjectType
+  description   String?
+  address       String?
+  lat           Float?
+  lng           Float?
+  budget        Decimal?        @db.Decimal(15, 2)
+  currency      String          @default("AOA")
+  startDate     DateTime?
+  estimatedEnd  DateTime?
+  actualEnd     DateTime?
+  status        ProjectStatus   @default(PLANNING)
+  managerId     String?                  // employeeId — gestor de projeto
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  works         ConstructionWork[]
+  budgetItems   BudgetItem[]
+  measurements  WorkMeasurement[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, projectType])
+}
+
+enum ProjectType { CONSTRUCTION RENOVATION MAINTENANCE DESIGN CONSULTATION INSPECTION OTHER }
+enum ProjectStatus { PLANNING APPROVED IN_PROGRESS ON_HOLD COMPLETED CANCELLED }
+
+// ── OBRAS ───────────────────────────────────
+model ConstructionWork {
+  id           String         @id @default(cuid())
+  tenantId     String
+  projectId    String
+  project      EngineeringProject @relation(fields: [projectId], references: [id])
+  name         String
+  description  String?
+  phase        String?                 // "Fundação", "Estrutura", "Acabamentos"
+  startDate    DateTime?
+  endDate      DateTime?
+  progress     Int            @default(0) // 0-100%
+  status       WorkStatus     @default(PENDING)
+  assignedTeam String?                 // nome da equipa
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([tenantId, projectId])
+  @@index([status])
+}
+
+enum WorkStatus { PENDING IN_PROGRESS COMPLETED BLOCKED CANCELLED }
+
+// ── ORÇAMENTOS TÉCNICOS (BQ) ────────────────
+model BudgetItem {
+  id           String  @id @default(cuid())
+  tenantId     String
+  projectId    String
+  project      EngineeringProject @relation(fields: [projectId], references: [id])
+  code         String?                // código do item (ex: "1.2.3")
+  description  String
+  unit         String                 // "m²", "m³", "un", "kg", "ml", etc.
+  quantity     Decimal @db.Decimal(10, 3)
+  unitPrice    Decimal @db.Decimal(15, 2)
+  total        Decimal @db.Decimal(15, 2)
+  category     String?                // "Material", "Mão de Obra", "Equipamento"
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId, projectId])
+}
+
+// ── AUTOS DE MEDIÇÃO ────────────────────────
+model WorkMeasurement {
+  id           String   @id @default(cuid())
+  tenantId     String
+  projectId    String
+  project      EngineeringProject @relation(fields: [projectId], references: [id])
+  number       Int                     // número sequencial do auto
+  period       String                  // "Março 2026"
+  measuredBy   String?                 // técnico responsável
+  approvedBy   String?
+  approvedAt   DateTime?
+  items        Json                    // [{ budgetItemId, description, unit, qty, unitPrice, total }]
+  subtotal     Decimal  @db.Decimal(15, 2)
+  taxAmount    Decimal  @db.Decimal(15, 2)
+  totalAmount  Decimal  @db.Decimal(15, 2)
+  status       MeasurementStatus @default(DRAFT)
+  invoiceId    String?                 // ligação à fatura gerada
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId, projectId])
+  @@index([status])
+}
+
+enum MeasurementStatus { DRAFT SUBMITTED APPROVED INVOICED REJECTED }
+
+// ══════════════════════════════════════════════
+// MÓDULO: ELETRICIDADE & ENERGIA (ELEC)
+// ══════════════════════════════════════════════
+
+// ── PROJETOS ELÉTRICOS ──────────────────────
+model ElectricalProject {
+  id            String          @id @default(cuid())
+  tenantId      String
+  branchId      String?
+  name          String
+  clientName    String
+  clientNif     String?
+  clientPhone   String?
+  projectType   ElecProjectType
+  voltageLevel  VoltageLevel    @default(LOW)
+  address       String?
+  description   String?
+  budget        Decimal?        @db.Decimal(15, 2)
+  currency      String          @default("AOA")
+  startDate     DateTime?
+  estimatedEnd  DateTime?
+  status        ProjectStatus   @default(PLANNING)
+  assignedTo    String?
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  inspections   ElectricalInspection[]
+  certifications ElectricalCertification[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, projectType])
+}
+
+enum ElecProjectType { NEW_INSTALLATION RENOVATION EXPANSION MAINTENANCE EMERGENCY }
+enum VoltageLevel { LOW MEDIUM HIGH }
+
+// ── INSPEÇÕES ELÉTRICAS ─────────────────────
+model ElectricalInspection {
+  id           String            @id @default(cuid())
+  tenantId     String
+  projectId    String?
+  project      ElectricalProject? @relation(fields: [projectId], references: [id])
+  address      String
+  clientName   String
+  inspectorId  String?                  // employeeId
+  inspectorName String?
+  inspectionType InspectionType
+  scheduledDate DateTime?
+  completedDate DateTime?
+  result       InspectionResult?
+  checklist    Json              @default("[]") // [{ item, passed, notes }]
+  findings     String?
+  photos       String[]
+  status       InspectionStatus  @default(SCHEDULED)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, scheduledDate])
+}
+
+enum InspectionType { INITIAL PERIODIC EXTRAORDINARY POST_INCIDENT }
+enum InspectionResult { APPROVED APPROVED_WITH_CONDITIONS REJECTED }
+enum InspectionStatus { SCHEDULED IN_PROGRESS COMPLETED CANCELLED }
+
+// ── CERTIFICAÇÕES ELÉTRICAS ─────────────────
+model ElectricalCertification {
+  id             String            @id @default(cuid())
+  tenantId       String
+  projectId      String?
+  project        ElectricalProject? @relation(fields: [projectId], references: [id])
+  clientName     String
+  address        String
+  certNumber     String?           @unique
+  certType       CertificationType
+  issuedAt       DateTime?
+  expiresAt      DateTime?
+  issuedBy       String?                 // técnico responsável
+  status         CertificationStatus @default(PENDING)
+  pdfUrl         String?
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, expiresAt])
+}
+
+enum CertificationType { INSTALLATION_CERT INSPECTION_CERT COMPLIANCE_CERT ENERGY_CERT }
+enum CertificationStatus { PENDING ISSUED EXPIRED REVOKED }
+
+// ══════════════════════════════════════════════
+// MÓDULO: CRM & CLIENTES
+// ══════════════════════════════════════════════
+
+model Client {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  nif         String?
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  country     String?  @default("AO")
+  type        ClientType @default(INDIVIDUAL)
+  source      String?             // como conheceu
+  notes       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deals       Deal[]
+
+  @@index([tenantId, active])
+  @@index([tenantId, name])
+}
+
+enum ClientType { INDIVIDUAL COMPANY GOVERNMENT }
+
+// ── PIPELINE DE VENDAS ──────────────────────
+model Deal {
+  id          String     @id @default(cuid())
+  tenantId    String
+  clientId    String
+  client      Client     @relation(fields: [clientId], references: [id])
+  title       String
+  value       Decimal?   @db.Decimal(15, 2)
+  currency    String     @default("AOA")
+  stage       DealStage  @default(LEAD)
+  probability Int        @default(0)    // 0-100%
+  assignedTo  String?                   // userId
+  expectedClose DateTime?
+  closedAt    DateTime?
+  lostReason  String?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([tenantId, stage])
+  @@index([tenantId, clientId])
+}
+
+enum DealStage { LEAD QUALIFIED PROPOSAL NEGOTIATION WON LOST }
+
+// ══════════════════════════════════════════════
+// MÓDULO: FROTAS & LOGÍSTICA
+// ══════════════════════════════════════════════
+
+model Vehicle {
+  id           String        @id @default(cuid())
+  tenantId     String
+  branchId     String?
+  plate        String
+  brand        String
+  model        String
+  year         Int?
+  type         VehicleType
+  fuelType     FuelType      @default(DIESEL)
+  mileage      Int           @default(0)
+  status       VehicleStatus @default(AVAILABLE)
+  assignedTo   String?                  // driverId
+  insuranceExp DateTime?
+  inspectionExp DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  fuelLogs     FuelLog[]
+
+  @@unique([tenantId, plate])
+  @@index([tenantId, status])
+}
+
+enum VehicleType { CAR VAN TRUCK MOTORCYCLE BUS EQUIPMENT }
+enum FuelType { DIESEL GASOLINE ELECTRIC HYBRID }
+enum VehicleStatus { AVAILABLE IN_USE MAINTENANCE DECOMMISSIONED }
+
+model FuelLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  vehicleId  String
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id])
+  driverId   String?
+  driverName String?
+  date       DateTime
+  liters     Decimal  @db.Decimal(8, 2)
+  pricePerLiter Decimal @db.Decimal(10, 2)
+  totalCost  Decimal  @db.Decimal(15, 2)
+  mileage    Int
+  station    String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, vehicleId])
+  @@index([tenantId, date])
+}
+
+// ══════════════════════════════════════════════
+// MÓDULO: CONTRATOS & JURÍDICO
+// ══════════════════════════════════════════════
+
+model ServiceContract {
+  id            String          @id @default(cuid())
+  tenantId      String
+  clientName    String
+  clientNif     String?
+  title         String
+  description   String?
+  contractType  String                // "Manutenção", "Segurança", "Limpeza", etc.
+  startDate     DateTime
+  endDate       DateTime?
+  renewAuto     Boolean         @default(false)
+  renewDaysBefore Int           @default(30)
+  monthlyValue  Decimal?        @db.Decimal(15, 2)
+  totalValue    Decimal?        @db.Decimal(15, 2)
+  currency      String          @default("AOA")
+  status        ContractStatus  @default(ACTIVE)
+  pdfUrl        String?
+  alertSent     Boolean         @default(false)
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, endDate])
+}
