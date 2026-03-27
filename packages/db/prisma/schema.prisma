@@ -83,8 +83,12 @@ model Tenant {
   @@index([active])
 }
 
-enum TenantPlan { STARTER PROFESSIONAL ENTERPRISE CUSTOM }
-
+enum TenantPlan {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
 // ── MÓDULOS DO TENANT ────────────────────────
 model TenantModule {
   id        String   @id @default(cuid())
@@ -182,7 +186,6 @@ enum UserRole {
   HR_MANAGER
   STAFF
 }
-
 // ── REFRESH TOKENS ────────────────────────────
 // FIX: permite revogar tokens sem esperar expiração (segurança)
 model RefreshToken {
@@ -241,9 +244,18 @@ model Room {
   @@index([resortId, type])
 }
 
-enum RoomType   { STANDARD SUPERIOR SUITE VILLA }
-enum RoomStatus { AVAILABLE OCCUPIED MAINTENANCE CLEANING }
-
+enum RoomType {
+  STANDARD
+  SUPERIOR
+  SUITE
+  VILLA
+}
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  CLEANING
+}
 // ── TARIFAS ───────────────────────────────────
 // NOVO: gestão de preços sazonais e categorias tarifárias
 model Tariff {
@@ -304,10 +316,28 @@ model Reservation {
   @@index([guestEmail])
 }
 
-enum ReservationStatus        { CONFIRMED CHECKED_IN CHECKED_OUT CANCELLED NO_SHOW }
-enum ReservationPaymentStatus { PENDING PARTIAL PAID REFUNDED }
-enum BookingSource            { DIRECT WEBSITE PHONE BOOKING_COM EXPEDIA AIRBNB OTHER }
-
+enum ReservationStatus {
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+enum ReservationPaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  REFUNDED
+}
+enum BookingSource {
+  DIRECT
+  WEBSITE
+  PHONE
+  BOOKING_COM
+  EXPEDIA
+  AIRBNB
+  OTHER
+}
 // ── PRODUTOS ─────────────────────────────────
 model Product {
   id         String     @id @default(cuid())
@@ -356,7 +386,7 @@ model Sale {
 model SaleItem {
   id        String  @id @default(cuid())
   saleId    String
-  sale      Sale    @relation(fields: [saleId], references: [id])
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
   productId String
   product   Product @relation(fields: [productId], references: [id])
   qty       Int
@@ -367,9 +397,17 @@ model SaleItem {
   @@index([saleId])
 }
 
-enum PaymentMethod { CASH CARD ROOM_CHARGE TRANSFER }
-enum SaleStatus    { PENDING INVOICED CANCELLED }
-
+enum PaymentMethod {
+  CASH
+  CARD
+  ROOM_CHARGE
+  TRANSFER
+}
+enum SaleStatus {
+  PENDING
+  INVOICED
+  CANCELLED
+}
 // ── STOCK ─────────────────────────────────────
 model StockItem {
   id         String          @id @default(cuid())
@@ -404,8 +442,11 @@ model StockMovement {
   @@index([stockItemId, createdAt])
 }
 
-enum MovementType { IN OUT ADJUSTMENT }
-
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
 // ── FORNECEDORES ──────────────────────────────
 // NOVO: necessário para gestão de compras e rastreabilidade
 model Supplier {
@@ -474,8 +515,12 @@ model AttendanceRecord {
   @@index([employeeId, createdAt])
 }
 
-enum AttendanceType { ENTRY EXIT BREAK_START BREAK_END }
-
+enum AttendanceType {
+  ENTRY
+  EXIT
+  BREAK_START
+  BREAK_END
+}
 // ── SALÁRIOS ──────────────────────────────────
 model Payroll {
   id            String    @id @default(cuid())
@@ -516,9 +561,18 @@ model MaintenanceTicket {
   @@index([roomId, status])
 }
 
-enum TicketPriority { LOW MEDIUM HIGH URGENT }
-enum TicketStatus   { OPEN IN_PROGRESS RESOLVED CLOSED }
-
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
 // ── AVALIAÇÕES ────────────────────────────────
 // NOVO: pedido no Sprint 3, agora no schema
 model GuestReview {
@@ -571,9 +625,22 @@ model RoomServiceOrder {
   @@index([reservationId])
 }
 
-enum ServiceOrderType   { ROOM_SERVICE HOUSEKEEPING SPA RESTAURANT ACTIVITY TRANSPORT OTHER }
-enum ServiceOrderStatus { PENDING CONFIRMED IN_PROGRESS COMPLETED CANCELLED }
-
+enum ServiceOrderType {
+  ROOM_SERVICE
+  HOUSEKEEPING
+  SPA
+  RESTAURANT
+  ACTIVITY
+  TRANSPORT
+  OTHER
+}
+enum ServiceOrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
 // ── CHAT ──────────────────────────────────────
 // NOVO: WebSocket chat hóspede ↔ receção (Sprint 3)
 model ChatMessage {
@@ -591,8 +658,10 @@ model ChatMessage {
   @@index([reservationId, createdAt])
 }
 
-enum SenderType { GUEST STAFF }
-
+enum SenderType {
+  GUEST
+  STAFF
+}
 // ── NOTIFICAÇÕES ─────────────────────────────
 // NOVO: rastreio de push/SMS/email enviados
 model Notification {
@@ -619,14 +688,36 @@ model Notification {
   @@index([createdAt])
 }
 
-enum NotificationType    { RESERVATION_CONFIRMED RESERVATION_REMINDER CHECKIN_READY PIN_GENERATED CHECKOUT_REMINDER INVOICE_READY STOCK_ALERT ATTENDANCE_MISSING PAYROLL_PROCESSED MAINTENANCE_ASSIGNED }
-enum NotificationChannel { PUSH SMS EMAIL IN_APP }
-enum NotificationStatus  { PENDING SENT DELIVERED READ FAILED }
-
+enum NotificationType {
+  RESERVATION_CONFIRMED
+  RESERVATION_REMINDER
+  CHECKIN_READY
+  PIN_GENERATED
+  CHECKOUT_REMINDER
+  INVOICE_READY
+  STOCK_ALERT
+  ATTENDANCE_MISSING
+  PAYROLL_PROCESSED
+  MAINTENANCE_ASSIGNED
+}
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+  IN_APP
+}
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
 // ── REGRAS DE ALERTAS ─────────────────────────
 model AlertRule {
   id          String   @id @default(cuid())
   tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   name        String
   module      String   // 'contracts', 'stock', 'invoicing', 'security', 'fleet', 'hr', 'maintenance', 'pms'
   alertType   String?  // Tipo predefinido: CONTRACT_EXPIRING_30D, STOCK_BELOW_MINIMUM, etc.
@@ -680,8 +771,15 @@ model Document {
   @@index([entityType, entityId])
 }
 
-enum DocumentType { ID_CARD PASSPORT CONTRACT INVOICE MEDICAL VISA OTHER }
-
+enum DocumentType {
+  ID_CARD
+  PASSPORT
+  CONTRACT
+  INVOICE
+  MEDICAL
+  VISA
+  OTHER
+}
 // ══════════════════════════════════════════════
 // FATURAÇÃO UNIVERSAL & MODO FORMAÇÃO
 // ══════════════════════════════════════════════
@@ -793,7 +891,6 @@ enum InvoiceDocType {
   AM    // Auto de Medição
   CS    // Contrato de Serviço
 }
-
 // ══════════════════════════════════════════════
 // MÓDULO: SEGURANÇA ELETRÓNICA (SEC)
 // ══════════════════════════════════════════════
@@ -826,9 +923,21 @@ model SecurityContract {
   @@index([tenantId, endDate])
 }
 
-enum SecurityContractType { MONITORING PATROL CCTV ALARM ACCESS_CONTROL MIXED }
-enum ContractStatus { DRAFT ACTIVE SUSPENDED EXPIRED CANCELLED }
-
+enum SecurityContractType {
+  MONITORING
+  PATROL
+  CCTV
+  ALARM
+  ACCESS_CONTROL
+  MIXED
+}
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  CANCELLED
+}
 // ── INSTALAÇÕES DE EQUIPAMENTOS ─────────────
 model SecurityInstallation {
   id           String              @id @default(cuid())
@@ -854,9 +963,21 @@ model SecurityInstallation {
   @@index([contractId])
 }
 
-enum SecurityInstallationType { CCTV ALARM INTERCOM ACCESS_CONTROL FIRE_DETECTION ELECTRIC_FENCE MIXED }
-enum InstallationStatus { PLANNED IN_PROGRESS COMPLETED CANCELLED }
-
+enum SecurityInstallationType {
+  CCTV
+  ALARM
+  INTERCOM
+  ACCESS_CONTROL
+  FIRE_DETECTION
+  ELECTRIC_FENCE
+  MIXED
+}
+enum InstallationStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
 // ── INCIDENTES / OCORRÊNCIAS ────────────────
 model SecurityIncident {
   id           String            @id @default(cuid())
@@ -885,10 +1006,29 @@ model SecurityIncident {
   @@index([tenantId, createdAt])
 }
 
-enum IncidentType { INTRUSION THEFT VANDALISM FIRE EQUIPMENT_FAILURE ALARM_TRIGGER ACCESS_VIOLATION OTHER }
-enum IncidentSeverity { LOW MEDIUM HIGH CRITICAL }
-enum IncidentStatus { OPEN INVESTIGATING IN_PROGRESS RESOLVED CLOSED }
-
+enum IncidentType {
+  INTRUSION
+  THEFT
+  VANDALISM
+  FIRE
+  EQUIPMENT_FAILURE
+  ALARM_TRIGGER
+  ACCESS_VIOLATION
+  OTHER
+}
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
 // ── RONDAS DE SEGURANÇA ──────────────────────
 model SecurityPatrol {
   id           String        @id @default(cuid())
@@ -910,8 +1050,12 @@ model SecurityPatrol {
   @@index([tenantId, createdAt])
 }
 
-enum PatrolStatus { SCHEDULED IN_PROGRESS COMPLETED INTERRUPTED }
-
+enum PatrolStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  INTERRUPTED
+}
 // ══════════════════════════════════════════════
 // MÓDULO: ENGENHARIA & CONSTRUÇÃO (ENG)
 // ══════════════════════════════════════════════
@@ -952,9 +1096,23 @@ model EngineeringProject {
   @@index([tenantId, projectType])
 }
 
-enum ProjectType { CONSTRUCTION RENOVATION MAINTENANCE DESIGN CONSULTATION INSPECTION OTHER }
-enum ProjectStatus { PLANNING APPROVED IN_PROGRESS ON_HOLD COMPLETED CANCELLED }
-
+enum ProjectType {
+  CONSTRUCTION
+  RENOVATION
+  MAINTENANCE
+  DESIGN
+  CONSULTATION
+  INSPECTION
+  OTHER
+}
+enum ProjectStatus {
+  PLANNING
+  APPROVED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
 // ── OBRAS ───────────────────────────────────
 model ConstructionWork {
   id           String         @id @default(cuid())
@@ -978,8 +1136,13 @@ model ConstructionWork {
   @@index([status])
 }
 
-enum WorkStatus { PENDING IN_PROGRESS COMPLETED BLOCKED CANCELLED }
-
+enum WorkStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
 // ── ORÇAMENTOS TÉCNICOS (BQ) ────────────────
 model BudgetItem {
   id           String  @id @default(cuid())
@@ -1027,8 +1190,13 @@ model WorkMeasurement {
   @@index([status])
 }
 
-enum MeasurementStatus { DRAFT SUBMITTED APPROVED INVOICED REJECTED }
-
+enum MeasurementStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  INVOICED
+  REJECTED
+}
 // ══════════════════════════════════════════════
 // MÓDULO: ELETRICIDADE & ENERGIA (ELEC)
 // ══════════════════════════════════════════════
@@ -1064,9 +1232,18 @@ model ElectricalProject {
   @@index([tenantId, projectType])
 }
 
-enum ElecProjectType { NEW_INSTALLATION RENOVATION EXPANSION MAINTENANCE EMERGENCY }
-enum VoltageLevel { LOW MEDIUM HIGH }
-
+enum ElecProjectType {
+  NEW_INSTALLATION
+  RENOVATION
+  EXPANSION
+  MAINTENANCE
+  EMERGENCY
+}
+enum VoltageLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
 // ── INSPEÇÕES ELÉTRICAS ─────────────────────
 model ElectricalInspection {
   id           String            @id @default(cuid())
@@ -1093,10 +1270,23 @@ model ElectricalInspection {
   @@index([tenantId, scheduledDate])
 }
 
-enum InspectionType { INITIAL PERIODIC EXTRAORDINARY POST_INCIDENT }
-enum InspectionResult { APPROVED APPROVED_WITH_CONDITIONS REJECTED }
-enum InspectionStatus { SCHEDULED IN_PROGRESS COMPLETED CANCELLED }
-
+enum InspectionType {
+  INITIAL
+  PERIODIC
+  EXTRAORDINARY
+  POST_INCIDENT
+}
+enum InspectionResult {
+  APPROVED
+  APPROVED_WITH_CONDITIONS
+  REJECTED
+}
+enum InspectionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
 // ── CERTIFICAÇÕES ELÉTRICAS ─────────────────
 model ElectricalCertification {
   id             String            @id @default(cuid())
@@ -1121,9 +1311,18 @@ model ElectricalCertification {
   @@index([tenantId, expiresAt])
 }
 
-enum CertificationType { INSTALLATION_CERT INSPECTION_CERT COMPLIANCE_CERT ENERGY_CERT }
-enum CertificationStatus { PENDING ISSUED EXPIRED REVOKED }
-
+enum CertificationType {
+  INSTALLATION_CERT
+  INSPECTION_CERT
+  COMPLIANCE_CERT
+  ENERGY_CERT
+}
+enum CertificationStatus {
+  PENDING
+  ISSUED
+  EXPIRED
+  REVOKED
+}
 // ══════════════════════════════════════════════
 // MÓDULO: CRM & CLIENTES
 // ══════════════════════════════════════════════
@@ -1150,10 +1349,14 @@ model Client {
 
   @@index([tenantId, active])
   @@index([tenantId, name])
+  @@index([tenantId, nif])
 }
 
-enum ClientType { INDIVIDUAL COMPANY GOVERNMENT }
-
+enum ClientType {
+  INDIVIDUAL
+  COMPANY
+  GOVERNMENT
+}
 // ── PIPELINE DE VENDAS ──────────────────────
 model Deal {
   id          String     @id @default(cuid())
@@ -1178,8 +1381,14 @@ model Deal {
   @@index([tenantId, clientId])
 }
 
-enum DealStage { LEAD QUALIFIED PROPOSAL NEGOTIATION WON LOST }
-
+enum DealStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
 // ══════════════════════════════════════════════
 // MÓDULO: FROTAS & LOGÍSTICA
 // ══════════════════════════════════════════════
@@ -1210,10 +1419,26 @@ model Vehicle {
   @@index([tenantId, status])
 }
 
-enum VehicleType { CAR VAN TRUCK MOTORCYCLE BUS EQUIPMENT }
-enum FuelType { DIESEL GASOLINE ELECTRIC HYBRID }
-enum VehicleStatus { AVAILABLE IN_USE MAINTENANCE DECOMMISSIONED }
-
+enum VehicleType {
+  CAR
+  VAN
+  TRUCK
+  MOTORCYCLE
+  BUS
+  EQUIPMENT
+}
+enum FuelType {
+  DIESEL
+  GASOLINE
+  ELECTRIC
+  HYBRID
+}
+enum VehicleStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  DECOMMISSIONED
+}
 model FuelLog {
   id         String   @id @default(cuid())
   tenantId   String
@@ -1648,6 +1873,7 @@ model RetailSale {
 
   @@index([tenantId, createdAt])
   @@index([tenantId, storeId])
+  @@index([tenantId, saleNumber])
 }
 
 // ══════════════════════════════════════════════
@@ -1674,6 +1900,7 @@ model ProductionOrder {
   updatedAt     DateTime @updatedAt
 
   @@index([tenantId, status])
+  @@index([tenantId, orderNumber])
 }
 
 // ══════════════════════════════════════════════
@@ -1752,6 +1979,7 @@ model TelecomSubscription {
 model LegalCase {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   caseNumber  String?
   title       String
   caseType    String               // CIVIL, CRIMINAL, LABOR, TAX, COMMERCIAL, ADMINISTRATIVE, CONTRACT, OTHER
@@ -1782,6 +2010,7 @@ model LegalCase {
 model AccountingEntry {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   entryNumber String?
   date        DateTime
   description String
@@ -1798,4 +2027,5 @@ model AccountingEntry {
 
   @@index([tenantId, date])
   @@index([tenantId, account])
+  @@index([tenantId, entryNumber])
 }
