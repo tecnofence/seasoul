@@ -25,6 +25,7 @@ declare module 'fastify' {
       phone?: string
       role?: string
       resortId?: string | null
+      tenantId?: string | null
       type?: 'staff' | 'guest'
     }
 

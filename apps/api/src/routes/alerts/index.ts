@@ -108,7 +108,11 @@ export default async function alertsRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: 'Sem permissão' })
     }
 
-    const existing = await app.prisma.alertRule.findUnique({ where: { id: request.params.id } })
+    const user = request.user as { tenantId?: string }
+    const alertWhere: Record<string, unknown> = { id: request.params.id }
+    if (user.tenantId) alertWhere.tenantId = user.tenantId
+
+    const existing = await app.prisma.alertRule.findFirst({ where: alertWhere })
     if (!existing) {
       return reply.code(404).send({ error: 'Regra de alerta não encontrada' })
     }
@@ -132,12 +136,16 @@ export default async function alertsRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: 'Sem permissão' })
     }
 
-    const existing = await app.prisma.alertRule.findUnique({ where: { id: request.params.id } })
+    const user = request.user as { tenantId?: string }
+    const alertWhere: Record<string, unknown> = { id: request.params.id }
+    if (user.tenantId) alertWhere.tenantId = user.tenantId
+
+    const existing = await app.prisma.alertRule.findFirst({ where: alertWhere })
     if (!existing) {
       return reply.code(404).send({ error: 'Regra de alerta não encontrada' })
     }
 
-    await app.prisma.alertRule.delete({ where: { id: request.params.id } })
+    await app.prisma.alertRule.delete({ where: { id: existing.id } })
 
     return reply.send({ message: 'Regra de alerta eliminada' })
   })

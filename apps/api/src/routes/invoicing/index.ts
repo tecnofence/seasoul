@@ -65,8 +65,12 @@ export default async function invoicingRoutes(app: FastifyInstance) {
 
   // ── Detalhe de um documento ────────────────────
   app.get<{ Params: { id: string } }>('/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
-    const invoice = await app.prisma.invoice.findUnique({
-      where: { id: request.params.id },
+    const user = request.user as { tenantId?: string }
+    const where: Record<string, unknown> = { id: request.params.id }
+    if (user.tenantId) where.tenantId = user.tenantId
+
+    const invoice = await app.prisma.invoice.findFirst({
+      where,
       include: { items: true, series: true },
     })
 
@@ -117,26 +121,7 @@ export default async function invoicingRoutes(app: FastifyInstance) {
     const isTraining = tenant?.trainingMode ?? false
     const seriesCode = isTraining ? 'TREINO' : 'A'
 
-    // Obter ou criar série
-    const series = await app.prisma.invoiceSeries.upsert({
-      where: {
-        tenantId_documentType_series: {
-          tenantId,
-          documentType: body.documentType as any,
-          series: seriesCode,
-        },
-      },
-      create: {
-        tenantId,
-        documentType: body.documentType as any,
-        series: seriesCode,
-        prefix: isTraining ? `${body.documentType}-TREINO` : body.documentType,
-        isTraining,
-      },
-      update: {},
-    })
-
-    // Calcular valores dos items
+    // Calcular valores dos items com precisão Decimal
     const taxRate14 = 14
     const processedItems = body.items.map((item) => {
       const qty = Number(item.quantity)
@@ -147,7 +132,7 @@ export default async function invoicingRoutes(app: FastifyInstance) {
       const discountAmount = subtotal * (disc / 100)
       const taxableAmount = subtotal - discountAmount
       const taxAmount = taxableAmount * (tax / 100)
-      const total = taxableAmount + taxAmount
+      const total = Math.round((taxableAmount + taxAmount) * 100) / 100
 
       return {
         description: item.description,
@@ -161,54 +146,76 @@ export default async function invoicingRoutes(app: FastifyInstance) {
       }
     })
 
-    const subtotal = processedItems.reduce((sum, i) => sum + (i.quantity * i.unitPrice * (1 - i.discount / 100)), 0)
-    const taxAmount = processedItems.reduce((sum, i) => {
+    const subtotal = Math.round(processedItems.reduce((sum, i) => sum + (i.quantity * i.unitPrice * (1 - i.discount / 100)), 0) * 100) / 100
+    const taxAmount = Math.round(processedItems.reduce((sum, i) => {
       const base = i.quantity * i.unitPrice * (1 - i.discount / 100)
       return sum + base * (i.taxRate / 100)
-    }, 0)
-    const totalAmount = subtotal + taxAmount
+    }, 0) * 100) / 100
+    const totalAmount = Math.round((subtotal + taxAmount) * 100) / 100
 
-    // Gerar número sequencial (atómico)
-    const updatedSeries = await app.prisma.invoiceSeries.update({
-      where: { id: series.id },
-      data: { lastNumber: { increment: 1 } },
-    })
-
-    const number = updatedSeries.lastNumber
-    const paddedNumber = String(number).padStart(5, '0')
-    const fullNumber = isTraining
-      ? `${body.documentType}-TREINO ${seriesCode}/${paddedNumber}`
-      : `${body.documentType} ${seriesCode}/${paddedNumber}`
-
-    // Criar fatura com items
-    const invoice = await app.prisma.invoice.create({
-      data: {
-        tenantId,
-        resortId: body.resortId || null,
-        seriesId: series.id,
-        documentType: body.documentType as any,
-        number,
-        fullNumber,
-        isTraining,
-        clientName: body.clientName,
-        clientNif: body.clientNif || null,
-        clientAddress: body.clientAddress || null,
-        clientEmail: body.clientEmail || null,
-        clientPhone: body.clientPhone || null,
-        subtotal,
-        taxAmount,
-        totalAmount,
-        currency: body.currency || 'AOA',
-        paymentMethod: body.paymentMethod as any || null,
-        dueDate: body.dueDate ? new Date(body.dueDate) : null,
-        relatedInvoiceId: body.relatedInvoiceId || null,
-        notes: body.notes || null,
-        createdBy: user.id,
-        items: {
-          create: processedItems,
+    // Transação atómica: série + número + fatura (previne race condition)
+    const invoice = await app.prisma.$transaction(async (tx) => {
+      // Obter ou criar série
+      const series = await tx.invoiceSeries.upsert({
+        where: {
+          tenantId_documentType_series: {
+            tenantId,
+            documentType: body.documentType as any,
+            series: seriesCode,
+          },
         },
-      },
-      include: { items: true },
+        create: {
+          tenantId,
+          documentType: body.documentType as any,
+          series: seriesCode,
+          prefix: isTraining ? `${body.documentType}-TREINO` : body.documentType,
+          isTraining,
+        },
+        update: {},
+      })
+
+      // Gerar número sequencial (atómico dentro da transação)
+      const updatedSeries = await tx.invoiceSeries.update({
+        where: { id: series.id },
+        data: { lastNumber: { increment: 1 } },
+      })
+
+      const number = updatedSeries.lastNumber
+      const paddedNumber = String(number).padStart(5, '0')
+      const fullNumber = isTraining
+        ? `${body.documentType}-TREINO ${seriesCode}/${paddedNumber}`
+        : `${body.documentType} ${seriesCode}/${paddedNumber}`
+
+      // Criar fatura com items
+      return tx.invoice.create({
+        data: {
+          tenantId,
+          resortId: body.resortId || null,
+          seriesId: series.id,
+          documentType: body.documentType as any,
+          number,
+          fullNumber,
+          isTraining,
+          clientName: body.clientName,
+          clientNif: body.clientNif || null,
+          clientAddress: body.clientAddress || null,
+          clientEmail: body.clientEmail || null,
+          clientPhone: body.clientPhone || null,
+          subtotal,
+          taxAmount,
+          totalAmount,
+          currency: body.currency || 'AOA',
+          paymentMethod: body.paymentMethod as any || null,
+          dueDate: body.dueDate ? new Date(body.dueDate) : null,
+          relatedInvoiceId: body.relatedInvoiceId || null,
+          notes: body.notes || null,
+          createdBy: user.id,
+          items: {
+            create: processedItems,
+          },
+        },
+        include: { items: true },
+      })
     })
 
     // Registar na auditoria
@@ -233,7 +240,7 @@ export default async function invoicingRoutes(app: FastifyInstance) {
 
   // ── Anular documento ──────────────────────────
   app.post<{ Params: { id: string } }>('/:id/cancel', { preHandler: [app.authenticate] }, async (request, reply) => {
-    const user = request.user as { id: string; role: string }
+    const user = request.user as { id: string; role: string; tenantId?: string }
     const body = request.body as { reason: string }
 
     if (!['SUPER_ADMIN', 'RESORT_MANAGER'].includes(user.role)) {
@@ -244,9 +251,10 @@ export default async function invoicingRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Motivo de anulação é obrigatório' })
     }
 
-    const invoice = await app.prisma.invoice.findUnique({
-      where: { id: request.params.id },
-    })
+    const where: Record<string, unknown> = { id: request.params.id }
+    if (user.tenantId) where.tenantId = user.tenantId
+
+    const invoice = await app.prisma.invoice.findFirst({ where })
 
     if (!invoice) return reply.status(404).send({ error: 'Documento não encontrado' })
     if (invoice.cancelledAt) return reply.status(400).send({ error: 'Documento já anulado' })

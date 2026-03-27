@@ -21,6 +21,7 @@ async function authPlugin(app: FastifyInstance) {
         phone: decoded.phone,
         role: decoded.role || 'GUEST',
         resortId: decoded.resortId,
+        tenantId: decoded.tenantId ?? null,
         type: decoded.type || 'staff',
       }
 
