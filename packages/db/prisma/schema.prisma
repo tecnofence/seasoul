@@ -1619,6 +1619,7 @@ model RetailStore {
   status      String   @default("ACTIVE")  // ACTIVE, INACTIVE, RENOVATION
   openTime    String?                      // "08:00"
   closeTime   String?                      // "22:00"
+  sales       RetailSale[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -1626,9 +1627,11 @@ model RetailStore {
 }
 
 model RetailSale {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   storeId     String?
+  store       RetailStore? @relation(fields: [storeId], references: [id])
   saleNumber  String?
   clientName  String?
   clientNif   String?
@@ -1654,6 +1657,7 @@ model RetailSale {
 model ProductionOrder {
   id            String   @id @default(cuid())
   tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderNumber   String?
   productName   String
   quantity      Decimal  @db.Decimal(10, 2)
@@ -1679,6 +1683,7 @@ model ProductionOrder {
 model ConsultingProject {
   id            String   @id @default(cuid())
   tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   title         String
   clientName    String
   projectType   String               // STRATEGY, TECHNOLOGY, MANAGEMENT, FINANCIAL, LEGAL, AUDIT, OTHER
@@ -1701,8 +1706,9 @@ model ConsultingProject {
 model TimeLog {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projectId   String
-  project     ConsultingProject @relation(fields: [projectId], references: [id])
+  project     ConsultingProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   userName    String
   date        DateTime
   hours       Decimal  @db.Decimal(5, 2)
@@ -1722,6 +1728,7 @@ model TimeLog {
 model TelecomSubscription {
   id            String   @id @default(cuid())
   tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clientName    String
   clientPhone   String?
   planName      String
