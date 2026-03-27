@@ -46,6 +46,18 @@ import {
   TrendingUp,
   Car,
   FileCheck,
+  Sparkles,
+  CalendarHeart,
+  Home,
+  PackageCheck,
+  HeartPulse,
+  Stethoscope,
+  Wheat,
+  Factory,
+  Briefcase,
+  Radio,
+  Scale,
+  Calculator,
   type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/lib/auth'
@@ -109,6 +121,31 @@ const allNavItems: NavItem[] = [
   { href: '/dashboard/vehicles', label: 'Veículos', icon: Car, module: 'fleet' },
   // Contratos
   { href: '/dashboard/contracts', label: 'Contratos', icon: FileCheck, module: 'contracts' },
+  // Spa & Bem-Estar
+  { href: '/dashboard/spa', label: 'Spa', icon: Sparkles, module: 'spa' },
+  // Eventos
+  { href: '/dashboard/events', label: 'Eventos', icon: CalendarHeart, module: 'events' },
+  // Imobiliário
+  { href: '/dashboard/properties', label: 'Imóveis', icon: Home, module: 'real_estate' },
+  // Logística
+  { href: '/dashboard/shipments', label: 'Envios', icon: PackageCheck, module: 'logistics' },
+  // Educação
+  { href: '/dashboard/courses', label: 'Cursos', icon: GraduationCap, module: 'education' },
+  // Saúde
+  { href: '/dashboard/patients', label: 'Pacientes', icon: HeartPulse, module: 'healthcare' },
+  { href: '/dashboard/appointments', label: 'Consultas', icon: Stethoscope, module: 'healthcare' },
+  // Agricultura
+  { href: '/dashboard/farms', label: 'Fazendas', icon: Wheat, module: 'agriculture' },
+  // Manufatura
+  { href: '/dashboard/production', label: 'Produção', icon: Factory, module: 'manufacturing' },
+  // Consultoria
+  { href: '/dashboard/consulting', label: 'Consultoria', icon: Briefcase, module: 'consulting' },
+  // Telecomunicações
+  { href: '/dashboard/telecom', label: 'Telecom', icon: Radio, module: 'telecom' },
+  // Jurídico
+  { href: '/dashboard/legal', label: 'Jurídico', icon: Scale, module: 'legal' },
+  // Contabilidade
+  { href: '/dashboard/accounting', label: 'Contabilidade', icon: Calculator, module: 'accounting' },
   // Admin (SUPER_ADMIN)
   { href: '/dashboard/tenants', label: 'Tenants', icon: Building2, module: 'admin' },
   { href: '/dashboard/settings', label: 'Configurações', icon: Settings, module: 'admin' },

@@ -51,6 +51,20 @@ import crmRoutes from './routes/crm/index.js'
 import fleetRoutes from './routes/fleet/index.js'
 import contractsRoutes from './routes/contracts/index.js'
 
+// Rotas — Módulos Verticais (Fase 2)
+import spaRoutes from './routes/spa/index.js'
+import eventsRoutes from './routes/events/index.js'
+import realEstateRoutes from './routes/real-estate/index.js'
+import logisticsRoutes from './routes/logistics/index.js'
+import educationRoutes from './routes/education/index.js'
+import healthcareRoutes from './routes/healthcare/index.js'
+import agricultureRoutes from './routes/agriculture/index.js'
+import manufacturingRoutes from './routes/manufacturing/index.js'
+import consultingRoutes from './routes/consulting/index.js'
+import telecomRoutes from './routes/telecom/index.js'
+import legalRoutes from './routes/legal/index.js'
+import accountingRoutes from './routes/accounting/index.js'
+
 const app = Fastify({
   logger: {
     transport: {
@@ -150,6 +164,20 @@ await app.register(electricalRoutes,    { prefix: '/v1/electrical' })
 await app.register(crmRoutes,           { prefix: '/v1/crm' })
 await app.register(fleetRoutes,         { prefix: '/v1/fleet' })
 await app.register(contractsRoutes,     { prefix: '/v1/contracts' })
+
+// ── ROTAS — Módulos Verticais (Fase 2) ──────
+await app.register(spaRoutes,           { prefix: '/v1/spa' })
+await app.register(eventsRoutes,        { prefix: '/v1/events' })
+await app.register(realEstateRoutes,    { prefix: '/v1/real-estate' })
+await app.register(logisticsRoutes,     { prefix: '/v1/logistics' })
+await app.register(educationRoutes,     { prefix: '/v1/education' })
+await app.register(healthcareRoutes,    { prefix: '/v1/healthcare' })
+await app.register(agricultureRoutes,   { prefix: '/v1/agriculture' })
+await app.register(manufacturingRoutes, { prefix: '/v1/manufacturing' })
+await app.register(consultingRoutes,    { prefix: '/v1/consulting' })
+await app.register(telecomRoutes,       { prefix: '/v1/telecom' })
+await app.register(legalRoutes,         { prefix: '/v1/legal' })
+await app.register(accountingRoutes,    { prefix: '/v1/accounting' })
 
 // ── Webhooks (TODO) ──────────────────────────
 // await app.register(seamWebhookRoutes, { prefix: '/webhooks/seam' })
