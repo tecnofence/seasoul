@@ -16,6 +16,15 @@ import roomsRoutes from './routes/rooms/index.js'
 import tariffsRoutes from './routes/tariffs/index.js'
 import reservationsRoutes from './routes/reservations/index.js'
 
+// Rotas — Sprint 2
+import posRoutes from './routes/pos/index.js'
+import invoicesRoutes from './routes/invoices/index.js'
+import stockRoutes from './routes/stock/index.js'
+import suppliersRoutes from './routes/suppliers/index.js'
+import hrRoutes from './routes/hr/index.js'
+import attendanceRoutes from './routes/attendance/index.js'
+import payrollRoutes from './routes/payroll/index.js'
+
 const app = Fastify({
   logger: {
     transport: {
@@ -79,15 +88,14 @@ await app.register(roomsRoutes,        { prefix: '/v1/rooms' })
 await app.register(tariffsRoutes,      { prefix: '/v1/tariffs' })
 await app.register(reservationsRoutes, { prefix: '/v1/reservations' })
 
-// ── ROTAS — Sprint 2 (TODO) ──────────────────
-// await app.register(posRoutes,         { prefix: '/v1/pos' })
-// await app.register(invoicesRoutes,    { prefix: '/v1/invoices' })
-// await app.register(agtRoutes,         { prefix: '/v1/agt' })
-// await app.register(stockRoutes,       { prefix: '/v1/stock' })
-// await app.register(suppliersRoutes,   { prefix: '/v1/suppliers' })
-// await app.register(hrRoutes,          { prefix: '/v1/hr' })
-// await app.register(attendanceRoutes,  { prefix: '/v1/attendance' })
-// await app.register(payrollRoutes,     { prefix: '/v1/payroll' })
+// ── ROTAS — Sprint 2 ─────────────────────────
+await app.register(posRoutes,          { prefix: '/v1/pos' })
+await app.register(invoicesRoutes,     { prefix: '/v1/invoices' })
+await app.register(stockRoutes,        { prefix: '/v1/stock' })
+await app.register(suppliersRoutes,    { prefix: '/v1/suppliers' })
+await app.register(hrRoutes,           { prefix: '/v1/hr' })
+await app.register(attendanceRoutes,   { prefix: '/v1/attendance' })
+await app.register(payrollRoutes,      { prefix: '/v1/payroll' })
 
 // ── ROTAS — Sprint 3 (TODO) ──────────────────
 // await app.register(locksRoutes,       { prefix: '/v1/locks' })
