@@ -12,6 +12,10 @@ import {
   BoxIcon,
   Users,
   Star,
+  Truck,
+  ClipboardCheck,
+  Banknote,
+  FileText,
   LogOut,
 } from 'lucide-react'
 import { logout } from '@/lib/auth'
@@ -24,6 +28,10 @@ const navItems = [
   { href: '/dashboard/products', label: 'Produtos', icon: Package },
   { href: '/dashboard/stock', label: 'Stock', icon: BoxIcon },
   { href: '/dashboard/hr', label: 'RH', icon: Users },
+  { href: '/dashboard/attendance', label: 'Assiduidade', icon: ClipboardCheck },
+  { href: '/dashboard/payroll', label: 'Salários', icon: Banknote },
+  { href: '/dashboard/suppliers', label: 'Fornecedores', icon: Truck },
+  { href: '/dashboard/invoices', label: 'Faturas', icon: FileText },
   { href: '/dashboard/reviews', label: 'Avaliações', icon: Star },
 ]
 

@@ -4,40 +4,37 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { formatKwanza } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
-export default function HrPage() {
+export default function SuppliersPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['employees', page, search],
+    queryKey: ['suppliers', page, search],
     queryFn: () =>
-      api.get('/hr', { params: { page, limit: 20, search: search || undefined } }).then((r) => r.data),
+      api.get('/suppliers', { params: { page, limit: 20, search: search || undefined } }).then((r) => r.data),
   })
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Recursos Humanos</h1>
-        <Link href="/dashboard/hr/new">
-          <Button>Novo Colaborador</Button>
+        <h1 className="text-2xl font-bold">Fornecedores</h1>
+        <Link href="/dashboard/suppliers/new">
+          <Button>Novo Fornecedor</Button>
         </Link>
       </div>
 
-      <div className="flex gap-4">
-        <Input
-          placeholder="Pesquisar colaborador..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          className="max-w-md"
-        />
-      </div>
+      <Input
+        placeholder="Pesquisar fornecedor..."
+        value={search}
+        onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+        className="max-w-md"
+      />
 
       <Card className="p-0">
         {isLoading ? (
@@ -48,30 +45,30 @@ export default function HrPage() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>NIF</TableHead>
-                <TableHead>Cargo</TableHead>
-                <TableHead>Departamento</TableHead>
-                <TableHead>Salário Base</TableHead>
+                <TableHead>Contacto</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Estado</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.data?.map((emp: any) => (
-                <TableRow key={emp.id}>
-                  <TableCell className="font-medium">{emp.name}</TableCell>
-                  <TableCell>{emp.nif}</TableCell>
-                  <TableCell>{emp.role}</TableCell>
-                  <TableCell>{emp.department}</TableCell>
-                  <TableCell>{formatKwanza(emp.baseSalary)}</TableCell>
+              {data?.data?.map((s: any) => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium">{s.name}</TableCell>
+                  <TableCell>{s.nif || '—'}</TableCell>
+                  <TableCell>{s.contact || '—'}</TableCell>
+                  <TableCell>{s.phone || '—'}</TableCell>
+                  <TableCell>{s.email || '—'}</TableCell>
                   <TableCell>
-                    <Badge variant={emp.active ? 'success' : 'danger'}>
-                      {emp.active ? 'Ativo' : 'Inativo'}
+                    <Badge variant={s.active ? 'success' : 'danger'}>
+                      {s.active ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </TableCell>
                 </TableRow>
               ))}
               {!data?.data?.length && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500">Sem colaboradores</TableCell>
+                  <TableCell colSpan={6} className="text-center text-gray-500">Sem fornecedores</TableCell>
                 </TableRow>
               )}
             </TableBody>
