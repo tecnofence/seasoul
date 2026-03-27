@@ -121,6 +121,33 @@ await app.register(swagger, {
 
 await app.register(swaggerUi, { routePrefix: '/docs' })
 
+// ── ERROR HANDLER GLOBAL ──────────────────────
+app.setErrorHandler((error, request, reply) => {
+  const prismaError = error as any
+
+  // Prisma unique constraint violation
+  if (prismaError.code === 'P2002') {
+    return reply.status(409).send({
+      error: 'Registo duplicado',
+      field: prismaError.meta?.target?.[0],
+    })
+  }
+
+  // Prisma record not found
+  if (prismaError.code === 'P2025') {
+    return reply.status(404).send({ error: 'Registo não encontrado' })
+  }
+
+  // Prisma foreign key constraint
+  if (prismaError.code === 'P2003') {
+    return reply.status(400).send({ error: 'Referência inválida', field: prismaError.meta?.field_name })
+  }
+
+  // Log unexpected errors
+  request.log.error(error)
+  return reply.status(500).send({ error: 'Erro interno do servidor' })
+})
+
 // ── SAÚDE ─────────────────────────────────────
 app.get('/health', async () => ({
   status:    'ok',

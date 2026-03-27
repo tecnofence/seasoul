@@ -93,23 +93,41 @@ export default async function consultingRoutes(app: FastifyInstance) {
     const where: Record<string, unknown> = {}
     if (user.tenantId) where.tenantId = user.tenantId
 
-    const [projects, timeLogs] = await Promise.all([
-      app.prisma.consultingProject.findMany({ where, select: { id: true, status: true, budget: true, hourlyRate: true } }),
-      app.prisma.timeLog.findMany({
+    const [totalProjects, totalHoursAgg, billableHoursAgg, billableLogsByProject] = await Promise.all([
+      app.prisma.consultingProject.count({ where }),
+      app.prisma.timeLog.aggregate({
+        _sum: { hours: true },
         where,
-        select: { hours: true, billable: true, projectId: true },
+      }),
+      app.prisma.timeLog.aggregate({
+        _sum: { hours: true },
+        where: { ...where, billable: true },
+      }),
+      // Agrupar horas faturáveis por projecto para calcular receita
+      app.prisma.timeLog.groupBy({
+        by: ['projectId'],
+        _sum: { hours: true },
+        where: { ...where, billable: true },
       }),
     ])
 
-    const totalProjects = projects.length
-    const totalHours = timeLogs.reduce((sum, log) => sum + Number(log.hours), 0)
-    const billableHours = timeLogs.filter(l => l.billable).reduce((sum, log) => sum + Number(log.hours), 0)
+    const totalHours = Number(totalHoursAgg._sum.hours || 0)
+    const billableHours = Number(billableHoursAgg._sum.hours || 0)
 
     // Calcular receita com base nas horas faturáveis e taxa horária do projecto
-    const projectRateMap = new Map(projects.map(p => [p.id, Number(p.hourlyRate || 0)]))
-    const revenue = timeLogs
-      .filter(l => l.billable)
-      .reduce((sum, log) => sum + Number(log.hours) * (projectRateMap.get(log.projectId) || 0), 0)
+    let revenue = 0
+    if (billableLogsByProject.length > 0) {
+      const projectIds = billableLogsByProject.map(g => g.projectId)
+      const projects = await app.prisma.consultingProject.findMany({
+        where: { id: { in: projectIds } },
+        select: { id: true, hourlyRate: true },
+      })
+      const rateMap = new Map(projects.map(p => [p.id, Number(p.hourlyRate || 0)]))
+      revenue = billableLogsByProject.reduce(
+        (sum, g) => sum + Number(g._sum.hours || 0) * (rateMap.get(g.projectId) || 0),
+        0
+      )
+    }
 
     return reply.send({
       data: {
