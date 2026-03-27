@@ -67,7 +67,7 @@ export default function NewProductPage() {
             {errors.department && <p className="text-xs text-red-500 mt-1">{errors.department.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium">Preço (AOA)</label>
               <Input {...register('unitPrice')} type="number" min={0} step="0.01" placeholder="0.00" />

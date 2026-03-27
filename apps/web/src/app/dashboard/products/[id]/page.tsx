@@ -116,7 +116,7 @@ export default function ProductDetailPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium">Preço (AOA)</label>
                   <Input {...register('unitPrice')} type="number" min={0} step="0.01" />
@@ -142,7 +142,7 @@ export default function ProductDetailPage() {
           <Card className="lg:col-span-2">
             <CardTitle>Detalhes</CardTitle>
             <CardContent>
-              <dl className="grid grid-cols-2 gap-4 text-sm">
+              <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                 <div>
                   <dt className="text-gray-500">Nome</dt>
                   <dd className="font-medium">{product.name}</dd>

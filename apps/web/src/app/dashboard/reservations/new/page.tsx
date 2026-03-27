@@ -60,7 +60,7 @@ export default function NewReservationPage() {
         <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
           {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium">Resort</label>
               <select {...register('resortId')} className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
@@ -90,7 +90,7 @@ export default function NewReservationPage() {
             {errors.guestName && <p className="text-xs text-red-500 mt-1">{errors.guestName.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium">Email</label>
               <Input {...register('guestEmail')} type="email" placeholder="email@exemplo.com" />
@@ -103,7 +103,7 @@ export default function NewReservationPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium">Check-in</label>
               <Input {...register('checkIn')} type="datetime-local" />
@@ -116,7 +116,7 @@ export default function NewReservationPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-medium">Adultos</label>
               <Input {...register('adults')} type="number" min={1} />

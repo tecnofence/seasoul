@@ -57,7 +57,7 @@ export default function NewRoomPage() {
             {errors.resortId && <p className="text-xs text-red-500 mt-1">{errors.resortId.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium">Número</label>
               <Input {...register('number')} placeholder="Ex: 101" />
@@ -74,7 +74,7 @@ export default function NewRoomPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-medium">Piso</label>
               <Input {...register('floor')} type="number" />

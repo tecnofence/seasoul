@@ -68,7 +68,7 @@ export default function StockMovementPage() {
             {errors.stockItemId && <p className="text-xs text-red-500 mt-1">{errors.stockItemId.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium">Tipo</label>
               <select {...register('type')} className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">

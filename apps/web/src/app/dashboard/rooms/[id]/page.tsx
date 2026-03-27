@@ -111,7 +111,7 @@ export default function RoomDetailPage() {
             <form onSubmit={handleSubmit((data) => updateMutation.mutate(data))} className="space-y-4">
               {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded">{error}</p>}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium">Número</label>
                   <Input {...register('number')} />
@@ -128,7 +128,7 @@ export default function RoomDetailPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium">Piso</label>
                   <Input {...register('floor')} type="number" />
@@ -163,7 +163,7 @@ export default function RoomDetailPage() {
           <Card className="lg:col-span-2">
             <CardTitle>Detalhes</CardTitle>
             <CardContent>
-              <dl className="grid grid-cols-2 gap-4 text-sm">
+              <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                 <div>
                   <dt className="text-gray-500">Número</dt>
                   <dd className="font-medium">#{room.number}</dd>

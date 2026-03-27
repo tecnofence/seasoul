@@ -76,7 +76,7 @@ export default function ReservationDetailPage() {
         <Card className="lg:col-span-2">
           <CardTitle>Detalhes</CardTitle>
           <CardContent>
-            <dl className="grid grid-cols-2 gap-4 text-sm">
+            <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-gray-500">Hóspede</dt>
                 <dd className="font-medium">{r.guestName}</dd>

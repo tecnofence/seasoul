@@ -98,7 +98,7 @@ export default function StockItemDetailPage() {
                 {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium">Departamento</label>
                   <select {...register('department')} className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
@@ -131,7 +131,7 @@ export default function StockItemDetailPage() {
           <Card className="lg:col-span-2">
             <CardTitle>Detalhes</CardTitle>
             <CardContent>
-              <dl className="grid grid-cols-2 gap-4 text-sm">
+              <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                 <div>
                   <dt className="text-gray-500">Nome</dt>
                   <dd className="font-medium">{item.name}</dd>
