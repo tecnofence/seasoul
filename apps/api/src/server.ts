@@ -8,6 +8,8 @@ import swaggerUi from '@fastify/swagger-ui'
 // Plugins
 import prismaPlugin from './plugins/prisma.js'
 import authPlugin from './plugins/auth.js'
+import rbacPlugin from './plugins/rbac.js'
+import tenantContextPlugin from './plugins/tenant-context.js'
 
 // Rotas — Sprint 1
 import authRoutes from './routes/auth/index.js'
@@ -88,6 +90,8 @@ await app.register(jwt, {
 })
 
 await app.register(authPlugin)
+await app.register(rbacPlugin)
+await app.register(tenantContextPlugin)
 
 await app.register(rateLimit, {
   max:        Number(process.env.RATE_LIMIT_MAX) || 100,

@@ -10,6 +10,7 @@ async function authPlugin(app: FastifyInstance) {
         phone?: string
         role?: string
         resortId?: string | null
+        tenantId?: string | null
         type?: 'staff' | 'guest'
       }>()
 
@@ -22,6 +23,9 @@ async function authPlugin(app: FastifyInstance) {
         resortId: decoded.resortId,
         type: decoded.type || 'staff',
       }
+
+      // Inicializar tenant como null (será preenchido pelo loadTenantContext)
+      request.tenant = null
     } catch {
       reply.code(401).send({ error: 'Token inválido ou expirado' })
     }
