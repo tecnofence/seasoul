@@ -97,6 +97,10 @@ export default async function reservationsRoutes(app: FastifyInstance) {
 
   // ── POST / — Criar reserva ──
   app.post('/', async (request, reply) => {
+    if (!['SUPER_ADMIN', 'RESORT_MANAGER', 'RECEPTIONIST'].includes(request.user.role!)) {
+      return reply.code(403).send({ error: 'Sem permissão para criar reservas' })
+    }
+
     const parsed = createReservationSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })

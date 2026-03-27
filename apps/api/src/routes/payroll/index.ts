@@ -171,26 +171,29 @@ async function calculatePayroll(
   const overtimeHours = Math.max(0, totalHours - expectedHours)
   const absenceDays = Math.max(0, WORKING_DAYS_MONTH - daysPresent.size)
 
-  const baseSalaryNum = employee.baseSalary.toNumber()
-  const dailyRate = baseSalaryNum / WORKING_DAYS_MONTH
-  const hourlyRate = dailyRate / NORMAL_DAILY_HOURS
+  // Usar Decimal para precisão financeira
+  const baseSalary = employee.baseSalary
+  const dailyRate = baseSalary.dividedBy(WORKING_DAYS_MONTH)
+  const hourlyRate = dailyRate.dividedBy(NORMAL_DAILY_HOURS)
 
-  const overtimePay = overtimeHours * hourlyRate * OVERTIME_MULTIPLIER
-  const absenceDeduct = absenceDays * dailyRate
-  const netSalary = baseSalaryNum + overtimePay - absenceDeduct
+  const hoursWorkedDec = new Decimal(String(Math.round(totalHours * 100) / 100))
+  const overtimeHoursDec = new Decimal(String(Math.round(overtimeHours * 100) / 100))
+  const overtimePayDec = overtimeHoursDec.times(hourlyRate).times(OVERTIME_MULTIPLIER)
+  const absenceDeductDec = dailyRate.times(absenceDays)
+  const netSalaryDec = Decimal.max(new Decimal('0'), baseSalary.plus(overtimePayDec).minus(absenceDeductDec))
 
   const payroll = await app.prisma.payroll.create({
     data: {
       employeeId,
       month,
       year,
-      baseSalary: employee.baseSalary,
-      hoursWorked: new Decimal(Math.round(totalHours * 100) / 100),
-      overtimeHours: new Decimal(Math.round(overtimeHours * 100) / 100),
-      overtimePay: new Decimal(Math.round(overtimePay * 100) / 100),
+      baseSalary,
+      hoursWorked: hoursWorkedDec,
+      overtimeHours: overtimeHoursDec,
+      overtimePay: overtimePayDec.toDecimalPlaces(2),
       absenceDays,
-      absenceDeduct: new Decimal(Math.round(absenceDeduct * 100) / 100),
-      netSalary: new Decimal(Math.round(Math.max(0, netSalary) * 100) / 100),
+      absenceDeduct: absenceDeductDec.toDecimalPlaces(2),
+      netSalary: netSalaryDec.toDecimalPlaces(2),
     },
     include: {
       employee: { select: { id: true, name: true, nif: true, department: true } },

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { Decimal } from '@prisma/client/runtime/library'
+import { Prisma, Decimal } from '@prisma/client/runtime/library'
 import { createStockItemSchema, updateStockItemSchema, stockMovementSchema, listStockQuery } from './schemas.js'
 
 export default async function stockRoutes(app: FastifyInstance) {
@@ -19,11 +19,6 @@ export default async function stockRoutes(app: FastifyInstance) {
     if (resortId) where.resortId = resortId
     if (department) where.department = department
 
-    // Filtrar itens com stock baixo (currentQty <= minQty)
-    if (lowStock) {
-      where.currentQty = { lte: app.prisma.stockItem.fields?.minQty }
-    }
-
     const [items, total] = await Promise.all([
       app.prisma.stockItem.findMany({
         where,
@@ -35,29 +30,39 @@ export default async function stockRoutes(app: FastifyInstance) {
       app.prisma.stockItem.count({ where }),
     ])
 
-    // Adicionar flag isLow
-    const data = items.map((item) => ({
+    // Adicionar flag isLow e filtrar se lowStock=true
+    let data = items.map((item) => ({
       ...item,
       isLow: item.currentQty.lessThanOrEqualTo(item.minQty),
     }))
 
-    return reply.send({ data, total, page, limit, totalPages: Math.ceil(total / limit) })
+    if (lowStock) {
+      data = data.filter((item) => item.isLow)
+    }
+
+    return reply.send({ data, total: lowStock ? data.length : total, page, limit, totalPages: Math.ceil((lowStock ? data.length : total) / limit) })
   })
 
-  // ── GET /alerts — Itens com stock baixo ──
+  // ── GET /alerts — Itens com stock baixo (FIX: query parametrizada) ──
   app.get('/alerts', async (request, reply) => {
     const { resortId } = request.query as { resortId?: string }
 
-    const items = await app.prisma.$queryRawUnsafe<any[]>(
-      `SELECT s.*, r.name as "resortName"
-       FROM "StockItem" s
-       JOIN "Resort" r ON r.id = s."resortId"
-       WHERE s."currentQty" <= s."minQty"
-       ${resortId ? `AND s."resortId" = '${resortId}'` : ''}
-       ORDER BY s."currentQty" ASC`,
-    )
+    // Query segura sem interpolação de strings
+    const items = resortId
+      ? await app.prisma.$queryRaw`
+          SELECT s.*, r.name as "resortName"
+          FROM "StockItem" s
+          JOIN "Resort" r ON r.id = s."resortId"
+          WHERE s."currentQty" <= s."minQty" AND s."resortId" = ${resortId}
+          ORDER BY s."currentQty" ASC`
+      : await app.prisma.$queryRaw`
+          SELECT s.*, r.name as "resortName"
+          FROM "StockItem" s
+          JOIN "Resort" r ON r.id = s."resortId"
+          WHERE s."currentQty" <= s."minQty"
+          ORDER BY s."currentQty" ASC`
 
-    return reply.send({ data: items, total: items.length })
+    return reply.send({ data: items, total: (items as any[]).length })
   })
 
   // ── GET /:id — Obter item de stock com movimentos ──
@@ -83,7 +88,7 @@ export default async function stockRoutes(app: FastifyInstance) {
 
   // ── POST / — Criar item de stock ──
   app.post('/', async (request, reply) => {
-    if (!['SUPER_ADMIN', 'RESORT_MANAGER', 'STOCK_MANAGER'].includes(request.user.role)) {
+    if (!['SUPER_ADMIN', 'RESORT_MANAGER', 'STOCK_MANAGER'].includes(request.user.role!)) {
       return reply.code(403).send({ error: 'Sem permissão' })
     }
 
@@ -95,8 +100,8 @@ export default async function stockRoutes(app: FastifyInstance) {
     const item = await app.prisma.stockItem.create({
       data: {
         ...parsed.data,
-        currentQty: new Decimal(parsed.data.currentQty),
-        minQty: new Decimal(parsed.data.minQty),
+        currentQty: new Decimal(String(parsed.data.currentQty)),
+        minQty: new Decimal(String(parsed.data.minQty)),
       },
       include: { resort: { select: { id: true, name: true } } },
     })
@@ -106,7 +111,7 @@ export default async function stockRoutes(app: FastifyInstance) {
 
   // ── PUT /:id — Atualizar item de stock ──
   app.put<{ Params: { id: string } }>('/:id', async (request, reply) => {
-    if (!['SUPER_ADMIN', 'RESORT_MANAGER', 'STOCK_MANAGER'].includes(request.user.role)) {
+    if (!['SUPER_ADMIN', 'RESORT_MANAGER', 'STOCK_MANAGER'].includes(request.user.role!)) {
       return reply.code(403).send({ error: 'Sem permissão' })
     }
 
@@ -121,7 +126,7 @@ export default async function stockRoutes(app: FastifyInstance) {
     }
 
     const data: Record<string, unknown> = { ...parsed.data }
-    if (parsed.data.minQty !== undefined) data.minQty = new Decimal(parsed.data.minQty)
+    if (parsed.data.minQty !== undefined) data.minQty = new Decimal(String(parsed.data.minQty))
 
     const item = await app.prisma.stockItem.update({
       where: { id: request.params.id },
@@ -133,7 +138,7 @@ export default async function stockRoutes(app: FastifyInstance) {
 
   // ── POST /movement — Registar movimento de stock ──
   app.post('/movement', async (request, reply) => {
-    if (!['SUPER_ADMIN', 'RESORT_MANAGER', 'STOCK_MANAGER'].includes(request.user.role)) {
+    if (!['SUPER_ADMIN', 'RESORT_MANAGER', 'STOCK_MANAGER'].includes(request.user.role!)) {
       return reply.code(403).send({ error: 'Sem permissão' })
     }
 
@@ -150,7 +155,7 @@ export default async function stockRoutes(app: FastifyInstance) {
     }
 
     // Calcular nova quantidade
-    const qtyDecimal = new Decimal(qty)
+    const qtyDecimal = new Decimal(String(qty))
     let newQty: Decimal
 
     if (type === 'IN') {

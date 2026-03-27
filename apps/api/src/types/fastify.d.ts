@@ -10,9 +10,11 @@ declare module 'fastify' {
   interface FastifyRequest {
     user: {
       id: string
-      email: string
-      role: string
+      email?: string
+      phone?: string
+      role?: string
       resortId?: string | null
+      type?: 'staff' | 'guest'
     }
   }
 }

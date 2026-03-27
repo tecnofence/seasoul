@@ -66,39 +66,41 @@ export default async function invoicesRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Não é possível faturar venda cancelada' })
     }
 
-    // Gerar número de fatura sequencial por resort
-    const lastInvoice = await app.prisma.sale.findFirst({
-      where: { resortId: sale.resortId, invoiceNumber: { not: null } },
-      orderBy: { createdAt: 'desc' },
-      select: { invoiceNumber: true },
-    })
+    // Gerar número de fatura sequencial por resort — em transação para evitar race conditions
+    const updated = await app.prisma.$transaction(async (tx) => {
+      const lastInvoice = await tx.sale.findFirst({
+        where: { resortId: sale.resortId, invoiceNumber: { not: null } },
+        orderBy: { createdAt: 'desc' },
+        select: { invoiceNumber: true },
+      })
 
-    let sequence = 1
-    if (lastInvoice?.invoiceNumber) {
-      const match = lastInvoice.invoiceNumber.match(/\/(\d+)$/)
-      if (match) sequence = parseInt(match[1], 10) + 1
-    }
+      let sequence = 1
+      if (lastInvoice?.invoiceNumber) {
+        const match = lastInvoice.invoiceNumber.match(/\/(\d+)$/)
+        if (match) sequence = parseInt(match[1], 10) + 1
+      }
 
-    const series = 'FT'
-    const invoiceNumber = `${series} A/${String(sequence).padStart(5, '0')}`
+      const series = 'FT'
+      const invoiceNumber = `${series} A/${String(sequence).padStart(5, '0')}`
 
-    const updated = await app.prisma.sale.update({
-      where: { id: sale.id },
-      data: {
-        status: 'INVOICED',
-        invoiceNumber,
-        invoiceSeries: series,
-      },
-      include: {
-        items: { include: { product: { select: { id: true, name: true } } } },
-        resort: { select: { id: true, name: true } },
-      },
+      return tx.sale.update({
+        where: { id: sale.id },
+        data: {
+          status: 'INVOICED',
+          invoiceNumber,
+          invoiceSeries: series,
+        },
+        include: {
+          items: { include: { product: { select: { id: true, name: true } } } },
+          resort: { select: { id: true, name: true } },
+        },
+      })
     })
 
     // TODO: Assinar com RSA e submeter à AGT
     // TODO: Gerar PDF e guardar no MinIO
 
-    return reply.send({ data: updated, message: `Fatura ${invoiceNumber} emitida com sucesso` })
+    return reply.send({ data: updated, message: `Fatura ${updated.invoiceNumber} emitida com sucesso` })
   })
 
   // ── GET /:id — Obter fatura por ID ──

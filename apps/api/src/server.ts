@@ -16,6 +16,9 @@ import roomsRoutes from './routes/rooms/index.js'
 import tariffsRoutes from './routes/tariffs/index.js'
 import reservationsRoutes from './routes/reservations/index.js'
 
+// Rotas — Produtos
+import productsRoutes from './routes/products/index.js'
+
 // Rotas — Sprint 2
 import posRoutes from './routes/pos/index.js'
 import invoicesRoutes from './routes/invoices/index.js'
@@ -96,6 +99,9 @@ await app.register(usersRoutes,        { prefix: '/v1/users' })
 await app.register(roomsRoutes,        { prefix: '/v1/rooms' })
 await app.register(tariffsRoutes,      { prefix: '/v1/tariffs' })
 await app.register(reservationsRoutes, { prefix: '/v1/reservations' })
+
+// ── ROTAS — Produtos ─────────────────────────
+await app.register(productsRoutes,     { prefix: '/v1/products' })
 
 // ── ROTAS — Sprint 2 ─────────────────────────
 await app.register(posRoutes,          { prefix: '/v1/pos' })

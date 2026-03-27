@@ -6,11 +6,22 @@ async function authPlugin(app: FastifyInstance) {
     try {
       const decoded = await request.jwtVerify<{
         id: string
-        email: string
-        role: string
+        email?: string
+        phone?: string
+        role?: string
         resortId?: string | null
+        type?: 'staff' | 'guest'
       }>()
-      request.user = decoded
+
+      // Normalizar: staff tokens têm email/role, guest tokens têm phone/type
+      request.user = {
+        id: decoded.id,
+        email: decoded.email,
+        phone: decoded.phone,
+        role: decoded.role || 'GUEST',
+        resortId: decoded.resortId,
+        type: decoded.type || 'staff',
+      }
     } catch {
       reply.code(401).send({ error: 'Token inválido ou expirado' })
     }

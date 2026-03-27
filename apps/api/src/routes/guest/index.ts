@@ -69,13 +69,12 @@ export default async function guestRoutes(app: FastifyInstance) {
   app.get('/me', {
     preHandler: [app.authenticate],
   }, async (request, reply) => {
-    const decoded = request.user as any
-    if (decoded.type !== 'guest') {
+    if (request.user.type !== 'guest') {
       return reply.code(403).send({ error: 'Endpoint exclusivo para hóspedes' })
     }
 
     const guest = await app.prisma.guest.findUnique({
-      where: { id: decoded.id },
+      where: { id: request.user.id },
     })
 
     if (!guest) {
@@ -89,14 +88,13 @@ export default async function guestRoutes(app: FastifyInstance) {
   app.put('/me', {
     preHandler: [app.authenticate],
   }, async (request, reply) => {
-    const decoded = request.user as any
     const parsed = updateGuestSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
     }
 
     const guest = await app.prisma.guest.update({
-      where: { id: decoded.id },
+      where: { id: request.user.id },
       data: parsed.data,
     })
 
@@ -107,10 +105,8 @@ export default async function guestRoutes(app: FastifyInstance) {
   app.get('/reservations', {
     preHandler: [app.authenticate],
   }, async (request, reply) => {
-    const decoded = request.user as any
-
     const reservations = await app.prisma.reservation.findMany({
-      where: { guestId: decoded.id },
+      where: { guestId: request.user.id },
       include: {
         room: { select: { id: true, number: true, type: true } },
         resort: { select: { id: true, name: true } },
