@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatKwanza, formatDateTime } from '@/lib/utils'
@@ -27,6 +28,9 @@ export default function PosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Ponto de Venda</h1>
+        <Link href="/dashboard/pos/new">
+          <Button>Nova Venda</Button>
+        </Link>
       </div>
 
       <Card className="p-0">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatKwanza, formatDate } from '@/lib/utils'
@@ -40,6 +41,9 @@ export default function ReservationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Reservas</h1>
+        <Link href="/dashboard/reservations/new">
+          <Button>Nova Reserva</Button>
+        </Link>
       </div>
 
       <div className="flex gap-4">
@@ -71,7 +75,7 @@ export default function ReservationsPage() {
             </TableHeader>
             <TableBody>
               {data?.data?.map((r: any) => (
-                <TableRow key={r.id}>
+                <TableRow key={r.id} className="cursor-pointer" onClick={() => window.location.href = `/dashboard/reservations/${r.id}`}>
                   <TableCell>
                     <div>
                       <p className="font-medium">{r.guestName}</p>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
@@ -22,13 +23,18 @@ export default function StockPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Stock</h1>
-        <Button
-          variant={lowStock ? 'danger' : 'secondary'}
-          size="sm"
-          onClick={() => { setLowStock(!lowStock); setPage(1) }}
-        >
-          {lowStock ? 'Mostrar Todos' : 'Stock Baixo'}
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/dashboard/stock/movement">
+            <Button>Registar Movimento</Button>
+          </Link>
+          <Button
+            variant={lowStock ? 'danger' : 'secondary'}
+            size="sm"
+            onClick={() => { setLowStock(!lowStock); setPage(1) }}
+          >
+            {lowStock ? 'Mostrar Todos' : 'Stock Baixo'}
+          </Button>
+        </div>
       </div>
 
       <Card className="p-0">

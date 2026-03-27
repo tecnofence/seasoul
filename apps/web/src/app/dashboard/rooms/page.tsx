@@ -1,9 +1,11 @@
 'use client'
 
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatKwanza } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 const statusVariant: Record<string, 'success' | 'info' | 'warning' | 'danger'> = {
@@ -32,7 +34,12 @@ export default function RoomsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Quartos</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Quartos</h1>
+        <Link href="/dashboard/rooms/new">
+          <Button>Novo Quarto</Button>
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {data?.data?.map((room: any) => (
