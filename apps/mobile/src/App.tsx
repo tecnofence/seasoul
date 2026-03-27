@@ -1,26 +1,22 @@
-import { NavigationContainer } from '@react-navigation/native'
-import { createStackNavigator } from '@react-navigation/stack'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { NavigationContainer } from '@react-navigation/native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import AppNavigator from './navigation/AppNavigator';
 
-// TODO: Importar screens
-// import { LoginScreen }    from './screens/LoginScreen'
-// import { HomeScreen }     from './screens/HomeScreen'
-// import { CheckInScreen }  from './screens/CheckInScreen'
-// import { RoomKeyScreen }  from './screens/RoomKeyScreen'
-// import { ServicesScreen } from './screens/ServicesScreen'
-// import { AttendanceScreen}from './screens/AttendanceScreen'
-
-const Stack = createStackNavigator()
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 5 * 60 * 1000, // 5 minutos
+    },
+  },
+});
 
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <NavigationContainer>
-        <Stack.Navigator>
-          {/* Screens registadas aqui */}
-        </Stack.Navigator>
+        <AppNavigator />
       </NavigationContainer>
     </QueryClientProvider>
-  )
+  );
 }
