@@ -1,4 +1,5 @@
-// Sea and Soul ERP — Componentes e Estilos Partilhados
+// ENGERIS ONE — Componentes e Estilos Partilhados
+// Plataforma ERP Modular Multi-Indústria
 // ENGERIS — engeris.co.ao
 
 // ── CORES ─────────────────────────────────────
@@ -140,6 +141,337 @@ export type SelectOption = {
 export type DateRange = {
   from: Date | null
   to:   Date | null
+}
+
+// ── REGISTRO DE MÓDULOS ─────────────────────────
+
+export const MODULE_REGISTRY: Record<string, {
+  name: string
+  description: string
+  category: 'core' | 'vertical' | 'transversal' | 'addon'
+  icon: string
+  dependencies: string[]
+  sidebarItems: { href: string; label: string; icon: string }[]
+}> = {
+  core: {
+    name: 'Core',
+    description: 'Autenticação, utilizadores, dashboard, auditoria, notificações',
+    category: 'core',
+    icon: 'Shield',
+    dependencies: [],
+    sidebarItems: [
+      { href: '/dashboard', label: 'Painel', icon: 'LayoutDashboard' },
+      { href: '/dashboard/users', label: 'Utilizadores', icon: 'UserCircle' },
+      { href: '/dashboard/chat', label: 'Chat', icon: 'MessageSquare' },
+      { href: '/dashboard/notifications', label: 'Notificações', icon: 'Bell' },
+      { href: '/dashboard/documents', label: 'Documentos', icon: 'FolderOpen' },
+      { href: '/dashboard/audit-log', label: 'Auditoria', icon: 'Shield' },
+    ],
+  },
+  pms: {
+    name: 'Hotelaria (PMS)',
+    description: 'Reservas, quartos, tarifas, check-in/out, smart locks, hóspedes',
+    category: 'vertical',
+    icon: 'BedDouble',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/reservations', label: 'Reservas', icon: 'CalendarDays' },
+      { href: '/dashboard/rooms', label: 'Quartos', icon: 'BedDouble' },
+      { href: '/dashboard/tariffs', label: 'Tarifas', icon: 'Tag' },
+      { href: '/dashboard/guests', label: 'Hóspedes', icon: 'UserCheck' },
+      { href: '/dashboard/locks', label: 'Smart Locks', icon: 'Key' },
+      { href: '/dashboard/reviews', label: 'Avaliações', icon: 'Star' },
+      { href: '/dashboard/service-orders', label: 'Serviços', icon: 'ConciergeBell' },
+    ],
+  },
+  pos: {
+    name: 'Restauração (POS)',
+    description: 'Ponto de venda, produtos, vendas, mesas',
+    category: 'vertical',
+    icon: 'ShoppingCart',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/pos', label: 'POS', icon: 'ShoppingCart' },
+      { href: '/dashboard/products', label: 'Produtos', icon: 'Package' },
+    ],
+  },
+  engineering: {
+    name: 'Engenharia & Construção',
+    description: 'Projetos, obras, orçamentos técnicos, autos de medição',
+    category: 'vertical',
+    icon: 'HardHat',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/projects', label: 'Projetos', icon: 'FolderKanban' },
+      { href: '/dashboard/works', label: 'Obras', icon: 'HardHat' },
+      { href: '/dashboard/budgets', label: 'Orçamentos', icon: 'Calculator' },
+    ],
+  },
+  security: {
+    name: 'Segurança Eletrónica',
+    description: 'Contratos, instalações, CCTV, alarmes, rondas, incidentes',
+    category: 'vertical',
+    icon: 'Camera',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/security-contracts', label: 'Contratos', icon: 'FileCheck' },
+      { href: '/dashboard/installations', label: 'Instalações', icon: 'Camera' },
+      { href: '/dashboard/incidents', label: 'Incidentes', icon: 'AlertTriangle' },
+      { href: '/dashboard/patrols', label: 'Rondas', icon: 'Route' },
+    ],
+  },
+  electrical: {
+    name: 'Eletricidade & Energia',
+    description: 'Projetos elétricos, instalações, certificação, inspeções',
+    category: 'vertical',
+    icon: 'Zap',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/electrical-projects', label: 'Projetos', icon: 'Zap' },
+      { href: '/dashboard/inspections', label: 'Inspeções', icon: 'ClipboardCheck' },
+      { href: '/dashboard/certifications', label: 'Certificações', icon: 'Award' },
+    ],
+  },
+  maintenance: {
+    name: 'Serviços & Manutenção',
+    description: 'Tickets, ordens de serviço, SLA, manutenção preventiva',
+    category: 'vertical',
+    icon: 'Wrench',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/maintenance', label: 'Manutenção', icon: 'Wrench' },
+    ],
+  },
+  spa: {
+    name: 'Spa & Wellness',
+    description: 'Tratamentos, terapeutas, agendamento, pacotes',
+    category: 'vertical',
+    icon: 'Sparkles',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/spa', label: 'Spa', icon: 'Sparkles' },
+    ],
+  },
+  events: {
+    name: 'Eventos & Conferências',
+    description: 'Reserva de salas, catering, timeline, contratos',
+    category: 'vertical',
+    icon: 'Calendar',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/events', label: 'Eventos', icon: 'Calendar' },
+    ],
+  },
+  activities: {
+    name: 'Atividades & Experiências',
+    description: 'Tours, desporto, passeios, agendamento, guias',
+    category: 'vertical',
+    icon: 'Compass',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/activities', label: 'Atividades', icon: 'Compass' },
+    ],
+  },
+  healthcare: {
+    name: 'Saúde & Clínicas',
+    description: 'Pacientes, consultas, agendamento, prontuários',
+    category: 'vertical',
+    icon: 'Heart',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/patients', label: 'Pacientes', icon: 'Heart' },
+      { href: '/dashboard/appointments', label: 'Consultas', icon: 'Stethoscope' },
+    ],
+  },
+  education: {
+    name: 'Educação & Formação',
+    description: 'Alunos, turmas, professores, avaliações, certificados',
+    category: 'vertical',
+    icon: 'GraduationCap',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/students', label: 'Alunos', icon: 'GraduationCap' },
+      { href: '/dashboard/classes', label: 'Turmas', icon: 'BookOpen' },
+    ],
+  },
+  logistics: {
+    name: 'Logística & Armazéns',
+    description: 'Armazéns, expedição, receção, rotas de entrega',
+    category: 'vertical',
+    icon: 'Warehouse',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/warehouses', label: 'Armazéns', icon: 'Warehouse' },
+      { href: '/dashboard/shipments', label: 'Expedição', icon: 'PackageCheck' },
+    ],
+  },
+  agriculture: {
+    name: 'Agricultura & Agro',
+    description: 'Parcelas, culturas, colheitas, equipamentos',
+    category: 'vertical',
+    icon: 'Leaf',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/farms', label: 'Parcelas', icon: 'Leaf' },
+      { href: '/dashboard/harvests', label: 'Colheitas', icon: 'Wheat' },
+    ],
+  },
+  realestate: {
+    name: 'Imobiliário',
+    description: 'Imóveis, contratos, rendas, visitas, proprietários',
+    category: 'vertical',
+    icon: 'Building',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/properties', label: 'Imóveis', icon: 'Building' },
+      { href: '/dashboard/leases', label: 'Contratos', icon: 'FileText' },
+    ],
+  },
+  retail: {
+    name: 'Retalho & Lojas',
+    description: 'Lojas, caixas, inventário, promoções',
+    category: 'vertical',
+    icon: 'Store',
+    dependencies: ['core', 'pos'],
+    sidebarItems: [
+      { href: '/dashboard/stores', label: 'Lojas', icon: 'Store' },
+    ],
+  },
+  manufacturing: {
+    name: 'Indústria & Fábricas',
+    description: 'Produção, linhas, ordens de fabrico, qualidade',
+    category: 'vertical',
+    icon: 'Factory',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/production', label: 'Produção', icon: 'Factory' },
+      { href: '/dashboard/quality', label: 'Qualidade', icon: 'CheckCircle' },
+    ],
+  },
+  telecom: {
+    name: 'Telecomunicações',
+    description: 'Clientes, assinaturas, torres, instalações, suporte',
+    category: 'vertical',
+    icon: 'Radio',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/subscriptions', label: 'Assinaturas', icon: 'Radio' },
+      { href: '/dashboard/towers', label: 'Torres', icon: 'Signal' },
+    ],
+  },
+  legal: {
+    name: 'Jurídico & Advocacia',
+    description: 'Processos, clientes, prazos, honorários',
+    category: 'vertical',
+    icon: 'Scale',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/cases', label: 'Processos', icon: 'Scale' },
+    ],
+  },
+  accounting: {
+    name: 'Contabilidade',
+    description: 'Plano de contas, lançamentos, balancetes, demonstrações',
+    category: 'vertical',
+    icon: 'Calculator',
+    dependencies: ['core', 'finance'],
+    sidebarItems: [
+      { href: '/dashboard/accounting', label: 'Contabilidade', icon: 'Calculator' },
+    ],
+  },
+  consulting: {
+    name: 'Consultoria',
+    description: 'Projetos, horas, propostas, deliverables',
+    category: 'vertical',
+    icon: 'Briefcase',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/consulting', label: 'Projetos', icon: 'Briefcase' },
+    ],
+  },
+  finance: {
+    name: 'Finanças & Faturação',
+    description: 'FT, FR, NC, ORC, PF, RC — conformidade AGT, modo formação',
+    category: 'transversal',
+    icon: 'Banknote',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/invoices', label: 'Faturas', icon: 'FileText' },
+      { href: '/dashboard/payroll', label: 'Salários', icon: 'Banknote' },
+    ],
+  },
+  stock: {
+    name: 'Stock & Compras',
+    description: 'Inventário, fornecedores, ordens de compra, requisições',
+    category: 'transversal',
+    icon: 'BoxIcon',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/stock', label: 'Stock', icon: 'BoxIcon' },
+      { href: '/dashboard/suppliers', label: 'Fornecedores', icon: 'Truck' },
+    ],
+  },
+  hr: {
+    name: 'RH & Pessoal',
+    description: 'Colaboradores, assiduidade, salários, férias, geofencing GPS',
+    category: 'transversal',
+    icon: 'Users',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/hr', label: 'RH', icon: 'Users' },
+      { href: '/dashboard/attendance', label: 'Assiduidade', icon: 'ClipboardCheck' },
+    ],
+  },
+  crm: {
+    name: 'CRM & Clientes',
+    description: 'Base de clientes, pipeline, propostas, campanhas',
+    category: 'transversal',
+    icon: 'UserPlus',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/clients', label: 'Clientes', icon: 'UserPlus' },
+      { href: '/dashboard/pipeline', label: 'Pipeline', icon: 'TrendingUp' },
+    ],
+  },
+  fleet: {
+    name: 'Frotas & Logística',
+    description: 'Veículos, motoristas, combustível, manutenção, rotas',
+    category: 'transversal',
+    icon: 'Car',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/vehicles', label: 'Veículos', icon: 'Car' },
+      { href: '/dashboard/drivers', label: 'Motoristas', icon: 'UserCheck' },
+    ],
+  },
+  contracts: {
+    name: 'Contratos & Jurídico',
+    description: 'Gestão de contratos, renovações, alertas de expiração',
+    category: 'transversal',
+    icon: 'FileCheck',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/contracts', label: 'Contratos', icon: 'FileCheck' },
+    ],
+  },
+  bi: {
+    name: 'BI & Relatórios',
+    description: 'Dashboards customizáveis, exportação, relatórios agendados',
+    category: 'transversal',
+    icon: 'BarChart3',
+    dependencies: ['core'],
+    sidebarItems: [
+      { href: '/dashboard/reports', label: 'Relatórios', icon: 'BarChart3' },
+    ],
+  },
+}
+
+// Planos e módulos incluídos
+export const PLAN_MODULES: Record<string, string[]> = {
+  starter:      ['core'],
+  professional: ['core', 'finance', 'stock', 'hr'],
+  enterprise:   Object.keys(MODULE_REGISTRY),
+  custom:       [], // definido por tenant
 }
 
 // ── CONSTANTES DE NEGÓCIO ─────────────────────

@@ -3,6 +3,8 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import api from '@/lib/api'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
@@ -27,34 +29,60 @@ import {
   MessageSquare,
   Shield,
   FolderOpen,
+  Building2,
+  Settings,
+  GraduationCap,
   LogOut,
   X,
+  type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/lib/auth'
 
-const navItems = [
-  { href: '/dashboard', label: 'Painel', icon: LayoutDashboard },
-  { href: '/dashboard/reservations', label: 'Reservas', icon: CalendarDays },
-  { href: '/dashboard/rooms', label: 'Quartos', icon: BedDouble },
-  { href: '/dashboard/tariffs', label: 'Tarifas', icon: Tag },
-  { href: '/dashboard/pos', label: 'POS', icon: ShoppingCart },
-  { href: '/dashboard/products', label: 'Produtos', icon: Package },
-  { href: '/dashboard/service-orders', label: 'Serviços', icon: ConciergeBell },
-  { href: '/dashboard/stock', label: 'Stock', icon: BoxIcon },
-  { href: '/dashboard/suppliers', label: 'Fornecedores', icon: Truck },
-  { href: '/dashboard/maintenance', label: 'Manutenção', icon: Wrench },
-  { href: '/dashboard/hr', label: 'RH', icon: Users },
-  { href: '/dashboard/attendance', label: 'Assiduidade', icon: ClipboardCheck },
-  { href: '/dashboard/payroll', label: 'Salários', icon: Banknote },
-  { href: '/dashboard/invoices', label: 'Faturas', icon: FileText },
-  { href: '/dashboard/guests', label: 'Hóspedes', icon: UserCheck },
-  { href: '/dashboard/locks', label: 'Smart Locks', icon: Key },
-  { href: '/dashboard/users', label: 'Utilizadores', icon: UserCircle },
-  { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
-  { href: '/dashboard/notifications', label: 'Notificações', icon: Bell },
-  { href: '/dashboard/reviews', label: 'Avaliações', icon: Star },
-  { href: '/dashboard/documents', label: 'Documentos', icon: FolderOpen },
-  { href: '/dashboard/audit-log', label: 'Auditoria', icon: Shield },
+// Mapeamento de ícones por string (vindo do MODULE_REGISTRY)
+const iconMap: Record<string, LucideIcon> = {
+  LayoutDashboard, CalendarDays, BedDouble, ShoppingCart, Package, BoxIcon,
+  Users, UserCircle, UserCheck, Star, Truck, ClipboardCheck, Banknote,
+  FileText, ConciergeBell, Wrench, Tag, Bell, Key, MessageSquare,
+  Shield, FolderOpen, Building2, Settings, GraduationCap,
+}
+
+// Itens organizados por módulo
+type NavItem = { href: string; label: string; icon: LucideIcon; module: string }
+
+const allNavItems: NavItem[] = [
+  // Core (sempre visível)
+  { href: '/dashboard', label: 'Painel', icon: LayoutDashboard, module: 'core' },
+  { href: '/dashboard/users', label: 'Utilizadores', icon: UserCircle, module: 'core' },
+  { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare, module: 'core' },
+  { href: '/dashboard/notifications', label: 'Notificações', icon: Bell, module: 'core' },
+  { href: '/dashboard/documents', label: 'Documentos', icon: FolderOpen, module: 'core' },
+  { href: '/dashboard/audit-log', label: 'Auditoria', icon: Shield, module: 'core' },
+  // PMS — Hotelaria
+  { href: '/dashboard/reservations', label: 'Reservas', icon: CalendarDays, module: 'pms' },
+  { href: '/dashboard/rooms', label: 'Quartos', icon: BedDouble, module: 'pms' },
+  { href: '/dashboard/tariffs', label: 'Tarifas', icon: Tag, module: 'pms' },
+  { href: '/dashboard/guests', label: 'Hóspedes', icon: UserCheck, module: 'pms' },
+  { href: '/dashboard/locks', label: 'Smart Locks', icon: Key, module: 'pms' },
+  { href: '/dashboard/reviews', label: 'Avaliações', icon: Star, module: 'pms' },
+  { href: '/dashboard/service-orders', label: 'Serviços', icon: ConciergeBell, module: 'pms' },
+  // POS — Restauração
+  { href: '/dashboard/pos', label: 'POS', icon: ShoppingCart, module: 'pos' },
+  { href: '/dashboard/products', label: 'Produtos', icon: Package, module: 'pos' },
+  // Manutenção
+  { href: '/dashboard/maintenance', label: 'Manutenção', icon: Wrench, module: 'maintenance' },
+  // Finanças
+  { href: '/dashboard/invoices', label: 'Faturas', icon: FileText, module: 'finance' },
+  { href: '/dashboard/payroll', label: 'Salários', icon: Banknote, module: 'finance' },
+  // Stock
+  { href: '/dashboard/stock', label: 'Stock', icon: BoxIcon, module: 'stock' },
+  { href: '/dashboard/suppliers', label: 'Fornecedores', icon: Truck, module: 'stock' },
+  // RH
+  { href: '/dashboard/hr', label: 'RH', icon: Users, module: 'hr' },
+  { href: '/dashboard/attendance', label: 'Assiduidade', icon: ClipboardCheck, module: 'hr' },
+  // Admin (SUPER_ADMIN)
+  { href: '/dashboard/tenants', label: 'Tenants', icon: Building2, module: 'admin' },
+  { href: '/dashboard/settings', label: 'Configurações', icon: Settings, module: 'admin' },
+  { href: '/dashboard/training', label: 'Modo Formação', icon: GraduationCap, module: 'admin' },
 ]
 
 interface SidebarProps {
@@ -64,6 +92,26 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
+
+  // Buscar módulos ativos do tenant
+  const { data: moduleData } = useQuery({
+    queryKey: ['tenant-modules'],
+    queryFn: () => api.get('/tenants/me/modules').then((r) => r.data.data),
+    staleTime: 5 * 60 * 1000, // cache 5 minutos
+    retry: 1,
+  })
+
+  const activeModules: string[] = moduleData?.modules ?? ['*']
+  const trainingMode: boolean = moduleData?.trainingMode ?? false
+  const hasAllAccess = activeModules.includes('*')
+
+  // Filtrar itens visíveis baseado nos módulos ativos
+  const visibleItems = allNavItems.filter((item) => {
+    if (hasAllAccess) return true
+    if (item.module === 'core') return true
+    if (item.module === 'admin') return hasAllAccess // admin só para super admin
+    return activeModules.includes(item.module)
+  })
 
   // Fechar sidebar ao navegar (mobile)
   useEffect(() => {
@@ -88,7 +136,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         )}
       >
         <div className="flex h-16 items-center justify-between border-b px-6">
-          <h1 className="text-xl font-bold text-primary">Sea & Soul</h1>
+          <h1 className="text-xl font-bold text-primary">ENGERIS ONE</h1>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-gray-400 hover:text-gray-600 lg:hidden"
@@ -97,8 +145,15 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </button>
         </div>
 
+        {/* Banner modo formação */}
+        {trainingMode && (
+          <div className="mx-3 mt-3 rounded-md bg-amber-100 px-3 py-2 text-center text-xs font-semibold text-amber-800">
+            MODO FORMAÇÃO
+          </div>
+        )}
+
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => {
+          {visibleItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
             return (
               <Link

@@ -1,5 +1,100 @@
-// Sea and Soul ERP — Tipos Partilhados
+// ENGERIS ONE — Tipos Partilhados
+// Plataforma ERP Modular Multi-Indústria
 // ENGERIS — engeris.co.ao
+
+// ── MÓDULOS DO SISTEMA ──────────────────────────
+
+export type ModuleId =
+  // Core (obrigatório)
+  | 'core'
+  // Módulos Verticais (indústrias)
+  | 'pms'           // Hotelaria — Property Management System
+  | 'pos'           // Restauração / Retalho — Point of Sale
+  | 'engineering'   // Engenharia & Construção
+  | 'security'      // Segurança Eletrónica
+  | 'electrical'    // Eletricidade & Energia
+  | 'maintenance'   // Serviços & Manutenção
+  | 'spa'           // Spa & Wellness
+  | 'events'        // Eventos & Conferências
+  | 'activities'    // Atividades & Experiências
+  | 'healthcare'    // Saúde & Clínicas
+  | 'education'     // Educação & Formação
+  | 'logistics'     // Logística & Armazéns
+  | 'agriculture'   // Agricultura & Agro
+  | 'realestate'    // Imobiliário
+  | 'retail'        // Retalho & Lojas
+  | 'manufacturing' // Indústria & Fábricas
+  | 'telecom'       // Telecomunicações
+  | 'legal'         // Jurídico & Advocacia
+  | 'accounting'    // Contabilidade
+  | 'consulting'    // Consultoria
+  // Módulos Transversais (qualquer indústria)
+  | 'finance'       // Finanças & Faturação AGT
+  | 'stock'         // Stock & Compras
+  | 'hr'            // RH & Pessoal
+  | 'crm'           // CRM & Clientes
+  | 'fleet'         // Frotas & Logística
+  | 'contracts'     // Contratos & Jurídico
+  | 'bi'            // BI & Relatórios
+  | 'mobile'        // App Móvel
+  | 'api_gateway'   // API Gateway
+  | 'white_label'   // White Label
+
+export type ModuleCategory = 'core' | 'vertical' | 'transversal' | 'addon'
+
+export type ModuleDefinition = {
+  id: ModuleId
+  name: string
+  description: string
+  category: ModuleCategory
+  icon: string
+  dependencies: ModuleId[]
+  routes: string[]        // prefixos de rota API
+  sidebarItems: string[]  // paths da sidebar
+}
+
+export type TenantPlan = 'starter' | 'professional' | 'enterprise' | 'custom'
+
+export type Tenant = {
+  id: string
+  name: string
+  slug: string
+  plan: TenantPlan
+  logo?: string
+  primaryColor?: string
+  domain?: string
+  active: boolean
+  maxUsers: number
+  maxBranches: number
+  modules: ModuleId[]
+  trainingMode: boolean
+  createdAt: string
+  expiresAt?: string
+}
+
+export type Branch = {
+  id: string
+  tenantId: string
+  name: string
+  slug: string
+  address?: string
+  lat?: number
+  lng?: number
+  geofenceRadius: number
+  phone?: string
+  email?: string
+  active: boolean
+}
+
+// ── MODO FORMAÇÃO ───────────────────────────────
+
+export type TrainingModeConfig = {
+  enabled: boolean
+  invoicePrefix: string    // 'FT-TREINO'
+  dataIsolated: boolean    // dados separados dos reais
+  bannerColor: string      // cor do banner de aviso
+  bannerText: string       // texto do banner
+}
 
 // ── ENUMS ─────────────────────────────────────
 

@@ -39,6 +39,8 @@ import notificationsRoutes from './routes/notifications/index.js'
 import maintenanceRoutes from './routes/maintenance/index.js'
 import auditLogRoutes from './routes/audit-log/index.js'
 import documentsRoutes from './routes/documents/index.js'
+import tenantsRoutes from './routes/tenants/index.js'
+import trainingModeRoutes from './routes/training-mode/index.js'
 
 const app = Fastify({
   logger: {
@@ -70,8 +72,8 @@ await app.register(rateLimit, {
 await app.register(swagger, {
   openapi: {
     info: {
-      title:       'Sea and Soul API',
-      description: 'ERP API — ENGERIS',
+      title:       'ENGERIS ONE API',
+      description: 'Plataforma ERP Modular — ENGERIS',
       version:     '1.0.0',
     },
     components: {
@@ -126,6 +128,10 @@ await app.register(notificationsRoutes,  { prefix: '/v1/notifications' })
 await app.register(maintenanceRoutes,    { prefix: '/v1/maintenance' })
 await app.register(auditLogRoutes,       { prefix: '/v1/audit-log' })
 await app.register(documentsRoutes,      { prefix: '/v1/documents' })
+
+// ── ROTAS — Multi-Tenant & Módulos ─────────
+await app.register(tenantsRoutes,        { prefix: '/v1/tenants' })
+await app.register(trainingModeRoutes,   { prefix: '/v1/training-mode' })
 
 // ── Webhooks (TODO) ──────────────────────────
 // await app.register(seamWebhookRoutes, { prefix: '/webhooks/seam' })

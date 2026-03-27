@@ -1,4 +1,5 @@
-// Sea and Soul ERP — Prisma Schema
+// ENGERIS ONE — Prisma Schema
+// Plataforma ERP Modular Multi-Indústria
 // ENGERIS — engeris.co.ao
 
 generator client {
@@ -10,7 +11,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── RESORTS ──────────────────────────────────
+// ══════════════════════════════════════════════
+// MULTI-TENANT & MÓDULOS
+// ══════════════════════════════════════════════
+
+// ── TENANT (Empresa/Cliente) ──────────────────
+model Tenant {
+  id           String     @id @default(cuid())
+  name         String
+  slug         String     @unique
+  nif          String?    @unique     // NIF da empresa
+  plan         TenantPlan @default(STARTER)
+  logo         String?               // URL do logo
+  primaryColor String?    @default("#0A5C8A")
+  domain       String?    @unique    // domínio personalizado (White Label)
+  maxUsers     Int        @default(5)
+  maxBranches  Int        @default(1)
+  trainingMode Boolean    @default(false)
+  active       Boolean    @default(true)
+  expiresAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  modules  TenantModule[]
+  branches Branch[]
+  users    User[]
+
+  @@index([slug])
+  @@index([active])
+}
+
+enum TenantPlan { STARTER PROFESSIONAL ENTERPRISE CUSTOM }
+
+// ── MÓDULOS DO TENANT ────────────────────────
+model TenantModule {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  moduleId  String   // 'core', 'pms', 'pos', 'finance', etc.
+  active    Boolean  @default(true)
+  activatedAt DateTime @default(now())
+  expiresAt DateTime?
+
+  @@unique([tenantId, moduleId])
+  @@index([tenantId])
+}
+
+// ── FILIAL / UNIDADE ─────────────────────────
+// Substitui "Resort" — agora genérico para qualquer tipo de negócio
+model Branch {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  address        String?
+  city           String?
+  country        String?  @default("AO")
+  lat            Float?
+  lng            Float?
+  geofenceRadius Int      @default(300)
+  phone          String?
+  email          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, active])
+}
+
+// ══════════════════════════════════════════════
+// ENTIDADES DE NEGÓCIO
+// ══════════════════════════════════════════════
+
+// ── RESORTS (compatibilidade — alias para Branch hoteleiro) ──
 model Resort {
   id             String   @id @default(cuid())
   name           String
@@ -36,6 +111,8 @@ model Resort {
 // ── UTILIZADORES (Staff / Admin) ──────────────
 model User {
   id           String   @id @default(cuid())
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
   name         String
   email        String   @unique
   passwordHash String
@@ -49,6 +126,8 @@ model User {
 
   refreshTokens RefreshToken[]
   notifications Notification[]
+
+  @@index([tenantId, active])
 }
 
 enum UserRole {
@@ -538,3 +617,113 @@ model Document {
 }
 
 enum DocumentType { ID_CARD PASSPORT CONTRACT INVOICE MEDICAL VISA OTHER }
+
+// ══════════════════════════════════════════════
+// FATURAÇÃO UNIVERSAL & MODO FORMAÇÃO
+// ══════════════════════════════════════════════
+
+// ── SÉRIES DE FATURAÇÃO ─────────────────────
+// Cada tenant tem as suas séries; modo formação usa série separada
+model InvoiceSeries {
+  id           String      @id @default(cuid())
+  tenantId     String
+  resortId     String?             // filial (opcional)
+  documentType InvoiceDocType
+  series       String              // "A", "B", "TREINO"
+  prefix       String              // "FT", "FR", "NC", etc.
+  lastNumber   Int         @default(0)
+  isTraining   Boolean     @default(false)
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  invoices     Invoice[]
+
+  @@unique([tenantId, documentType, series])
+  @@index([tenantId])
+}
+
+// ── FATURAS / DOCUMENTOS FISCAIS ─────────────
+// Genérico para qualquer indústria
+model Invoice {
+  id              String         @id @default(cuid())
+  tenantId        String
+  resortId        String?
+  seriesId        String
+  series          InvoiceSeries  @relation(fields: [seriesId], references: [id])
+  documentType    InvoiceDocType
+  number          Int                     // número sequencial
+  fullNumber      String         @unique  // "FT A/00001" ou "FT-TREINO T/00001"
+  isTraining      Boolean        @default(false) // modo formação
+  // Cliente
+  clientName      String
+  clientNif       String?
+  clientAddress   String?
+  clientEmail     String?
+  clientPhone     String?
+  // Valores
+  subtotal        Decimal        @db.Decimal(15, 2)
+  taxAmount       Decimal        @db.Decimal(15, 2)
+  totalAmount     Decimal        @db.Decimal(15, 2)
+  currency        String         @default("AOA")
+  exchangeRate    Decimal?       @db.Decimal(10, 4) // câmbio para multi-moeda
+  // Pagamento
+  paymentMethod   PaymentMethod?
+  paidAt          DateTime?
+  dueDate         DateTime?
+  // AGT
+  agtHash         String?                 // hash RSA do documento
+  agtPreviousHash String?                 // hash do documento anterior (cadeia)
+  agtStatus       String?                 // pending, submitted, accepted, rejected
+  agtQrCode       String?
+  agtSubmittedAt  DateTime?
+  // Referências
+  relatedInvoiceId String?                // para NC referenciando FT
+  saleId          String?                 // ligação a Sale (POS)
+  reservationId   String?                 // ligação a Reservation (PMS)
+  notes           String?
+  pdfUrl          String?
+  // Meta
+  createdBy       String?                 // userId
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  items InvoiceItem[]
+
+  @@index([tenantId, documentType])
+  @@index([tenantId, isTraining])
+  @@index([tenantId, createdAt])
+  @@index([clientNif])
+  @@index([fullNumber])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal @db.Decimal(10, 3)
+  unitPrice   Decimal @db.Decimal(15, 2)
+  taxRate     Decimal @db.Decimal(5, 2)  @default(14)
+  discount    Decimal @db.Decimal(5, 2)  @default(0)
+  total       Decimal @db.Decimal(15, 2)
+  productId   String?
+  unit        String? // "un", "kg", "m", "h", "m²", etc.
+
+  @@index([invoiceId])
+}
+
+enum InvoiceDocType {
+  FT    // Fatura
+  FR    // Fatura-Recibo
+  NC    // Nota de Crédito
+  ND    // Nota de Débito
+  ORC   // Orçamento
+  PF    // Proforma
+  RC    // Recibo
+  GT    // Guia de Transporte
+  AM    // Auto de Medição
+  CS    // Contrato de Serviço
+}

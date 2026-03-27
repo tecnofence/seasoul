@@ -41,7 +41,7 @@ export default function DashboardPage() {
 
   // Dados para gráfico de ocupação por resort
   const occupancyData = resorts.map((r: any) => ({
-    name: r.resortName?.replace('Sea & Soul ', ''),
+    name: r.resortName,
     ocupação: Math.round(r.occupancy ?? 0),
     quartos: r.totalRooms ?? 0,
     ocupados: r.occupiedRooms ?? 0,
@@ -49,7 +49,7 @@ export default function DashboardPage() {
 
   // Dados para gráfico pie de distribuição de quartos
   const roomDistData = resorts.map((r: any) => ({
-    name: r.resortName?.replace('Sea & Soul ', ''),
+    name: r.resortName,
     value: r.totalRooms ?? 0,
   }))
 
