@@ -1,0 +1,164 @@
+version: '3.9'
+
+# ══════════════════════════════════════════════════
+# SEA AND SOUL ERP — Docker Compose (Produção)
+# ENGERIS — engeris.co.ao
+# Uso: docker-compose -f docker-compose.prod.yml up -d
+# ══════════════════════════════════════════════════
+
+networks:
+  seasoul-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  grafana_data:
+  prometheus_data:
+  nginx_certs:
+
+services:
+
+  # ── BASE DE DADOS ──────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: seasoul-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - seasoul-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Sem exposição de portas em produção
+
+  # ── REDIS ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: seasoul-redis
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - seasoul-network
+
+  # ── MINIO ──────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: seasoul-minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    networks:
+      - seasoul-network
+
+  # ── API ─────────────────────────────────────────────
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: ../../infra/docker/api.Dockerfile
+      target: production
+    container_name: seasoul-api
+    restart: always
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - seasoul-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  # ── WEB ─────────────────────────────────────────────
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: ../../infra/docker/web.Dockerfile
+      target: production
+    container_name: seasoul-web
+    restart: always
+    env_file: .env
+    depends_on:
+      - api
+    networks:
+      - seasoul-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  # ── NGINX (Reverse Proxy + SSL) ─────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: seasoul-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/sites:/etc/nginx/conf.d:ro
+      - nginx_certs:/etc/letsencrypt
+    depends_on:
+      - web
+      - api
+    networks:
+      - seasoul-network
+
+  # ── BACKUP AUTOMÁTICO ───────────────────────────────
+  backup:
+    image: postgres:16-alpine
+    container_name: seasoul-backup
+    restart: always
+    env_file: .env
+    volumes:
+      - ./infra/scripts/backup.sh:/backup.sh
+    depends_on:
+      - postgres
+    networks:
+      - seasoul-network
+    entrypoint: ["/bin/sh", "-c", "chmod +x /backup.sh && crond -f"]
+
+  # ── GRAFANA ─────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: seasoul-grafana
+    restart: always
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SERVER_ROOT_URL: https://monitor.seasoul.ao
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - seasoul-network
+
+  # ── PROMETHEUS ─────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: seasoul-prometheus
+    restart: always
+    volumes:
+      - ./infra/docker/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - seasoul-network

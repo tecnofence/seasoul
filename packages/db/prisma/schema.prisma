@@ -1,0 +1,540 @@
+// Sea and Soul ERP — Prisma Schema
+// ENGERIS — engeris.co.ao
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── RESORTS ──────────────────────────────────
+model Resort {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  lat            Float
+  lng            Float
+  geofenceRadius Int      @default(300)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  rooms         Room[]
+  employees     Employee[]
+  reservations  Reservation[]
+  sales         Sale[]
+  stockItems    StockItem[]
+  tariffs       Tariff[]
+  reviews       GuestReview[]
+  serviceOrders RoomServiceOrder[]
+  notifications Notification[]
+}
+
+// ── UTILIZADORES (Staff / Admin) ──────────────
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  resortId     String?
+  twoFaSecret  String?
+  twoFaEnabled Boolean  @default(false)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  notifications Notification[]
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  RESORT_MANAGER
+  RECEPTIONIST
+  POS_OPERATOR
+  STOCK_MANAGER
+  HR_MANAGER
+  STAFF
+}
+
+// ── REFRESH TOKENS ────────────────────────────
+// FIX: permite revogar tokens sem esperar expiração (segurança)
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ── HÓSPEDES (App Hóspede) ────────────────────
+// Separado de User — fluxo de autenticação diferente
+model Guest {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?  @unique
+  phone       String   @unique
+  countryCode String?
+  language    String   @default("pt")
+  deviceToken String?  // Expo push token
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reservations  Reservation[]
+  reviews       GuestReview[]
+  serviceOrders RoomServiceOrder[]
+  chatMessages  ChatMessage[]
+  notifications Notification[]
+}
+
+// ── QUARTOS ──────────────────────────────────
+model Room {
+  id            String     @id @default(cuid())
+  resortId      String
+  resort        Resort     @relation(fields: [resortId], references: [id])
+  number        String
+  type          RoomType
+  floor         Int
+  capacity      Int
+  pricePerNight Decimal    @db.Decimal(15, 2) // FIX: Float → Decimal
+  seamDeviceId  String?
+  status        RoomStatus @default(AVAILABLE)
+  description   String?
+  amenities     String[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  reservations Reservation[]
+
+  @@unique([resortId, number])
+  @@index([resortId, status])
+  @@index([resortId, type])
+}
+
+enum RoomType   { STANDARD SUPERIOR SUITE VILLA }
+enum RoomStatus { AVAILABLE OCCUPIED MAINTENANCE CLEANING }
+
+// ── TARIFAS ───────────────────────────────────
+// NOVO: gestão de preços sazonais e categorias tarifárias
+model Tariff {
+  id            String   @id @default(cuid())
+  resortId      String
+  resort        Resort   @relation(fields: [resortId], references: [id])
+  name          String
+  roomType      RoomType
+  pricePerNight Decimal  @db.Decimal(15, 2)
+  validFrom     DateTime
+  validUntil    DateTime
+  minNights     Int      @default(1)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([resortId, roomType, validFrom])
+}
+
+// ── RESERVAS ─────────────────────────────────
+model Reservation {
+  id                 String                   @id @default(cuid())
+  resortId           String
+  resort             Resort                   @relation(fields: [resortId], references: [id])
+  roomId             String
+  room               Room                     @relation(fields: [roomId], references: [id])
+  guestId            String?                  // ligação à conta app do hóspede (opcional)
+  guest              Guest?                   @relation(fields: [guestId], references: [id])
+  guestName          String
+  guestEmail         String
+  guestPhone         String
+  checkIn            DateTime
+  checkOut           DateTime
+  nights             Int
+  adults             Int
+  children           Int                      @default(0)
+  status             ReservationStatus        @default(CONFIRMED)
+  bookingSource      BookingSource            @default(DIRECT)  // NOVO
+  accessPinEncrypted String?                  // FIX: renomeado, agora encriptado AES-256
+  pinValidFrom       DateTime?
+  pinValidUntil      DateTime?
+  totalAmount        Decimal                  @db.Decimal(15, 2) // FIX: Float → Decimal
+  depositPaid        Decimal                  @db.Decimal(15, 2) @default(0) // NOVO
+  paymentStatus      ReservationPaymentStatus @default(PENDING)  // NOVO
+  notes              String?
+  internalNotes      String?                  // NOVO: notas internas (não visíveis ao hóspede)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  sales         Sale[]
+  review        GuestReview?
+  serviceOrders RoomServiceOrder[]
+  chatMessages  ChatMessage[]
+
+  @@index([resortId, status])
+  @@index([resortId, checkIn, checkOut])
+  @@index([roomId, checkIn, checkOut])
+  @@index([guestEmail])
+}
+
+enum ReservationStatus        { CONFIRMED CHECKED_IN CHECKED_OUT CANCELLED NO_SHOW }
+enum ReservationPaymentStatus { PENDING PARTIAL PAID REFUNDED }
+enum BookingSource            { DIRECT WEBSITE PHONE BOOKING_COM EXPEDIA AIRBNB OTHER }
+
+// ── PRODUTOS ─────────────────────────────────
+model Product {
+  id         String     @id @default(cuid())
+  name       String
+  category   String
+  department String
+  unitPrice  Decimal    @db.Decimal(15, 2) // FIX: Float → Decimal
+  taxRate    Decimal    @db.Decimal(5, 2)  @default(14) // FIX: Float → Decimal
+  active     Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  saleItems  SaleItem[]
+
+  @@index([department, active])
+}
+
+// ── VENDAS / POS ─────────────────────────────
+model Sale {
+  id             String        @id @default(cuid())
+  resortId       String
+  resort         Resort        @relation(fields: [resortId], references: [id])
+  reservationId  String?
+  reservation    Reservation?  @relation(fields: [reservationId], references: [id])
+  operatorId     String?       // userId do caixa — NOVO
+  totalAmount    Decimal       @db.Decimal(15, 2) // FIX: Float → Decimal
+  taxAmount      Decimal       @db.Decimal(15, 2) @default(0) // FIX: Float → Decimal
+  paymentMethod  PaymentMethod
+  status         SaleStatus    @default(PENDING)
+  invoiceNumber  String?       @unique
+  invoiceSeries  String?
+  agtStatus      String?
+  agtQrCode      String?
+  agtSubmittedAt DateTime?     // NOVO: quando foi enviado à AGT
+  pdfUrl         String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  items SaleItem[]
+
+  @@index([resortId, status])
+  @@index([resortId, createdAt])
+  @@index([invoiceNumber])
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  qty       Int
+  unitPrice Decimal @db.Decimal(15, 2) // FIX: Float → Decimal
+  taxRate   Decimal @db.Decimal(5, 2)  // FIX: Float → Decimal
+  total     Decimal @db.Decimal(15, 2) // FIX: Float → Decimal
+
+  @@index([saleId])
+}
+
+enum PaymentMethod { CASH CARD ROOM_CHARGE TRANSFER }
+enum SaleStatus    { PENDING INVOICED CANCELLED }
+
+// ── STOCK ─────────────────────────────────────
+model StockItem {
+  id         String          @id @default(cuid())
+  resortId   String
+  resort     Resort          @relation(fields: [resortId], references: [id])
+  name       String
+  department String
+  unit       String
+  currentQty Decimal         @db.Decimal(10, 3) // FIX: Float → Decimal
+  minQty     Decimal         @db.Decimal(10, 3) // FIX: Float → Decimal
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  movements StockMovement[]
+
+  @@index([resortId, department])
+}
+
+model StockMovement {
+  id          String       @id @default(cuid())
+  stockItemId String
+  stockItem   StockItem    @relation(fields: [stockItemId], references: [id])
+  type        MovementType
+  qty         Decimal      @db.Decimal(10, 3) // FIX: Float → Decimal
+  reason      String
+  saleId      String?
+  supplierId  String?      // NOVO: ligação ao fornecedor
+  supplier    Supplier?    @relation(fields: [supplierId], references: [id])
+  createdBy   String?      // userId
+  createdAt   DateTime     @default(now())
+
+  @@index([stockItemId, createdAt])
+}
+
+enum MovementType { IN OUT ADJUSTMENT }
+
+// ── FORNECEDORES ──────────────────────────────
+// NOVO: necessário para gestão de compras e rastreabilidade
+model Supplier {
+  id        String          @id @default(cuid())
+  name      String
+  nif       String?         @unique
+  contact   String?
+  phone     String?
+  email     String?
+  address   String?
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  stockMovements StockMovement[]
+}
+
+// ── RH ────────────────────────────────────────
+model Employee {
+  id         String   @id @default(cuid())
+  resortId   String
+  resort     Resort   @relation(fields: [resortId], references: [id])
+  name       String
+  nif        String   @unique
+  role       String
+  department String
+  baseSalary Decimal  @db.Decimal(15, 2) // FIX: Float → Decimal
+  startDate  DateTime
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  attendance AttendanceRecord[]
+  payrolls   Payroll[]
+  shifts     Shift[]
+
+  @@index([resortId, active])
+  @@index([resortId, department])
+}
+
+model Shift {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  date       DateTime @db.Date  // data do turno (sem hora)
+  startTime  DateTime           // FIX: String → DateTime
+  endTime    DateTime           // FIX: String → DateTime
+  department String
+  createdAt  DateTime @default(now())
+
+  @@index([employeeId, date])
+}
+
+// ── ASSIDUIDADE ───────────────────────────────
+model AttendanceRecord {
+  id         String         @id @default(cuid())
+  employeeId String
+  employee   Employee       @relation(fields: [employeeId], references: [id])
+  type       AttendanceType
+  lat        Float
+  lng        Float
+  validGps   Boolean
+  syncedAt   DateTime?
+  createdAt  DateTime       @default(now())
+
+  @@index([employeeId, createdAt])
+}
+
+enum AttendanceType { ENTRY EXIT BREAK_START BREAK_END }
+
+// ── SALÁRIOS ──────────────────────────────────
+model Payroll {
+  id            String    @id @default(cuid())
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  month         Int
+  year          Int
+  baseSalary    Decimal   @db.Decimal(15, 2) // FIX: Float → Decimal
+  hoursWorked   Decimal   @db.Decimal(8, 2)  // FIX: Float → Decimal
+  overtimeHours Decimal   @db.Decimal(8, 2)  // FIX: Float → Decimal
+  overtimePay   Decimal   @db.Decimal(15, 2) // FIX: Float → Decimal
+  absenceDays   Int
+  absenceDeduct Decimal   @db.Decimal(15, 2) // FIX: Float → Decimal
+  netSalary     Decimal   @db.Decimal(15, 2) // FIX: Float → Decimal
+  processed     Boolean   @default(false)
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([employeeId, month, year])
+  @@index([month, year])
+}
+
+// ── MANUTENÇÃO / LIMPEZA ──────────────────────
+model MaintenanceTicket {
+  id          String         @id @default(cuid())
+  resortId    String
+  roomId      String?
+  location    String
+  description String
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+  assignedTo  String?        // employeeId — NOVO
+  resolvedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([resortId, status])
+  @@index([roomId, status])
+}
+
+enum TicketPriority { LOW MEDIUM HIGH URGENT }
+enum TicketStatus   { OPEN IN_PROGRESS RESOLVED CLOSED }
+
+// ── AVALIAÇÕES ────────────────────────────────
+// NOVO: pedido no Sprint 3, agora no schema
+model GuestReview {
+  id            String      @id @default(cuid())
+  resortId      String
+  resort        Resort      @relation(fields: [resortId], references: [id])
+  reservationId String      @unique
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  guestId       String?
+  guest         Guest?      @relation(fields: [guestId], references: [id])
+  guestName     String
+  overallRating Int         // 1-5
+  cleanliness   Int?        // 1-5
+  service       Int?        // 1-5
+  location      Int?        // 1-5
+  valueForMoney Int?        // 1-5
+  comment       String?
+  language      String      @default("pt")
+  published     Boolean     @default(false)
+  reply         String?     // resposta da gestão
+  repliedAt     DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([resortId, published])
+  @@index([resortId, overallRating])
+}
+
+// ── ROOM SERVICE / PEDIDOS ────────────────────
+// NOVO: pedido no Sprint 3, agora no schema
+model RoomServiceOrder {
+  id            String             @id @default(cuid())
+  resortId      String
+  resort        Resort             @relation(fields: [resortId], references: [id])
+  reservationId String
+  reservation   Reservation        @relation(fields: [reservationId], references: [id])
+  guestId       String?
+  guest         Guest?             @relation(fields: [guestId], references: [id])
+  type          ServiceOrderType
+  items         Json               // [{ name, qty, price, notes }]
+  notes         String?
+  status        ServiceOrderStatus @default(PENDING)
+  scheduledAt   DateTime?
+  completedAt   DateTime?
+  assignedTo    String?            // employeeId
+  totalAmount   Decimal?           @db.Decimal(15, 2)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([resortId, status])
+  @@index([reservationId])
+}
+
+enum ServiceOrderType   { ROOM_SERVICE HOUSEKEEPING SPA RESTAURANT ACTIVITY TRANSPORT OTHER }
+enum ServiceOrderStatus { PENDING CONFIRMED IN_PROGRESS COMPLETED CANCELLED }
+
+// ── CHAT ──────────────────────────────────────
+// NOVO: WebSocket chat hóspede ↔ receção (Sprint 3)
+model ChatMessage {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  guestId       String?
+  guest         Guest?      @relation(fields: [guestId], references: [id])
+  senderType    SenderType
+  senderId      String      // guestId ou userId
+  content       String
+  readAt        DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([reservationId, createdAt])
+}
+
+enum SenderType { GUEST STAFF }
+
+// ── NOTIFICAÇÕES ─────────────────────────────
+// NOVO: rastreio de push/SMS/email enviados
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String?
+  user      User?               @relation(fields: [userId], references: [id])
+  guestId   String?
+  guest     Guest?              @relation(fields: [guestId], references: [id])
+  resortId  String?
+  resort    Resort?             @relation(fields: [resortId], references: [id])
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  channel   NotificationChannel
+  status    NotificationStatus  @default(PENDING)
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@index([userId, status])
+  @@index([guestId, status])
+  @@index([createdAt])
+}
+
+enum NotificationType    { RESERVATION_CONFIRMED RESERVATION_REMINDER CHECKIN_READY PIN_GENERATED CHECKOUT_REMINDER INVOICE_READY STOCK_ALERT ATTENDANCE_MISSING PAYROLL_PROCESSED MAINTENANCE_ASSIGNED }
+enum NotificationChannel { PUSH SMS EMAIL IN_APP }
+enum NotificationStatus  { PENDING SENT DELIVERED READ FAILED }
+
+// ── AUDITORIA ─────────────────────────────────
+// NOVO: obrigatório para conformidade fiscal AGT
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userEmail String?
+  action    String   // CREATE UPDATE DELETE LOGIN LOGOUT INVOICE_EMIT etc.
+  entity    String   // "Reservation" "Sale" "User" "Payroll" etc.
+  entityId  String?
+  before    Json?    // estado anterior
+  after     Json?    // estado novo
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ── DOCUMENTOS ───────────────────────────────
+// NOVO: BI hóspede, contratos colaboradores, etc.
+model Document {
+  id          String       @id @default(cuid())
+  entityType  String       // "Guest" "Employee" "Reservation"
+  entityId    String
+  type        DocumentType
+  name        String
+  fileUrl     String
+  mimeType    String
+  sizeBytes   Int
+  uploadedBy  String       // userId
+  createdAt   DateTime     @default(now())
+
+  @@index([entityType, entityId])
+}
+
+enum DocumentType { ID_CARD PASSPORT CONTRACT INVOICE MEDICAL VISA OTHER }

@@ -1,0 +1,13 @@
+{
+  "name": "@seasoul/db",
+  "version": "1.0.0",
+  "scripts": {
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "tsx prisma/seed.ts",
+    "studio": "prisma studio",
+    "generate": "prisma generate"
+  },
+  "dependencies": { "@prisma/client": "^5.14.0" },
+  "devDependencies": { "prisma": "^5.14.0", "tsx": "^4.11.0" }
+}

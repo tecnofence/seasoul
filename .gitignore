@@ -1,0 +1,50 @@
+# Dependências
+node_modules/
+.pnpm-store/
+
+# Ambiente — NUNCA commitar
+.env
+.env.local
+.env.*.local
+
+# Build
+.next/
+dist/
+build/
+out/
+
+# Cache
+.turbo/
+.cache/
+
+# Expo / React Native
+.expo/
+ios/
+android/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Chaves e certificados — NUNCA commitar
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# Backups locais
+backups/
+
+# Prisma
+prisma/migrations/dev/

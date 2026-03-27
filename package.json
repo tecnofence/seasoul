@@ -1,0 +1,32 @@
+{
+  "name": "sea-and-soul",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sea and Soul Resorts — ERP Completo | ENGERIS",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:migrate": "pnpm --filter @seasoul/db migrate:dev",
+    "db:migrate:prod": "pnpm --filter @seasoul/db migrate:deploy",
+    "db:seed": "pnpm --filter @seasoul/db seed",
+    "db:studio": "pnpm --filter @seasoul/db studio",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
