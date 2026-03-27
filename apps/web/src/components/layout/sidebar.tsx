@@ -12,6 +12,8 @@ import {
   Package,
   BoxIcon,
   Users,
+  UserCircle,
+  UserCheck,
   Star,
   Truck,
   ClipboardCheck,
@@ -21,6 +23,7 @@ import {
   Wrench,
   Tag,
   Bell,
+  Key,
   LogOut,
   X,
 } from 'lucide-react'
@@ -41,6 +44,9 @@ const navItems = [
   { href: '/dashboard/attendance', label: 'Assiduidade', icon: ClipboardCheck },
   { href: '/dashboard/payroll', label: 'Salários', icon: Banknote },
   { href: '/dashboard/invoices', label: 'Faturas', icon: FileText },
+  { href: '/dashboard/guests', label: 'Hóspedes', icon: UserCheck },
+  { href: '/dashboard/locks', label: 'Smart Locks', icon: Key },
+  { href: '/dashboard/users', label: 'Utilizadores', icon: UserCircle },
   { href: '/dashboard/notifications', label: 'Notificações', icon: Bell },
   { href: '/dashboard/reviews', label: 'Avaliações', icon: Star },
 ]
