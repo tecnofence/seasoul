@@ -232,14 +232,20 @@ export default async function consultingRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Projecto não encontrado' })
     }
 
-    // Calcular resumo de horas
-    const allLogs = await app.prisma.timeLog.findMany({
-      where: { projectId: project.id, tenantId: user.tenantId },
-      select: { hours: true, billable: true },
-    })
+    // Calcular resumo de horas com aggregate (evita carregar todos os registos)
+    const [totalHoursAgg, billableHoursAgg] = await Promise.all([
+      app.prisma.timeLog.aggregate({
+        _sum: { hours: true },
+        where: { projectId: project.id, tenantId: user.tenantId },
+      }),
+      app.prisma.timeLog.aggregate({
+        _sum: { hours: true },
+        where: { projectId: project.id, tenantId: user.tenantId, billable: true },
+      }),
+    ])
 
-    const totalHours = allLogs.reduce((sum, log) => sum + Number(log.hours), 0)
-    const totalBillableHours = allLogs.filter(l => l.billable).reduce((sum, log) => sum + Number(log.hours), 0)
+    const totalHours = Number(totalHoursAgg._sum.hours || 0)
+    const totalBillableHours = Number(billableHoursAgg._sum.hours || 0)
 
     return reply.send({
       data: {

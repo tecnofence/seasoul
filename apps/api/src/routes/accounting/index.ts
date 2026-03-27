@@ -92,25 +92,29 @@ export default async function accountingRoutes(app: FastifyInstance) {
     const where: Record<string, unknown> = {}
     if (user.tenantId) where.tenantId = user.tenantId
 
-    const entries = await app.prisma.accountingEntry.findMany({
-      where,
-      select: { debit: true, credit: true, category: true },
-    })
+    const [totals, categoryGroups] = await Promise.all([
+      app.prisma.accountingEntry.aggregate({
+        _sum: { debit: true, credit: true },
+        where,
+      }),
+      app.prisma.accountingEntry.groupBy({
+        by: ['category'],
+        _sum: { debit: true, credit: true },
+        where,
+      }),
+    ])
 
-    const totalDebit = entries.reduce((sum, e) => sum + Number(e.debit), 0)
-    const totalCredit = entries.reduce((sum, e) => sum + Number(e.credit), 0)
+    const totalDebit = Number(totals._sum.debit || 0)
+    const totalCredit = Number(totals._sum.credit || 0)
     const balance = totalDebit - totalCredit
 
     // Agrupar por categoria
     const byCategory: Record<string, { debit: number; credit: number; balance: number }> = {}
-    for (const entry of entries) {
-      const cat = entry.category || 'SEM_CATEGORIA'
-      if (!byCategory[cat]) {
-        byCategory[cat] = { debit: 0, credit: 0, balance: 0 }
-      }
-      byCategory[cat].debit += Number(entry.debit)
-      byCategory[cat].credit += Number(entry.credit)
-      byCategory[cat].balance = byCategory[cat].debit - byCategory[cat].credit
+    for (const group of categoryGroups) {
+      const cat = group.category || 'SEM_CATEGORIA'
+      const debit = Number(group._sum.debit || 0)
+      const credit = Number(group._sum.credit || 0)
+      byCategory[cat] = { debit, credit, balance: debit - credit }
     }
 
     return reply.send({
@@ -130,23 +134,18 @@ export default async function accountingRoutes(app: FastifyInstance) {
     const where: Record<string, unknown> = {}
     if (user.tenantId) where.tenantId = user.tenantId
 
-    const entries = await app.prisma.accountingEntry.findMany({
+    const accountGroups = await app.prisma.accountingEntry.groupBy({
+      by: ['account'],
+      _sum: { debit: true, credit: true },
       where,
-      select: { account: true, debit: true, credit: true },
+      orderBy: { account: 'asc' },
     })
 
-    // Agrupar por conta
-    const byAccount: Record<string, { account: string; debit: number; credit: number; balance: number }> = {}
-    for (const entry of entries) {
-      if (!byAccount[entry.account]) {
-        byAccount[entry.account] = { account: entry.account, debit: 0, credit: 0, balance: 0 }
-      }
-      byAccount[entry.account].debit += Number(entry.debit)
-      byAccount[entry.account].credit += Number(entry.credit)
-      byAccount[entry.account].balance = byAccount[entry.account].debit - byAccount[entry.account].credit
-    }
-
-    const data = Object.values(byAccount).sort((a, b) => a.account.localeCompare(b.account))
+    const data = accountGroups.map((group) => {
+      const debit = Number(group._sum.debit || 0)
+      const credit = Number(group._sum.credit || 0)
+      return { account: group.account, debit, credit, balance: debit - credit }
+    })
 
     return reply.send({ data })
   })
