@@ -60,6 +60,7 @@ import {
   Calculator,
   Compass,
   Store,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/lib/auth'
@@ -148,6 +149,8 @@ const allNavItems: NavItem[] = [
   { href: '/dashboard/legal', label: 'Jurídico', icon: Scale, module: 'legal' },
   // Contabilidade
   { href: '/dashboard/accounting', label: 'Contabilidade', icon: Calculator, module: 'accounting' },
+  // Relatórios & BI
+  { href: '/dashboard/reports', label: 'Relatórios', icon: BarChart3, module: 'core' },
   // Atividades & Experiências
   { href: '/dashboard/activities', label: 'Atividades', icon: Compass, module: 'activities' },
   // Retalho
