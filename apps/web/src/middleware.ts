@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/api', '/_next', '/favicon.ico']
+const PUBLIC_PATHS = ['/api', '/_next', '/favicon.ico']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -15,15 +15,24 @@ export function middleware(request: NextRequest) {
     request.cookies.get('token')?.value ||
     request.headers.get('authorization')?.replace('Bearer ', '')
 
-  if (!token && pathname.startsWith('/dashboard')) {
+  const isDashboard = pathname.startsWith('/dashboard')
+  const isLoginPage = pathname === '/login'
+
+  // If trying to access dashboard without token, redirect to login
+  if (isDashboard && !token) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // If on login page with token, redirect to dashboard
+  if (isLoginPage && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/dashboard/:path*', '/login'],
 }

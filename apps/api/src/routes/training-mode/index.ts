@@ -51,33 +51,45 @@ export default async function trainingModeRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Utilizador sem tenant associado' })
     }
 
+    // Verificar se já está ativo
+    const existing = await app.prisma.tenant.findUnique({
+      where: { id: user.tenantId },
+      select: { trainingMode: true },
+    })
+
+    if (existing?.trainingMode) {
+      return reply.send({ message: 'Modo formação já está ativo' })
+    }
+
     // Ativar modo formação no tenant
     const tenant = await app.prisma.tenant.update({
       where: { id: user.tenantId },
       data: { trainingMode: true },
     })
 
-    // Criar séries de formação se não existirem
+    // Criar séries de formação se não existirem (transação atómica)
     const docTypes = ['FT', 'FR', 'NC', 'ORC', 'PF', 'RC'] as const
-    for (const dt of docTypes) {
-      await app.prisma.invoiceSeries.upsert({
-        where: {
-          tenantId_documentType_series: {
-            tenantId: user.tenantId,
+    await app.prisma.$transaction(
+      docTypes.map((dt) =>
+        app.prisma.invoiceSeries.upsert({
+          where: {
+            tenantId_documentType_series: {
+              tenantId: user.tenantId!,
+              documentType: dt,
+              series: 'TREINO',
+            },
+          },
+          create: {
+            tenantId: user.tenantId!,
             documentType: dt,
             series: 'TREINO',
+            prefix: `${dt}-TREINO`,
+            isTraining: true,
           },
-        },
-        create: {
-          tenantId: user.tenantId,
-          documentType: dt,
-          series: 'TREINO',
-          prefix: `${dt}-TREINO`,
-          isTraining: true,
-        },
-        update: { active: true },
-      })
-    }
+          update: { active: true },
+        })
+      )
+    )
 
     // Registar na auditoria
     await app.prisma.auditLog.create({
@@ -139,21 +151,24 @@ export default async function trainingModeRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Utilizador sem tenant associado' })
     }
 
-    // Apagar items primeiro (cascade)
-    await app.prisma.invoiceItem.deleteMany({
-      where: { invoice: { tenantId: user.tenantId, isTraining: true } },
-    })
+    // Apagar dados de formação numa transação atómica
+    const [, deleted] = await app.prisma.$transaction([
+      // Apagar items primeiro (cascade)
+      app.prisma.invoiceItem.deleteMany({
+        where: { invoice: { tenantId: user.tenantId, isTraining: true } },
+      }),
 
-    // Apagar faturas de formação
-    const deleted = await app.prisma.invoice.deleteMany({
-      where: { tenantId: user.tenantId, isTraining: true },
-    })
+      // Apagar faturas de formação
+      app.prisma.invoice.deleteMany({
+        where: { tenantId: user.tenantId, isTraining: true },
+      }),
 
-    // Resetar contadores das séries de formação
-    await app.prisma.invoiceSeries.updateMany({
-      where: { tenantId: user.tenantId, isTraining: true },
-      data: { lastNumber: 0 },
-    })
+      // Resetar contadores das séries de formação
+      app.prisma.invoiceSeries.updateMany({
+        where: { tenantId: user.tenantId, isTraining: true },
+        data: { lastNumber: 0 },
+      }),
+    ])
 
     await app.prisma.auditLog.create({
       data: {

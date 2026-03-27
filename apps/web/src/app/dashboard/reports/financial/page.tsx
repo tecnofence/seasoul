@@ -278,7 +278,7 @@ function processTaxSummary(invoices: any[]) {
   let paid = 0
   invoices.forEach((inv: any) => {
     const tax = parseFloat(inv.taxAmount || inv.tax || '0')
-    if (inv.documentType === 'NOTA_CREDITO') {
+    if (inv.documentType === 'NC') {
       paid += tax
     } else {
       collected += tax

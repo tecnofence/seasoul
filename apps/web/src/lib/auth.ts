@@ -11,6 +11,7 @@ export interface AuthUser {
 export async function login(email: string, password: string) {
   const { data } = await api.post('/auth/login', { email, password })
   localStorage.setItem('token', data.data.token)
+  document.cookie = 'token=' + data.data.token + '; path=/; samesite=strict'
   if (data.data.refreshToken) {
     localStorage.setItem('refreshToken', data.data.refreshToken)
   }
@@ -25,6 +26,7 @@ export async function getMe(): Promise<AuthUser> {
 export function logout() {
   localStorage.removeItem('token')
   localStorage.removeItem('refreshToken')
+  document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
   window.location.href = '/login'
 }
 
