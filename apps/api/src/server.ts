@@ -37,6 +37,8 @@ import reviewsRoutes from './routes/reviews/index.js'
 import dashboardRoutes from './routes/dashboard/index.js'
 import notificationsRoutes from './routes/notifications/index.js'
 import maintenanceRoutes from './routes/maintenance/index.js'
+import auditLogRoutes from './routes/audit-log/index.js'
+import documentsRoutes from './routes/documents/index.js'
 
 const app = Fastify({
   logger: {
@@ -122,6 +124,8 @@ await app.register(reviewsRoutes,        { prefix: '/v1/reviews' })
 await app.register(dashboardRoutes,      { prefix: '/v1/dashboard' })
 await app.register(notificationsRoutes,  { prefix: '/v1/notifications' })
 await app.register(maintenanceRoutes,    { prefix: '/v1/maintenance' })
+await app.register(auditLogRoutes,       { prefix: '/v1/audit-log' })
+await app.register(documentsRoutes,      { prefix: '/v1/documents' })
 
 // ── Webhooks (TODO) ──────────────────────────
 // await app.register(seamWebhookRoutes, { prefix: '/webhooks/seam' })

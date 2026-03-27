@@ -2,6 +2,55 @@ import type { FastifyInstance } from 'fastify'
 import { registerGuestSchema, updateGuestSchema, guestLoginSchema } from './schemas.js'
 
 export default async function guestRoutes(app: FastifyInstance) {
+  // ── GET /list — Listar hóspedes (admin) ──
+  app.get('/list', {
+    preHandler: [app.authenticate],
+  }, async (request, reply) => {
+    const query = request.query as { page?: string; limit?: string; search?: string }
+    const page = Math.max(1, parseInt(query.page ?? '1'))
+    const limit = Math.min(100, Math.max(1, parseInt(query.limit ?? '20')))
+    const skip = (page - 1) * limit
+
+    const where: Record<string, unknown> = {}
+    if (query.search) {
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+        { phone: { contains: query.search } },
+      ]
+    }
+
+    const [data, total] = await Promise.all([
+      app.prisma.guest.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      app.prisma.guest.count({ where }),
+    ])
+
+    return reply.send({ data, total, page, limit, totalPages: Math.ceil(total / limit) })
+  })
+
+  // ── GET /admin/:id — Detalhe de hóspede (admin) ──
+  app.get<{ Params: { id: string } }>('/admin/:id', {
+    preHandler: [app.authenticate],
+  }, async (request, reply) => {
+    const guest = await app.prisma.guest.findUnique({
+      where: { id: request.params.id },
+      include: {
+        reservations: {
+          include: { room: { select: { id: true, number: true, type: true } } },
+          orderBy: { checkIn: 'desc' },
+          take: 10,
+        },
+        reviews: { orderBy: { createdAt: 'desc' }, take: 5 },
+      },
+    })
+
+    if (!guest) {
+      return reply.code(404).send({ error: 'Hóspede não encontrado' })
+    }
+
+    return reply.send({ data: guest })
+  })
+
   // ── POST /register — Registar hóspede na app ──
   app.post('/register', async (request, reply) => {
     const parsed = registerGuestSchema.safeParse(request.body)

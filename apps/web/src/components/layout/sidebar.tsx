@@ -24,6 +24,9 @@ import {
   Tag,
   Bell,
   Key,
+  MessageSquare,
+  Shield,
+  FolderOpen,
   LogOut,
   X,
 } from 'lucide-react'
@@ -47,8 +50,11 @@ const navItems = [
   { href: '/dashboard/guests', label: 'Hóspedes', icon: UserCheck },
   { href: '/dashboard/locks', label: 'Smart Locks', icon: Key },
   { href: '/dashboard/users', label: 'Utilizadores', icon: UserCircle },
+  { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
   { href: '/dashboard/notifications', label: 'Notificações', icon: Bell },
   { href: '/dashboard/reviews', label: 'Avaliações', icon: Star },
+  { href: '/dashboard/documents', label: 'Documentos', icon: FolderOpen },
+  { href: '/dashboard/audit-log', label: 'Auditoria', icon: Shield },
 ]
 
 interface SidebarProps {

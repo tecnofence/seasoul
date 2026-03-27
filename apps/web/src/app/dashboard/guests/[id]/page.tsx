@@ -22,7 +22,7 @@ export default function GuestDetailPage() {
 
   const { data: guest, isLoading } = useQuery({
     queryKey: ['guest', id],
-    queryFn: () => api.get(`/guest/${id}`).then((r) => r.data.data),
+    queryFn: () => api.get(`/guest/admin/${id}`).then((r) => r.data.data),
   })
 
   if (isLoading) return <div className="flex h-64 items-center justify-center text-gray-500">A carregar...</div>
