@@ -37,6 +37,48 @@ model Tenant {
   branches Branch[]
   users    User[]
 
+  invoiceSeries     InvoiceSeries[]
+  invoices          Invoice[]
+  securityContracts SecurityContract[]
+  securityInstallations SecurityInstallation[]
+  securityIncidents SecurityIncident[]
+  securityPatrols   SecurityPatrol[]
+  engineeringProjects EngineeringProject[]
+  constructionWorks ConstructionWork[]
+  budgetItems       BudgetItem[]
+  workMeasurements  WorkMeasurement[]
+  electricalProjects ElectricalProject[]
+  electricalInspections ElectricalInspection[]
+  electricalCertifications ElectricalCertification[]
+  clients           Client[]
+  deals             Deal[]
+  vehicles          Vehicle[]
+  fuelLogs          FuelLog[]
+  serviceContracts  ServiceContract[]
+  spaServices       SpaService[]
+  spaBookings       SpaBooking[]
+  events            Event[]
+  properties        Property[]
+  shipments         Shipment[]
+  courses           Course[]
+  enrollments       Enrollment[]
+  patients          Patient[]
+  appointments      Appointment[]
+  farms             Farm[]
+  crops             Crop[]
+  harvests          Harvest[]
+  activities        Activity[]
+  activityBookings  ActivityBooking[]
+  retailStores      RetailStore[]
+  retailSales       RetailSale[]
+  productionOrders  ProductionOrder[]
+  consultingProjects ConsultingProject[]
+  timeLogs          TimeLog[]
+  telecomSubscriptions TelecomSubscription[]
+  legalCases        LegalCase[]
+  accountingEntries AccountingEntry[]
+  alertRules        AlertRule[]
+
   @@index([slug])
   @@index([active])
 }
@@ -52,6 +94,7 @@ model TenantModule {
   active    Boolean  @default(true)
   activatedAt DateTime @default(now())
   expiresAt DateTime?
+  updatedAt DateTime @updatedAt
 
   @@unique([tenantId, moduleId])
   @@index([tenantId])
@@ -569,6 +612,7 @@ model Notification {
   sentAt    DateTime?
   readAt    DateTime?
   createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   @@index([userId, status])
   @@index([guestId, status])
@@ -631,6 +675,7 @@ model Document {
   sizeBytes   Int
   uploadedBy  String       // userId
   createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([entityType, entityId])
 }
@@ -646,6 +691,7 @@ enum DocumentType { ID_CARD PASSPORT CONTRACT INVOICE MEDICAL VISA OTHER }
 model InvoiceSeries {
   id           String      @id @default(cuid())
   tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   resortId     String?             // filial (opcional)
   documentType InvoiceDocType
   series       String              // "A", "B", "TREINO"
@@ -667,6 +713,7 @@ model InvoiceSeries {
 model Invoice {
   id              String         @id @default(cuid())
   tenantId        String
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   resortId        String?
   seriesId        String
   series          InvoiceSeries  @relation(fields: [seriesId], references: [id])
@@ -755,6 +802,7 @@ enum InvoiceDocType {
 model SecurityContract {
   id            String              @id @default(cuid())
   tenantId      String
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branchId      String?
   clientName    String
   clientNif     String?
@@ -785,8 +833,9 @@ enum ContractStatus { DRAFT ACTIVE SUSPENDED EXPIRED CANCELLED }
 model SecurityInstallation {
   id           String              @id @default(cuid())
   tenantId     String
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   contractId   String?
-  contract     SecurityContract?   @relation(fields: [contractId], references: [id])
+  contract     SecurityContract?   @relation(fields: [contractId], references: [id], onDelete: Cascade)
   clientName   String
   address      String
   lat          Float?
@@ -812,6 +861,7 @@ enum InstallationStatus { PLANNED IN_PROGRESS COMPLETED CANCELLED }
 model SecurityIncident {
   id           String            @id @default(cuid())
   tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branchId     String?
   contractId   String?
   type         IncidentType
@@ -843,6 +893,7 @@ enum IncidentStatus { OPEN INVESTIGATING IN_PROGRESS RESOLVED CLOSED }
 model SecurityPatrol {
   id           String        @id @default(cuid())
   tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branchId     String?
   guardId      String                // employeeId
   guardName    String
@@ -853,6 +904,7 @@ model SecurityPatrol {
   checkpoints  Json          @default("[]") // [{ name, lat, lng, checkedAt, notes, photo }]
   notes        String?
   createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
@@ -868,6 +920,7 @@ enum PatrolStatus { SCHEDULED IN_PROGRESS COMPLETED INTERRUPTED }
 model EngineeringProject {
   id            String          @id @default(cuid())
   tenantId      String
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branchId      String?
   name          String
   code          String?                  // código interno do projeto
@@ -906,8 +959,9 @@ enum ProjectStatus { PLANNING APPROVED IN_PROGRESS ON_HOLD COMPLETED CANCELLED }
 model ConstructionWork {
   id           String         @id @default(cuid())
   tenantId     String
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projectId    String
-  project      EngineeringProject @relation(fields: [projectId], references: [id])
+  project      EngineeringProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name         String
   description  String?
   phase        String?                 // "Fundação", "Estrutura", "Acabamentos"
@@ -930,8 +984,9 @@ enum WorkStatus { PENDING IN_PROGRESS COMPLETED BLOCKED CANCELLED }
 model BudgetItem {
   id           String  @id @default(cuid())
   tenantId     String
+  tenant       Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projectId    String
-  project      EngineeringProject @relation(fields: [projectId], references: [id])
+  project      EngineeringProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   code         String?                // código do item (ex: "1.2.3")
   description  String
   unit         String                 // "m²", "m³", "un", "kg", "ml", etc.
@@ -941,6 +996,7 @@ model BudgetItem {
   category     String?                // "Material", "Mão de Obra", "Equipamento"
   notes        String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([tenantId, projectId])
 }
@@ -949,8 +1005,9 @@ model BudgetItem {
 model WorkMeasurement {
   id           String   @id @default(cuid())
   tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projectId    String
-  project      EngineeringProject @relation(fields: [projectId], references: [id])
+  project      EngineeringProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   number       Int                     // número sequencial do auto
   period       String                  // "Março 2026"
   measuredBy   String?                 // técnico responsável
@@ -980,6 +1037,7 @@ enum MeasurementStatus { DRAFT SUBMITTED APPROVED INVOICED REJECTED }
 model ElectricalProject {
   id            String          @id @default(cuid())
   tenantId      String
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branchId      String?
   name          String
   clientName    String
@@ -1013,8 +1071,9 @@ enum VoltageLevel { LOW MEDIUM HIGH }
 model ElectricalInspection {
   id           String            @id @default(cuid())
   tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projectId    String?
-  project      ElectricalProject? @relation(fields: [projectId], references: [id])
+  project      ElectricalProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   address      String
   clientName   String
   inspectorId  String?                  // employeeId
@@ -1042,8 +1101,9 @@ enum InspectionStatus { SCHEDULED IN_PROGRESS COMPLETED CANCELLED }
 model ElectricalCertification {
   id             String            @id @default(cuid())
   tenantId       String
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projectId      String?
-  project        ElectricalProject? @relation(fields: [projectId], references: [id])
+  project        ElectricalProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   clientName     String
   address        String
   certNumber     String?           @unique
@@ -1071,6 +1131,7 @@ enum CertificationStatus { PENDING ISSUED EXPIRED REVOKED }
 model Client {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   nif         String?
   phone       String?
@@ -1097,8 +1158,9 @@ enum ClientType { INDIVIDUAL COMPANY GOVERNMENT }
 model Deal {
   id          String     @id @default(cuid())
   tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clientId    String
-  client      Client     @relation(fields: [clientId], references: [id])
+  client      Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
   title       String
   value       Decimal?   @db.Decimal(15, 2)
   currency    String     @default("AOA")
@@ -1125,6 +1187,7 @@ enum DealStage { LEAD QUALIFIED PROPOSAL NEGOTIATION WON LOST }
 model Vehicle {
   id           String        @id @default(cuid())
   tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branchId     String?
   plate        String
   brand        String
@@ -1154,8 +1217,9 @@ enum VehicleStatus { AVAILABLE IN_USE MAINTENANCE DECOMMISSIONED }
 model FuelLog {
   id         String   @id @default(cuid())
   tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicleId  String
-  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   driverId   String?
   driverName String?
   date       DateTime
@@ -1165,6 +1229,7 @@ model FuelLog {
   mileage    Int
   station    String?
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([tenantId, vehicleId])
   @@index([tenantId, date])
@@ -1177,6 +1242,7 @@ model FuelLog {
 model ServiceContract {
   id            String          @id @default(cuid())
   tenantId      String
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clientName    String
   clientNif     String?
   title         String
@@ -1207,6 +1273,7 @@ model ServiceContract {
 model SpaService {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   category    String               // MASSAGE, FACIAL, BODY, HAIR, NAILS, OTHER
   duration    Int                   // minutos
@@ -1223,8 +1290,9 @@ model SpaService {
 model SpaBooking {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   serviceId   String
-  service     SpaService @relation(fields: [serviceId], references: [id])
+  service     SpaService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   clientName  String
   clientPhone String?
   therapist   String?
@@ -1246,6 +1314,7 @@ model SpaBooking {
 model Event {
   id            String   @id @default(cuid())
   tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   title         String
   description   String?
   eventType     String               // CONFERENCE, WEDDING, PARTY, WORKSHOP, MEETING, SPORTS, CULTURAL, OTHER
@@ -1274,6 +1343,7 @@ model Event {
 model Property {
   id            String   @id @default(cuid())
   tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   title         String
   propertyType  String               // APARTMENT, HOUSE, LAND, COMMERCIAL, WAREHOUSE, OFFICE
   purpose       String   @default("SALE")  // SALE, RENT, BOTH
@@ -1306,6 +1376,7 @@ model Property {
 model Shipment {
   id              String   @id @default(cuid())
   tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   trackingCode    String?
   origin          String
   destination     String
@@ -1335,6 +1406,7 @@ model Shipment {
 model Course {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   code        String?
   category    String?              // TECHNICAL, SAFETY, MANAGEMENT, LANGUAGE, CERTIFICATION, OTHER
@@ -1354,8 +1426,9 @@ model Course {
 model Enrollment {
   id          String   @id @default(cuid())
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   courseId     String
-  course      Course   @relation(fields: [courseId], references: [id])
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   studentName String
   studentEmail String?
   studentPhone String?
@@ -1365,6 +1438,8 @@ model Enrollment {
   status      String   @default("ENROLLED")  // ENROLLED, IN_PROGRESS, COMPLETED, DROPPED, FAILED
   certificateUrl String?
   notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([tenantId, courseId])
   @@index([tenantId, status])
@@ -1626,6 +1701,7 @@ model TimeLog {
   description String?
   billable    Boolean  @default(true)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([tenantId, projectId])
   @@index([tenantId, date])

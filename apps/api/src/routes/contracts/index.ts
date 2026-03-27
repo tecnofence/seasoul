@@ -1,4 +1,28 @@
 import type { FastifyInstance } from 'fastify'
+import { z } from 'zod'
+
+const createContractSchema = z.object({
+  clientName: z.string().min(1),
+  clientNif: z.string().optional().nullable(),
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  contractType: z.string().min(1),
+  startDate: z.string().min(1),
+  endDate: z.string().optional().nullable(),
+  renewAuto: z.boolean().optional().default(false),
+  renewDaysBefore: z.number().int().min(1).optional().default(30),
+  monthlyValue: z.number().optional().nullable(),
+  totalValue: z.number().optional().nullable(),
+  currency: z.string().optional().default('AOA'),
+  status: z.enum(['DRAFT', 'ACTIVE', 'SUSPENDED', 'EXPIRED', 'CANCELLED']).optional().default('DRAFT'),
+  pdfUrl: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+})
+
+const updateContractStatusSchema = z.object({
+  status: z.enum(['DRAFT', 'ACTIVE', 'SUSPENDED', 'EXPIRED', 'CANCELLED']),
+  notes: z.string().optional().nullable(),
+})
 
 export default async function contractsRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
@@ -96,26 +120,30 @@ export default async function contractsRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Tenant não definido' })
     }
 
-    const body = request.body as Record<string, unknown>
+    const parsed = createContractSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     const contract = await app.prisma.serviceContract.create({
       data: {
         tenantId: user.tenantId,
-        clientName: body.clientName as string,
-        clientNif: (body.clientNif as string) || null,
-        title: body.title as string,
-        description: (body.description as string) || null,
-        contractType: body.contractType as string,
-        startDate: new Date(body.startDate as string),
-        endDate: body.endDate ? new Date(body.endDate as string) : null,
-        renewAuto: (body.renewAuto as boolean) || false,
-        renewDaysBefore: (body.renewDaysBefore as number) || 30,
-        monthlyValue: body.monthlyValue !== undefined ? body.monthlyValue as number : null,
-        totalValue: body.totalValue !== undefined ? body.totalValue as number : null,
-        currency: (body.currency as string) || 'AOA',
-        status: (body.status as 'DRAFT' | 'ACTIVE' | 'SUSPENDED' | 'EXPIRED' | 'CANCELLED') || 'DRAFT',
-        pdfUrl: (body.pdfUrl as string) || null,
-        notes: (body.notes as string) || null,
+        clientName: body.clientName,
+        clientNif: body.clientNif || null,
+        title: body.title,
+        description: body.description || null,
+        contractType: body.contractType,
+        startDate: new Date(body.startDate),
+        endDate: body.endDate ? new Date(body.endDate) : null,
+        renewAuto: body.renewAuto,
+        renewDaysBefore: body.renewDaysBefore,
+        monthlyValue: body.monthlyValue !== undefined ? body.monthlyValue : null,
+        totalValue: body.totalValue !== undefined ? body.totalValue : null,
+        currency: body.currency,
+        status: body.status,
+        pdfUrl: body.pdfUrl || null,
+        notes: body.notes || null,
       },
     })
 
@@ -134,7 +162,11 @@ export default async function contractsRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Contrato não encontrado' })
     }
 
-    const body = request.body as { status: string; notes?: string }
+    const parsed = updateContractStatusSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     const data: Record<string, unknown> = { status: body.status }
     if (body.notes) data.notes = body.notes

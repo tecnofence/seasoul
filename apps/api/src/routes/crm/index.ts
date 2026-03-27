@@ -1,4 +1,49 @@
 import type { FastifyInstance } from 'fastify'
+import { z } from 'zod'
+
+const createClientSchema = z.object({
+  name: z.string().min(1),
+  nif: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email().optional().nullable(),
+  address: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  country: z.string().optional().default('AO'),
+  type: z.enum(['INDIVIDUAL', 'COMPANY', 'GOVERNMENT']).optional().default('INDIVIDUAL'),
+  source: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+})
+
+const updateClientSchema = z.object({
+  name: z.string().min(1).optional(),
+  nif: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email().optional().nullable(),
+  address: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  country: z.string().optional(),
+  type: z.enum(['INDIVIDUAL', 'COMPANY', 'GOVERNMENT']).optional(),
+  source: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  active: z.boolean().optional(),
+})
+
+const createDealSchema = z.object({
+  clientId: z.string().min(1),
+  title: z.string().min(1),
+  value: z.number().optional().nullable(),
+  currency: z.string().optional().default('AOA'),
+  stage: z.enum(['LEAD', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']).optional().default('LEAD'),
+  probability: z.number().min(0).max(100).optional().default(0),
+  assignedTo: z.string().optional().nullable(),
+  expectedClose: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+})
+
+const updateDealStageSchema = z.object({
+  stage: z.enum(['LEAD', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']),
+  lostReason: z.string().optional().nullable(),
+})
 
 export default async function crmRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
@@ -75,12 +120,16 @@ export default async function crmRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Tenant não definido' })
     }
 
-    const body = request.body as Record<string, unknown>
+    const parsed = createClientSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     // Verificar NIF duplicado dentro do tenant
     if (body.nif) {
       const exists = await app.prisma.client.findFirst({
-        where: { tenantId: user.tenantId, nif: body.nif as string },
+        where: { tenantId: user.tenantId, nif: body.nif },
       })
       if (exists) {
         return reply.code(409).send({ error: 'NIF já registado neste tenant' })
@@ -90,16 +139,16 @@ export default async function crmRoutes(app: FastifyInstance) {
     const client = await app.prisma.client.create({
       data: {
         tenantId: user.tenantId,
-        name: body.name as string,
-        nif: (body.nif as string) || null,
-        phone: (body.phone as string) || null,
-        email: (body.email as string) || null,
-        address: (body.address as string) || null,
-        city: (body.city as string) || null,
-        country: (body.country as string) || 'AO',
-        type: (body.type as 'INDIVIDUAL' | 'COMPANY' | 'GOVERNMENT') || 'INDIVIDUAL',
-        source: (body.source as string) || null,
-        notes: (body.notes as string) || null,
+        name: body.name,
+        nif: body.nif || null,
+        phone: body.phone || null,
+        email: body.email || null,
+        address: body.address || null,
+        city: body.city || null,
+        country: body.country,
+        type: body.type,
+        source: body.source || null,
+        notes: body.notes || null,
       },
     })
 
@@ -118,12 +167,16 @@ export default async function crmRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Cliente não encontrado' })
     }
 
-    const body = request.body as Record<string, unknown>
+    const parsed = updateClientSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     // Verificar NIF duplicado se alterado
     if (body.nif && body.nif !== existing.nif) {
       const dup = await app.prisma.client.findFirst({
-        where: { tenantId: existing.tenantId, nif: body.nif as string, id: { not: existing.id } },
+        where: { tenantId: existing.tenantId, nif: body.nif, id: { not: existing.id } },
       })
       if (dup) {
         return reply.code(409).send({ error: 'NIF já registado neste tenant' })
@@ -198,11 +251,15 @@ export default async function crmRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Tenant não definido' })
     }
 
-    const body = request.body as Record<string, unknown>
+    const parsed = createDealSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     // Verificar que o cliente pertence ao mesmo tenant
     const client = await app.prisma.client.findFirst({
-      where: { id: body.clientId as string, tenantId: user.tenantId },
+      where: { id: body.clientId, tenantId: user.tenantId },
     })
     if (!client) {
       return reply.code(404).send({ error: 'Cliente não encontrado neste tenant' })
@@ -211,15 +268,15 @@ export default async function crmRoutes(app: FastifyInstance) {
     const deal = await app.prisma.deal.create({
       data: {
         tenantId: user.tenantId,
-        clientId: body.clientId as string,
-        title: body.title as string,
-        value: body.value !== undefined ? body.value as number : null,
-        currency: (body.currency as string) || 'AOA',
-        stage: (body.stage as 'LEAD' | 'QUALIFIED' | 'PROPOSAL' | 'NEGOTIATION' | 'WON' | 'LOST') || 'LEAD',
-        probability: (body.probability as number) || 0,
-        assignedTo: (body.assignedTo as string) || null,
-        expectedClose: body.expectedClose ? new Date(body.expectedClose as string) : null,
-        notes: (body.notes as string) || null,
+        clientId: body.clientId,
+        title: body.title,
+        value: body.value !== undefined ? body.value : null,
+        currency: body.currency,
+        stage: body.stage,
+        probability: body.probability,
+        assignedTo: body.assignedTo || null,
+        expectedClose: body.expectedClose ? new Date(body.expectedClose) : null,
+        notes: body.notes || null,
       },
       include: { client: { select: { id: true, name: true } } },
     })
@@ -239,7 +296,11 @@ export default async function crmRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Negócio não encontrado' })
     }
 
-    const body = request.body as { stage: string; lostReason?: string }
+    const parsed = updateDealStageSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     const data: Record<string, unknown> = { stage: body.stage }
     if (body.stage === 'WON' || body.stage === 'LOST') {

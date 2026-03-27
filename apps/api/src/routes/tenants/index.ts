@@ -1,7 +1,39 @@
 import { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 
 // ── GESTÃO DE TENANTS & MÓDULOS ──────────────────
 // CRUD de tenants, ativação de módulos, gestão de filiais
+
+const createTenantSchema = z.object({
+  name: z.string().min(1),
+  slug: z.string().min(1),
+  nif: z.string().optional(),
+  plan: z.string().optional().default('STARTER'),
+  maxUsers: z.number().int().min(1).optional().default(5),
+  maxBranches: z.number().int().min(1).optional().default(1),
+  modules: z.array(z.string()).optional(),
+})
+
+const updateTenantSchema = z.object({
+  name: z.string().min(1).optional(),
+  plan: z.string().optional(),
+  maxUsers: z.number().int().min(1).optional(),
+  maxBranches: z.number().int().min(1).optional(),
+  primaryColor: z.string().optional(),
+  logo: z.string().optional(),
+  active: z.boolean().optional(),
+})
+
+const createBranchSchema = z.object({
+  name: z.string().min(1),
+  slug: z.string().min(1),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+})
 
 export default async function tenantsRoutes(app: FastifyInstance) {
   // Listar todos os tenants (SUPER_ADMIN only)
@@ -48,6 +80,40 @@ export default async function tenantsRoutes(app: FastifyInstance) {
     })
   })
 
+  // Obter módulos ativos do utilizador atual
+  app.get('/me/modules', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { tenantId?: string }
+
+    if (!user.tenantId) {
+      // Sem tenant = acesso a tudo (SUPER_ADMIN global)
+      return reply.send({ data: { modules: ['*'], trainingMode: false } })
+    }
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { id: user.tenantId },
+      select: {
+        trainingMode: true,
+        plan: true,
+        modules: {
+          where: { active: true },
+          select: { moduleId: true },
+        },
+      },
+    })
+
+    if (!tenant) {
+      return reply.status(404).send({ error: 'Tenant não encontrado' })
+    }
+
+    return reply.send({
+      data: {
+        modules: tenant.modules.map((m) => m.moduleId),
+        plan: tenant.plan,
+        trainingMode: tenant.trainingMode,
+      },
+    })
+  })
+
   // Detalhe de um tenant
   app.get<{ Params: { id: string } }>('/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
     const tenant = await app.prisma.tenant.findUnique({
@@ -73,24 +139,20 @@ export default async function tenantsRoutes(app: FastifyInstance) {
       return reply.status(403).send({ error: 'Sem permissão' })
     }
 
-    const body = request.body as {
-      name: string
-      slug: string
-      nif?: string
-      plan?: string
-      maxUsers?: number
-      maxBranches?: number
-      modules?: string[]
+    const parsed = createTenantSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
     }
+    const body = parsed.data
 
     const tenant = await app.prisma.tenant.create({
       data: {
         name: body.name,
         slug: body.slug,
         nif: body.nif,
-        plan: (body.plan as any) || 'STARTER',
-        maxUsers: body.maxUsers || 5,
-        maxBranches: body.maxBranches || 1,
+        plan: body.plan as any,
+        maxUsers: body.maxUsers,
+        maxBranches: body.maxBranches,
         modules: {
           create: [
             { moduleId: 'core' }, // Core é sempre incluído
@@ -123,19 +185,15 @@ export default async function tenantsRoutes(app: FastifyInstance) {
       return reply.status(403).send({ error: 'Sem permissão' })
     }
 
-    const body = request.body as Partial<{
-      name: string
-      plan: string
-      maxUsers: number
-      maxBranches: number
-      primaryColor: string
-      logo: string
-      active: boolean
-    }>
+    const parsed = updateTenantSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     const tenant = await app.prisma.tenant.update({
       where: { id: request.params.id },
-      data: body as any,
+      data: body,
     })
 
     return reply.send({ data: tenant })
@@ -205,16 +263,11 @@ export default async function tenantsRoutes(app: FastifyInstance) {
 
   // Criar filial
   app.post<{ Params: { id: string } }>('/:id/branches', { preHandler: [app.authenticate] }, async (request, reply) => {
-    const body = request.body as {
-      name: string
-      slug: string
-      address?: string
-      city?: string
-      lat?: number
-      lng?: number
-      phone?: string
-      email?: string
+    const parsed = createBranchSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
     }
+    const body = parsed.data
 
     // Verificar limite de filiais
     const tenant = await app.prisma.tenant.findUnique({
@@ -236,39 +289,5 @@ export default async function tenantsRoutes(app: FastifyInstance) {
     })
 
     return reply.status(201).send({ data: branch })
-  })
-
-  // Obter módulos ativos do utilizador atual
-  app.get('/me/modules', { preHandler: [app.authenticate] }, async (request, reply) => {
-    const user = request.user as { tenantId?: string }
-
-    if (!user.tenantId) {
-      // Sem tenant = acesso a tudo (SUPER_ADMIN global)
-      return reply.send({ data: { modules: ['*'], trainingMode: false } })
-    }
-
-    const tenant = await app.prisma.tenant.findUnique({
-      where: { id: user.tenantId },
-      select: {
-        trainingMode: true,
-        plan: true,
-        modules: {
-          where: { active: true },
-          select: { moduleId: true },
-        },
-      },
-    })
-
-    if (!tenant) {
-      return reply.status(404).send({ error: 'Tenant não encontrado' })
-    }
-
-    return reply.send({
-      data: {
-        modules: tenant.modules.map((m) => m.moduleId),
-        plan: tenant.plan,
-        trainingMode: tenant.trainingMode,
-      },
-    })
   })
 }

@@ -1,5 +1,45 @@
 import type { FastifyInstance } from 'fastify'
 import { Decimal } from '@prisma/client/runtime/library'
+import { z } from 'zod'
+
+const createVehicleSchema = z.object({
+  branchId: z.string().optional().nullable(),
+  plate: z.string().min(1),
+  brand: z.string().min(1),
+  model: z.string().min(1),
+  year: z.number().int().min(1900).max(2100).optional().nullable(),
+  type: z.enum(['CAR', 'VAN', 'TRUCK', 'MOTORCYCLE', 'BUS', 'EQUIPMENT']),
+  fuelType: z.enum(['DIESEL', 'GASOLINE', 'ELECTRIC', 'HYBRID']).optional().default('DIESEL'),
+  mileage: z.number().int().min(0).optional().default(0),
+  status: z.enum(['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'DECOMMISSIONED']).optional().default('AVAILABLE'),
+  assignedTo: z.string().optional().nullable(),
+  insuranceExp: z.string().optional().nullable(),
+  inspectionExp: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+})
+
+const updateVehicleStatusSchema = z.object({
+  status: z.enum(['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'DECOMMISSIONED']),
+  assignedTo: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+})
+
+const createFuelLogSchema = z.object({
+  vehicleId: z.string().min(1),
+  driverId: z.string().optional().nullable(),
+  driverName: z.string().optional().nullable(),
+  date: z.string().min(1),
+  liters: z.union([z.string(), z.number()]).refine((v) => {
+    const n = Number(v)
+    return !isNaN(n) && n > 0
+  }, { message: 'liters deve ser um número positivo' }),
+  pricePerLiter: z.union([z.string(), z.number()]).refine((v) => {
+    const n = Number(v)
+    return !isNaN(n) && n > 0
+  }, { message: 'pricePerLiter deve ser um número positivo' }),
+  mileage: z.number().int().min(0),
+  station: z.string().optional().nullable(),
+})
 
 export default async function fleetRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
@@ -75,11 +115,15 @@ export default async function fleetRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Tenant não definido' })
     }
 
-    const body = request.body as Record<string, unknown>
+    const parsed = createVehicleSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     // Verificar matrícula duplicada no tenant
     const exists = await app.prisma.vehicle.findUnique({
-      where: { tenantId_plate: { tenantId: user.tenantId, plate: body.plate as string } },
+      where: { tenantId_plate: { tenantId: user.tenantId, plate: body.plate } },
     })
     if (exists) {
       return reply.code(409).send({ error: 'Matrícula já registada neste tenant' })
@@ -88,19 +132,19 @@ export default async function fleetRoutes(app: FastifyInstance) {
     const vehicle = await app.prisma.vehicle.create({
       data: {
         tenantId: user.tenantId,
-        branchId: (body.branchId as string) || null,
-        plate: body.plate as string,
-        brand: body.brand as string,
-        model: body.model as string,
-        year: (body.year as number) || null,
-        type: body.type as 'CAR' | 'VAN' | 'TRUCK' | 'MOTORCYCLE' | 'BUS' | 'EQUIPMENT',
-        fuelType: (body.fuelType as 'DIESEL' | 'GASOLINE' | 'ELECTRIC' | 'HYBRID') || 'DIESEL',
-        mileage: (body.mileage as number) || 0,
-        status: (body.status as 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'DECOMMISSIONED') || 'AVAILABLE',
-        assignedTo: (body.assignedTo as string) || null,
-        insuranceExp: body.insuranceExp ? new Date(body.insuranceExp as string) : null,
-        inspectionExp: body.inspectionExp ? new Date(body.inspectionExp as string) : null,
-        notes: (body.notes as string) || null,
+        branchId: body.branchId || null,
+        plate: body.plate,
+        brand: body.brand,
+        model: body.model,
+        year: body.year || null,
+        type: body.type,
+        fuelType: body.fuelType,
+        mileage: body.mileage,
+        status: body.status,
+        assignedTo: body.assignedTo || null,
+        insuranceExp: body.insuranceExp ? new Date(body.insuranceExp) : null,
+        inspectionExp: body.inspectionExp ? new Date(body.inspectionExp) : null,
+        notes: body.notes || null,
       },
     })
 
@@ -119,7 +163,11 @@ export default async function fleetRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Veículo não encontrado' })
     }
 
-    const body = request.body as { status: string; assignedTo?: string; notes?: string }
+    const parsed = updateVehicleStatusSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     const data: Record<string, unknown> = { status: body.status }
     if (body.assignedTo !== undefined) data.assignedTo = body.assignedTo || null
@@ -178,11 +226,15 @@ export default async function fleetRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Tenant não definido' })
     }
 
-    const body = request.body as Record<string, unknown>
+    const parsed = createFuelLogSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const body = parsed.data
 
     // Verificar que o veículo pertence ao tenant
     const vehicle = await app.prisma.vehicle.findFirst({
-      where: { id: body.vehicleId as string, tenantId: user.tenantId },
+      where: { id: body.vehicleId, tenantId: user.tenantId },
     })
     if (!vehicle) {
       return reply.code(404).send({ error: 'Veículo não encontrado neste tenant' })
@@ -191,20 +243,20 @@ export default async function fleetRoutes(app: FastifyInstance) {
     const liters = new Decimal(String(body.liters))
     const pricePerLiter = new Decimal(String(body.pricePerLiter))
     const totalCost = liters.times(pricePerLiter).toDecimalPlaces(2)
-    const mileage = body.mileage as number
+    const mileage = body.mileage
 
     const fuelLog = await app.prisma.fuelLog.create({
       data: {
         tenantId: user.tenantId,
-        vehicleId: body.vehicleId as string,
-        driverId: (body.driverId as string) || null,
-        driverName: (body.driverName as string) || null,
-        date: new Date(body.date as string),
+        vehicleId: body.vehicleId,
+        driverId: body.driverId || null,
+        driverName: body.driverName || null,
+        date: new Date(body.date),
         liters,
         pricePerLiter,
         totalCost,
         mileage,
-        station: (body.station as string) || null,
+        station: body.station || null,
       },
       include: { vehicle: { select: { id: true, plate: true } } },
     })
