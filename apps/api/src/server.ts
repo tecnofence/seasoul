@@ -4,9 +4,17 @@ import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
-import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+// Plugins
+import prismaPlugin from './plugins/prisma.js'
+import authPlugin from './plugins/auth.js'
+
+// Rotas — Sprint 1
+import authRoutes from './routes/auth/index.js'
+import usersRoutes from './routes/users/index.js'
+import roomsRoutes from './routes/rooms/index.js'
+import tariffsRoutes from './routes/tariffs/index.js'
+import reservationsRoutes from './routes/reservations/index.js'
 
 const app = Fastify({
   logger: {
@@ -17,15 +25,9 @@ const app = Fastify({
   },
 })
 
-// ── PRISMA ────────────────────────────────────
-// Disponibiliza prisma client como decorator em todos os handlers
-app.decorate('prisma', prisma)
-
-app.addHook('onClose', async () => {
-  await prisma.$disconnect()
-})
-
 // ── PLUGINS ───────────────────────────────────
+await app.register(prismaPlugin)
+
 await app.register(cors, {
   origin: process.env.CORS_ORIGINS?.split(',') ?? [],
 })
@@ -33,6 +35,8 @@ await app.register(cors, {
 await app.register(jwt, {
   secret: process.env.JWT_SECRET!,
 })
+
+await app.register(authPlugin)
 
 await app.register(rateLimit, {
   max:        Number(process.env.RATE_LIMIT_MAX) || 100,
@@ -61,15 +65,6 @@ await app.register(swagger, {
 
 await app.register(swaggerUi, { routePrefix: '/docs' })
 
-// ── HOOK DE AUTENTICAÇÃO ──────────────────────
-app.decorate('authenticate', async (request: any, reply: any) => {
-  try {
-    await request.jwtVerify()
-  } catch {
-    reply.code(401).send({ error: 'Token inválido ou expirado' })
-  }
-})
-
 // ── SAÚDE ─────────────────────────────────────
 app.get('/health', async () => ({
   status:    'ok',
@@ -77,29 +72,24 @@ app.get('/health', async () => ({
   version:   process.env.npm_package_version ?? '1.0.0',
 }))
 
-// ── ROTAS ─────────────────────────────────────
-// TODO Sprint 1 — Semana 2
-// await app.register(authRoutes,        { prefix: '/v1/auth' })
-// await app.register(usersRoutes,       { prefix: '/v1/users' })
+// ── ROTAS — Sprint 1 ─────────────────────────
+await app.register(authRoutes,         { prefix: '/v1/auth' })
+await app.register(usersRoutes,        { prefix: '/v1/users' })
+await app.register(roomsRoutes,        { prefix: '/v1/rooms' })
+await app.register(tariffsRoutes,      { prefix: '/v1/tariffs' })
+await app.register(reservationsRoutes, { prefix: '/v1/reservations' })
 
-// TODO Sprint 1 — Semana 3-4
-// await app.register(reservationsRoutes,{ prefix: '/v1/reservations' })
-// await app.register(roomsRoutes,       { prefix: '/v1/rooms' })
-// await app.register(tariffsRoutes,     { prefix: '/v1/tariffs' })
-
-// TODO Sprint 2 — Semana 5-6
+// ── ROTAS — Sprint 2 (TODO) ──────────────────
 // await app.register(posRoutes,         { prefix: '/v1/pos' })
 // await app.register(invoicesRoutes,    { prefix: '/v1/invoices' })
 // await app.register(agtRoutes,         { prefix: '/v1/agt' })
-
-// TODO Sprint 2 — Semana 7-8
 // await app.register(stockRoutes,       { prefix: '/v1/stock' })
 // await app.register(suppliersRoutes,   { prefix: '/v1/suppliers' })
 // await app.register(hrRoutes,          { prefix: '/v1/hr' })
 // await app.register(attendanceRoutes,  { prefix: '/v1/attendance' })
 // await app.register(payrollRoutes,     { prefix: '/v1/payroll' })
 
-// TODO Sprint 3 — Semana 9-10
+// ── ROTAS — Sprint 3 (TODO) ──────────────────
 // await app.register(locksRoutes,       { prefix: '/v1/locks' })
 // await app.register(guestRoutes,       { prefix: '/v1/guest' })
 // await app.register(serviceOrderRoutes,{ prefix: '/v1/service-orders' })
@@ -108,7 +98,7 @@ app.get('/health', async () => ({
 // await app.register(dashboardRoutes,   { prefix: '/v1/dashboard' })
 // await app.register(notificationsRoutes,{prefix: '/v1/notifications' })
 
-// TODO Webhooks
+// ── Webhooks (TODO) ──────────────────────────
 // await app.register(seamWebhookRoutes, { prefix: '/webhooks/seam' })
 // await app.register(agtWebhookRoutes,  { prefix: '/webhooks/agt' })
 
@@ -118,5 +108,5 @@ const host = process.env.API_HOST || '0.0.0.0'
 
 await app.listen({ port, host })
 
-app.log.info(`🚀 API a correr em http://localhost:${port}`)
-app.log.info(`📖 Swagger docs em http://localhost:${port}/docs`)
+app.log.info(`API a correr em http://localhost:${port}`)
+app.log.info(`Swagger docs em http://localhost:${port}/docs`)
