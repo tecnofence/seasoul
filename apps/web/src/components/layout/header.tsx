@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { getMe, type AuthUser } from '@/lib/auth'
 import { Menu, User } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications/notification-bell'
+import { LanguageSwitcher } from '@/components/language-switcher'
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -20,6 +21,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     <header className="flex h-16 items-center justify-between border-b bg-white px-4 sm:px-6">
       <button
         onClick={onMenuClick}
+        aria-label="Abrir menu"
         className="rounded-md p-2 text-gray-500 hover:bg-gray-100 lg:hidden"
       >
         <Menu className="h-5 w-5" />
@@ -29,6 +31,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="hidden lg:block" />
 
       <div className="flex items-center gap-2 sm:gap-4">
+        <LanguageSwitcher />
         <NotificationBell />
         <div className="flex items-center gap-2 text-sm">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">

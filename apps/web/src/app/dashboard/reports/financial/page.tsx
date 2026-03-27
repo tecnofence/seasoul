@@ -221,7 +221,7 @@ function processMonthlyRevenue(invoices: any[]) {
     const monthName = months[monthIdx]
     if (monthName) {
       const total = parseFloat(inv.totalAmount || inv.total || '0')
-      if (inv.documentType === 'NOTA_CREDITO') {
+      if (inv.documentType === 'NC') {
         revenueMap[monthName].despesas += total
       } else {
         revenueMap[monthName].receita += total
@@ -239,14 +239,19 @@ function processMonthlyRevenue(invoices: any[]) {
 function processInvoiceDistribution(invoices: any[]) {
   const typeMap: Record<string, number> = {}
   const labelMap: Record<string, string> = {
-    FATURA: 'Fatura',
-    FATURA_RECIBO: 'Fatura-Recibo',
-    NOTA_CREDITO: 'Nota de Crédito',
-    NOTA_DEBITO: 'Nota de Débito',
-    RECIBO: 'Recibo',
+    FT: 'Fatura',
+    FR: 'Fatura-Recibo',
+    NC: 'Nota de Crédito',
+    ND: 'Nota de Débito',
+    ORC: 'Orçamento',
+    PF: 'Proforma',
+    RC: 'Recibo',
+    GT: 'Guia de Transporte',
+    AM: 'Auto de Medição',
+    CS: 'Contrato de Serviço',
   }
   invoices.forEach((inv: any) => {
-    const type = inv.documentType || 'FATURA'
+    const type = inv.documentType || 'FT'
     typeMap[type] = (typeMap[type] || 0) + 1
   })
   return Object.entries(typeMap).map(([key, value]) => ({

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,13 +25,36 @@ const ALL_MODULES = [
 ]
 
 export default function SettingsPage() {
+  const queryClient = useQueryClient()
   const [enabledModules, setEnabledModules] = useState<Record<string, boolean>>({})
   const [branding, setBranding] = useState({ logoUrl: '', primaryColor: '#1A3E6E' })
   const [business, setBusiness] = useState({ nif: '', address: '', contact: '' })
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const { data: tenant, isLoading } = useQuery({
     queryKey: ['tenant-settings'],
     queryFn: () => api.get('/tenants/me/modules').then((r) => r.data.data),
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const tenantId = tenant?.tenantId || tenant?.id
+      if (!tenantId) throw new Error('Tenant não encontrado')
+      await api.patch(`/tenants/${tenantId}`, {
+        logo: branding.logoUrl || null,
+        primaryColor: branding.primaryColor,
+        nif: business.nif || null,
+      })
+    },
+    onSuccess: () => {
+      setSaveStatus('saved')
+      queryClient.invalidateQueries({ queryKey: ['tenant-settings'] })
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    },
+    onError: () => {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    },
   })
 
   useEffect(() => {
@@ -117,6 +140,9 @@ export default function SettingsPage() {
                 </div>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={!!enabledModules[mod.id]}
+                  aria-label={mod.label}
                   onClick={() => toggleModule(mod.id)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     enabledModules[mod.id] ? 'bg-primary' : 'bg-gray-300'
@@ -241,9 +267,22 @@ export default function SettingsPage() {
       </Card>
 
       {/* Botão guardar */}
-      <div className="flex justify-end">
-        <Button size="lg">
-          Guardar Definições
+      <div className="flex items-center justify-end gap-3">
+        {saveStatus === 'saved' && (
+          <span className="text-sm font-medium text-green-600">Definições guardadas!</span>
+        )}
+        {saveStatus === 'error' && (
+          <span className="text-sm font-medium text-red-600">Erro ao guardar. Tente novamente.</span>
+        )}
+        <Button
+          size="lg"
+          onClick={() => {
+            setSaveStatus('saving')
+            saveMutation.mutate()
+          }}
+          disabled={saveStatus === 'saving'}
+        >
+          {saveStatus === 'saving' ? 'A guardar...' : 'Guardar Definições'}
         </Button>
       </div>
     </div>
