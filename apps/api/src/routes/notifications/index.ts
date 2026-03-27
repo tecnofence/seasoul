@@ -1,0 +1,111 @@
+import type { FastifyInstance } from 'fastify'
+import { createNotificationSchema, listNotificationsQuery } from './schemas.js'
+
+export default async function notificationsRoutes(app: FastifyInstance) {
+  app.addHook('preHandler', app.authenticate)
+
+  // ── GET / — Listar notificações ──
+  app.get('/', async (request, reply) => {
+    const parsed = listNotificationsQuery.safeParse(request.query)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Parâmetros inválidos', details: parsed.error.flatten() })
+    }
+
+    const { page, limit, userId, guestId, status, channel } = parsed.data
+    const skip = (page - 1) * limit
+
+    const where: Record<string, unknown> = {}
+    if (userId) where.userId = userId
+    if (guestId) where.guestId = guestId
+    if (status) where.status = status
+    if (channel) where.channel = channel
+
+    const [data, total] = await Promise.all([
+      app.prisma.notification.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      app.prisma.notification.count({ where }),
+    ])
+
+    return reply.send({ data, total, page, limit, totalPages: Math.ceil(total / limit) })
+  })
+
+  // ── GET /me — Notificações do utilizador autenticado ──
+  app.get('/me', async (request, reply) => {
+    const user = request.user as any
+    const isGuest = user.type === 'guest'
+
+    const where = isGuest
+      ? { guestId: user.id }
+      : { userId: user.id }
+
+    const data = await app.prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
+
+    const unread = data.filter((n) => !n.readAt).length
+
+    return reply.send({ data, unread })
+  })
+
+  // ── POST / — Criar notificação (interno) ──
+  app.post('/', async (request, reply) => {
+    if (!['SUPER_ADMIN', 'RESORT_MANAGER'].includes(request.user.role)) {
+      return reply.code(403).send({ error: 'Sem permissão' })
+    }
+
+    const parsed = createNotificationSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+
+    if (!parsed.data.userId && !parsed.data.guestId) {
+      return reply.code(400).send({ error: 'userId ou guestId obrigatório' })
+    }
+
+    const notification = await app.prisma.notification.create({
+      data: parsed.data,
+    })
+
+    // TODO: Dispatch via canal (PUSH → Expo, SMS → Africa's Talking, EMAIL → Resend)
+
+    return reply.code(201).send({ data: notification, message: 'Notificação criada' })
+  })
+
+  // ── PATCH /:id/read — Marcar como lida ──
+  app.patch<{ Params: { id: string } }>('/:id/read', async (request, reply) => {
+    const notification = await app.prisma.notification.findUnique({ where: { id: request.params.id } })
+    if (!notification) {
+      return reply.code(404).send({ error: 'Notificação não encontrada' })
+    }
+
+    const updated = await app.prisma.notification.update({
+      where: { id: request.params.id },
+      data: { readAt: new Date(), status: 'READ' },
+    })
+
+    return reply.send({ data: updated })
+  })
+
+  // ── PATCH /read-all — Marcar todas como lidas ──
+  app.patch('/read-all', async (request, reply) => {
+    const user = request.user as any
+    const isGuest = user.type === 'guest'
+
+    const where = isGuest
+      ? { guestId: user.id, readAt: null }
+      : { userId: user.id, readAt: null }
+
+    await app.prisma.notification.updateMany({
+      where,
+      data: { readAt: new Date(), status: 'READ' },
+    })
+
+    return reply.send({ message: 'Todas as notificações marcadas como lidas' })
+  })
+}
