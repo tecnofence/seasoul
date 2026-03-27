@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Route, MapPin, Clock, CheckCircle } from 'lucide-react'
+import { Route, MapPin, Clock, CheckCircle, Plus } from 'lucide-react'
 
 const STATUS_LABEL: Record<string, string> = { SCHEDULED: 'Agendada', IN_PROGRESS: 'Em Curso', COMPLETED: 'Concluída', INTERRUPTED: 'Interrompida' }
 const STATUS_COLOR: Record<string, string> = { SCHEDULED: 'bg-blue-100 text-blue-700', IN_PROGRESS: 'bg-amber-100 text-amber-700', COMPLETED: 'bg-green-100 text-green-700', INTERRUPTED: 'bg-red-100 text-red-700' }
@@ -23,6 +24,9 @@ export default function PatrolsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Segurança — Rondas</h1>
+        <Button onClick={() => router.push('/dashboard/patrols/new')}>
+          <Plus className="mr-2 h-4 w-4" /> Nova Ronda
+        </Button>
         <div className="flex gap-2">
           {Object.entries(STATUS_LABEL).map(([k, v]) => (
             <button key={k} onClick={() => setStatusFilter(statusFilter === k ? '' : k)}
@@ -38,7 +42,7 @@ export default function PatrolsPage() {
           {patrols.map((p: any) => {
             const checkpoints = Array.isArray(p.checkpoints) ? p.checkpoints : []
             return (
-              <div key={p.id} className="rounded-lg border bg-white p-5 shadow-sm">
+              <div key={p.id} className="cursor-pointer rounded-lg border bg-white p-5 shadow-sm hover:shadow-md transition-shadow" onClick={() => router.push(`/dashboard/patrols/${p.id}`)}>
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Route className="h-5 w-5 text-primary" />

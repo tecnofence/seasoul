@@ -1,15 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Star } from 'lucide-react'
+import { Star, Plus } from 'lucide-react'
 
 export default function ReviewsPage() {
+  const router = useRouter()
   const [page, setPage] = useState(1)
 
   const { data, isLoading } = useQuery({
@@ -23,11 +25,16 @@ export default function ReviewsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Avaliações</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Avaliações</h1>
+        <Button onClick={() => router.push('/dashboard/reviews/new')}>
+          <Plus className="mr-2 h-4 w-4" /> Nova Avaliação
+        </Button>
+      </div>
 
       <div className="space-y-4">
         {data?.data?.map((review: any) => (
-          <Card key={review.id}>
+          <Card key={review.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push(`/dashboard/reviews/${review.id}`)}>
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2">
