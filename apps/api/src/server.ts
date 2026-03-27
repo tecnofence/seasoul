@@ -38,6 +38,7 @@ import chatRoutes from './routes/chat/index.js'
 import reviewsRoutes from './routes/reviews/index.js'
 import dashboardRoutes from './routes/dashboard/index.js'
 import notificationsRoutes from './routes/notifications/index.js'
+import alertsRoutes from './routes/alerts/index.js'
 import maintenanceRoutes from './routes/maintenance/index.js'
 import auditLogRoutes from './routes/audit-log/index.js'
 import documentsRoutes from './routes/documents/index.js'
@@ -154,6 +155,7 @@ await app.register(chatRoutes,           { prefix: '/v1/chat' })
 await app.register(reviewsRoutes,        { prefix: '/v1/reviews' })
 await app.register(dashboardRoutes,      { prefix: '/v1/dashboard' })
 await app.register(notificationsRoutes,  { prefix: '/v1/notifications' })
+await app.register(alertsRoutes,         { prefix: '/v1/alerts' })
 await app.register(maintenanceRoutes,    { prefix: '/v1/maintenance' })
 await app.register(auditLogRoutes,       { prefix: '/v1/audit-log' })
 await app.register(documentsRoutes,      { prefix: '/v1/documents' })

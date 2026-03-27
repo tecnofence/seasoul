@@ -579,6 +579,25 @@ enum NotificationType    { RESERVATION_CONFIRMED RESERVATION_REMINDER CHECKIN_RE
 enum NotificationChannel { PUSH SMS EMAIL IN_APP }
 enum NotificationStatus  { PENDING SENT DELIVERED READ FAILED }
 
+// ── REGRAS DE ALERTAS ─────────────────────────
+model AlertRule {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  name        String
+  module      String   // 'contracts', 'stock', 'invoicing', 'security', 'fleet', 'hr', 'maintenance', 'pms'
+  alertType   String?  // Tipo predefinido: CONTRACT_EXPIRING_30D, STOCK_BELOW_MINIMUM, etc.
+  condition   String
+  threshold   Float?
+  channels    String[] // ['email', 'sms', 'push', 'in_app']
+  active      Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, active])
+  @@index([module])
+}
+
 // ── AUDITORIA ─────────────────────────────────
 // NOVO: obrigatório para conformidade fiscal AGT
 model AuditLog {
