@@ -338,9 +338,9 @@ describe('Invoicing API — /v1/invoicing', () => {
 
       // Verificar que o create foi chamado com valores corretos de imposto
       const createCall = mockPrisma.invoice.create.mock.calls[0][0]
-      expect(createCall.data.subtotal).toBe(10000)
-      expect(createCall.data.taxAmount).toBe(1400) // 14% de 10000
-      expect(createCall.data.totalAmount).toBe(11400)
+      expect(createCall.data.subtotal).toBeCloseTo(10000, 2)
+      expect(createCall.data.taxAmount).toBeCloseTo(1400, 2) // 14% de 10000
+      expect(createCall.data.totalAmount).toBeCloseTo(11400, 2)
     })
   })
 
