@@ -3,9 +3,10 @@ import Fastify, { FastifyInstance } from 'fastify'
 import invoicingRoutes from '../index.js'
 
 // ── Mock Prisma ──────────────────────────────────
-const mockPrisma = {
+const mockPrisma: any = {
   invoice: {
     findMany: vi.fn(),
+    findFirst: vi.fn(),
     findUnique: vi.fn(),
     count: vi.fn(),
     create: vi.fn(),
@@ -22,6 +23,7 @@ const mockPrisma = {
   auditLog: {
     create: vi.fn(),
   },
+  $transaction: vi.fn(async (fn: any) => fn(mockPrisma)),
 }
 
 // ── Mock Users ───────────────────────────────────
@@ -352,7 +354,7 @@ describe('Invoicing API — /v1/invoicing', () => {
         fullNumber: 'FT A/00001',
         cancelledAt: null,
       }
-      mockPrisma.invoice.findUnique.mockResolvedValue(invoice)
+      mockPrisma.invoice.findFirst.mockResolvedValue(invoice)
       mockPrisma.invoice.update.mockResolvedValue({
         ...invoice,
         cancelledAt: new Date(),
@@ -382,7 +384,7 @@ describe('Invoicing API — /v1/invoicing', () => {
     })
 
     it('deve rejeitar anulacao de documento ja anulado', async () => {
-      mockPrisma.invoice.findUnique.mockResolvedValue({
+      mockPrisma.invoice.findFirst.mockResolvedValue({
         id: 'inv-1',
         cancelledAt: new Date(),
       })
@@ -398,7 +400,7 @@ describe('Invoicing API — /v1/invoicing', () => {
     })
 
     it('deve retornar 404 para documento inexistente', async () => {
-      mockPrisma.invoice.findUnique.mockResolvedValue(null)
+      mockPrisma.invoice.findFirst.mockResolvedValue(null)
 
       const res = await app.inject({
         method: 'POST',

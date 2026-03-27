@@ -3,7 +3,7 @@ import Fastify, { FastifyInstance } from 'fastify'
 import trainingModeRoutes from '../index.js'
 
 // ── Mock Prisma ──────────────────────────────────
-const mockPrisma = {
+const mockPrisma: any = {
   tenant: {
     findUnique: vi.fn(),
     update: vi.fn(),
@@ -22,6 +22,14 @@ const mockPrisma = {
   auditLog: {
     create: vi.fn(),
   },
+  $transaction: vi.fn(async (arg: any) => {
+    if (Array.isArray(arg)) {
+      // Array form: execute each promise and return results
+      return Promise.all(arg)
+    }
+    // Function form
+    return arg(mockPrisma)
+  }),
 }
 
 // ── Mock Users ───────────────────────────────────
@@ -157,6 +165,7 @@ describe('Training Mode API — /v1/training-mode', () => {
   // ── ACTIVATE ──────────────────────────────────
   describe('POST /v1/training-mode/activate', () => {
     it('deve ativar modo formacao', async () => {
+      mockPrisma.tenant.findUnique.mockResolvedValue({ trainingMode: false })
       mockPrisma.tenant.update.mockResolvedValue({
         id: 'tenant-1',
         trainingMode: true,
@@ -176,6 +185,7 @@ describe('Training Mode API — /v1/training-mode', () => {
     })
 
     it('deve criar series TREINO para todos os tipos de documento', async () => {
+      mockPrisma.tenant.findUnique.mockResolvedValue({ trainingMode: false })
       mockPrisma.tenant.update.mockResolvedValue({ id: 'tenant-1', trainingMode: true })
       mockPrisma.invoiceSeries.upsert.mockResolvedValue({})
       mockPrisma.auditLog.create.mockResolvedValue({})
@@ -200,6 +210,7 @@ describe('Training Mode API — /v1/training-mode', () => {
     })
 
     it('deve registar na auditoria', async () => {
+      mockPrisma.tenant.findUnique.mockResolvedValue({ trainingMode: false })
       mockPrisma.tenant.update.mockResolvedValue({ id: 'tenant-1', trainingMode: true })
       mockPrisma.invoiceSeries.upsert.mockResolvedValue({})
       mockPrisma.auditLog.create.mockResolvedValue({})
@@ -225,6 +236,7 @@ describe('Training Mode API — /v1/training-mode', () => {
       await managerApp.register(trainingModeRoutes, { prefix: '/v1/training-mode' })
       await managerApp.ready()
 
+      mockPrisma.tenant.findUnique.mockResolvedValue({ trainingMode: false })
       mockPrisma.tenant.update.mockResolvedValue({ id: 'tenant-1', trainingMode: true })
       mockPrisma.invoiceSeries.upsert.mockResolvedValue({})
       mockPrisma.auditLog.create.mockResolvedValue({})
