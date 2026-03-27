@@ -2,208 +2,320 @@
 
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { formatKwanza } from '@/lib/utils'
+import { formatKwanza, formatDateTime } from '@/lib/utils'
 import { StatCard } from '@/components/ui/stat-card'
 import { Card, CardTitle, CardContent } from '@/components/ui/card'
-import { BedDouble, TrendingUp, LogIn, LogOut, Wrench, AlertTriangle, ConciergeBell, Star } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts'
+  DollarSign,
+  FileText,
+  Users,
+  Briefcase,
+  BedDouble,
+  Wrench,
+  ShieldCheck,
+  Zap,
+  Truck,
+  Package,
+  ClipboardList,
+  UserPlus,
+  HardHat,
+  AlertTriangle,
+  Handshake,
+  Plus,
+  Clock,
+  Activity,
+  type LucideIcon,
+} from 'lucide-react'
+import type { ReactNode } from 'react'
 
-const COLORS = ['#1A3E6E', '#1A5E6E', '#3B82F6', '#F59E0B', '#EF4444', '#10B981']
+// ── Configuração dos módulos ──────────────────────
+
+interface ModuleConfig {
+  key: string
+  label: string
+  icon: LucideIcon
+  endpoint: string
+  metricLabel: string
+  badgeVariant: 'default' | 'success' | 'warning' | 'danger' | 'info'
+}
+
+const MODULES: ModuleConfig[] = [
+  { key: 'reservations', label: 'Reservas', icon: BedDouble, endpoint: '/reservations', metricLabel: 'Reservas', badgeVariant: 'info' },
+  { key: 'engineering', label: 'Engenharia', icon: HardHat, endpoint: '/engineering', metricLabel: 'Projetos', badgeVariant: 'default' },
+  { key: 'security', label: 'Segurança', icon: ShieldCheck, endpoint: '/security', metricLabel: 'Contratos', badgeVariant: 'warning' },
+  { key: 'electrical', label: 'Eletricidade', icon: Zap, endpoint: '/electrical', metricLabel: 'Projetos', badgeVariant: 'info' },
+  { key: 'fleet', label: 'Frota', icon: Truck, endpoint: '/fleet', metricLabel: 'Veículos', badgeVariant: 'default' },
+  { key: 'stock', label: 'Stock', icon: Package, endpoint: '/stock', metricLabel: 'Itens', badgeVariant: 'success' },
+  { key: 'maintenance', label: 'Manutenção', icon: Wrench, endpoint: '/maintenance', metricLabel: 'Ordens', badgeVariant: 'warning' },
+  { key: 'hr', label: 'Recursos Humanos', icon: Users, endpoint: '/hr', metricLabel: 'Colaboradores', badgeVariant: 'default' },
+  { key: 'service-orders', label: 'Pedidos', icon: ClipboardList, endpoint: '/service-orders', metricLabel: 'Pedidos', badgeVariant: 'info' },
+  { key: 'incidents', label: 'Incidentes', icon: AlertTriangle, endpoint: '/security/incidents', metricLabel: 'Incidentes', badgeVariant: 'danger' },
+]
+
+// ── Ações rápidas ─────────────────────────────────
+
+interface QuickAction {
+  label: string
+  href: string
+  icon: LucideIcon
+}
+
+const QUICK_ACTIONS: QuickAction[] = [
+  { label: 'Nova Fatura', href: '/dashboard/invoicing/new', icon: FileText },
+  { label: 'Novo Cliente', href: '/dashboard/clients/new', icon: UserPlus },
+  { label: 'Novo Projeto', href: '/dashboard/projects/new', icon: HardHat },
+  { label: 'Registar Incidente', href: '/dashboard/incidents/new', icon: AlertTriangle },
+  { label: 'Nova Reserva', href: '/dashboard/reservations/new', icon: BedDouble },
+  { label: 'Novo Contrato', href: '/dashboard/contracts/new', icon: Briefcase },
+  { label: 'Novo Veículo', href: '/dashboard/vehicles/new', icon: Truck },
+  { label: 'Novo Colaborador', href: '/dashboard/hr/new', icon: Users },
+]
+
+// ── Itens de atividade recente ────────────────────
+
+interface ActivityItem {
+  id: string
+  icon: ReactNode
+  description: string
+  timestamp: string
+  module: string
+  badgeVariant: 'default' | 'success' | 'warning' | 'danger' | 'info'
+}
+
+// ── Componente do cartão de módulo ────────────────
+
+function ModuleStatCard({ config }: { config: ModuleConfig }) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: [`dashboard-module-${config.key}`],
+    queryFn: () => api.get(config.endpoint, { params: { limit: 1 } }).then(r => r.data),
+    staleTime: 60000,
+    retry: 1,
+  })
+
+  const total = data?.total ?? 0
+  const Icon = config.icon
+
+  return (
+    <Card className="flex items-center gap-4 p-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-gray-500">{config.label}</p>
+        {isLoading ? (
+          <p className="text-lg font-bold text-gray-300">...</p>
+        ) : isError ? (
+          <p className="text-sm text-gray-400">Indisponível</p>
+        ) : (
+          <p className="text-lg font-bold text-gray-900">
+            {total} {config.metricLabel}
+          </p>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+// ── Página principal ──────────────────────────────
 
 export default function DashboardPage() {
-  const { data: dashboard, isLoading } = useQuery({
-    queryKey: ['dashboard-central'],
-    queryFn: () => api.get('/dashboard/central').then((r) => r.data.data),
+  // KPI principal — Faturação
+  const { data: invoicingData, isLoading: invoicingLoading } = useQuery({
+    queryKey: ['dashboard-invoicing'],
+    queryFn: () => api.get('/invoicing', { params: { limit: 1 } }).then(r => r.data),
+    staleTime: 60000,
+    retry: 1,
   })
 
-  const { data: today } = useQuery({
-    queryKey: ['reservations-today'],
-    queryFn: () => api.get('/reservations/today').then((r) => r.data.data),
+  // KPI — Clientes ativos
+  const { data: clientsData, isLoading: clientsLoading } = useQuery({
+    queryKey: ['dashboard-clients'],
+    queryFn: () => api.get('/crm', { params: { limit: 1, active: 'true' } }).then(r => r.data),
+    staleTime: 60000,
+    retry: 1,
   })
 
-  if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-gray-500">A carregar painel...</p>
-      </div>
-    )
-  }
+  // KPI — Contratos ativos
+  const { data: contractsData, isLoading: contractsLoading } = useQuery({
+    queryKey: ['dashboard-contracts'],
+    queryFn: () => api.get('/contracts', { params: { limit: 1, status: 'ACTIVE' } }).then(r => r.data),
+    staleTime: 60000,
+    retry: 1,
+  })
 
-  const resorts = dashboard?.resorts ?? []
-  const totalRevenue = dashboard?.totalRevenueMtd ?? 0
-  const totalOccupancy = dashboard?.totalOccupancy ?? 0
-  const totalCheckIns = dashboard?.combinedCheckInsToday ?? 0
-  const checkInsToday = today?.checkIns?.length ?? 0
-  const checkOutsToday = today?.checkOuts?.length ?? 0
+  // Receita total — soma dos valores das faturas recentes
+  const { data: revenueData, isLoading: revenueLoading } = useQuery({
+    queryKey: ['dashboard-revenue'],
+    queryFn: () => api.get('/invoicing', { params: { limit: 5, status: 'active', type: 'FT' } }).then(r => r.data),
+    staleTime: 60000,
+    retry: 1,
+  })
 
-  // Dados para gráfico de ocupação por resort
-  const occupancyData = resorts.map((r: any) => ({
-    name: r.resortName,
-    ocupação: Math.round(r.occupancy ?? 0),
-    quartos: r.totalRooms ?? 0,
-    ocupados: r.occupiedRooms ?? 0,
-  }))
+  // Atividade recente — últimas faturas
+  const { data: recentInvoices } = useQuery({
+    queryKey: ['dashboard-recent-invoices'],
+    queryFn: () => api.get('/invoicing', { params: { limit: 5 } }).then(r => r.data),
+    staleTime: 60000,
+    retry: 1,
+  })
 
-  // Dados para gráfico pie de distribuição de quartos
-  const roomDistData = resorts.map((r: any) => ({
-    name: r.resortName,
-    value: r.totalRooms ?? 0,
-  }))
+  // Atividade recente — últimos incidentes
+  const { data: recentIncidents } = useQuery({
+    queryKey: ['dashboard-recent-incidents'],
+    queryFn: () => api.get('/security/incidents', { params: { limit: 3 } }).then(r => r.data),
+    staleTime: 60000,
+    retry: 1,
+  })
 
-  // KPI adicional
-  const firstResort = resorts[0]
+  // Atividade recente — últimos clientes (deals)
+  const { data: recentClients } = useQuery({
+    queryKey: ['dashboard-recent-clients'],
+    queryFn: () => api.get('/crm', { params: { limit: 3 } }).then(r => r.data),
+    staleTime: 60000,
+    retry: 1,
+  })
+
+  // Computar receita total a partir das faturas
+  const totalRevenue = (revenueData?.data ?? []).reduce(
+    (acc: number, inv: any) => acc + (parseFloat(inv.totalAmount ?? inv.total ?? '0') || 0),
+    0,
+  )
+
+  // Montar lista de atividade recente
+  const activityItems: ActivityItem[] = [
+    ...(recentInvoices?.data ?? []).map((inv: any) => ({
+      id: `inv-${inv.id}`,
+      icon: <FileText className="h-4 w-4 text-blue-600" />,
+      description: `Fatura ${inv.fullNumber ?? inv.id?.slice(0, 8)} — ${inv.clientName ?? 'Cliente'}`,
+      timestamp: inv.createdAt,
+      module: 'Faturação',
+      badgeVariant: 'info' as const,
+    })),
+    ...(recentIncidents?.data ?? []).map((inc: any) => ({
+      id: `inc-${inc.id}`,
+      icon: <AlertTriangle className="h-4 w-4 text-red-600" />,
+      description: `Incidente: ${inc.title ?? inc.description?.slice(0, 50) ?? 'Sem descrição'}`,
+      timestamp: inc.createdAt,
+      module: 'Segurança',
+      badgeVariant: 'danger' as const,
+    })),
+    ...(recentClients?.data ?? []).map((cli: any) => ({
+      id: `cli-${cli.id}`,
+      icon: <Handshake className="h-4 w-4 text-green-600" />,
+      description: `Cliente: ${cli.name ?? 'Sem nome'}`,
+      timestamp: cli.createdAt,
+      module: 'CRM',
+      badgeVariant: 'success' as const,
+    })),
+  ]
+    .filter(item => item.timestamp)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 8)
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Painel de Controlo</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Painel de Controlo</h1>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Activity className="h-4 w-4" />
+          <span>Visão geral do sistema</span>
+        </div>
+      </div>
 
-      {/* KPIs */}
+      {/* ── KPIs Principais ────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Taxa de Ocupação"
-          value={`${Math.round(totalOccupancy)}%`}
-          icon={<BedDouble className="h-8 w-8" />}
+          title="Receita Total"
+          value={revenueLoading ? '...' : formatKwanza(totalRevenue)}
+          icon={<DollarSign className="h-8 w-8" />}
         />
         <StatCard
-          title="Receita (mês)"
-          value={formatKwanza(totalRevenue)}
-          icon={<TrendingUp className="h-8 w-8" />}
+          title="Faturas Emitidas"
+          value={invoicingLoading ? '...' : (invoicingData?.total ?? 0)}
+          icon={<FileText className="h-8 w-8" />}
         />
         <StatCard
-          title="Check-ins Hoje"
-          value={checkInsToday}
-          icon={<LogIn className="h-8 w-8" />}
+          title="Clientes Ativos"
+          value={clientsLoading ? '...' : (clientsData?.total ?? 0)}
+          icon={<Users className="h-8 w-8" />}
         />
         <StatCard
-          title="Check-outs Hoje"
-          value={checkOutsToday}
-          icon={<LogOut className="h-8 w-8" />}
+          title="Contratos Ativos"
+          value={contractsLoading ? '...' : (contractsData?.total ?? 0)}
+          icon={<Briefcase className="h-8 w-8" />}
         />
       </div>
 
-      {/* KPIs secundários */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Manutenção Pendente"
-          value={firstResort?.pendingMaintenance ?? 0}
-          icon={<Wrench className="h-8 w-8" />}
-        />
-        <StatCard
-          title="Stock Baixo"
-          value={firstResort?.lowStockAlerts ?? 0}
-          icon={<AlertTriangle className="h-8 w-8" />}
-        />
-        <StatCard
-          title="Pedidos Pendentes"
-          value={firstResort?.pendingServiceOrders ?? 0}
-          icon={<ConciergeBell className="h-8 w-8" />}
-        />
-        <StatCard
-          title="Avaliação Média"
-          value={firstResort?.averageRating ? `${Number(firstResort.averageRating).toFixed(1)}/5` : '—'}
-          icon={<Star className="h-8 w-8" />}
-        />
+      {/* ── Estatísticas por Módulo ─────────────── */}
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">Módulos Ativos</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          {MODULES.map(mod => (
+            <ModuleStatCard key={mod.key} config={mod} />
+          ))}
+        </div>
       </div>
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Ocupação por resort */}
-        <Card>
-          <CardTitle>Ocupação por Resort</CardTitle>
+      {/* ── Atividade Recente + Ações Rápidas ──── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Atividade Recente */}
+        <Card className="lg:col-span-2">
+          <CardTitle className="mb-4 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-gray-400" />
+            Atividade Recente
+          </CardTitle>
           <CardContent>
-            {occupancyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={occupancyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: number, name: string) => [name === 'ocupação' ? `${value}%` : value, name === 'ocupação' ? 'Ocupação' : name === 'ocupados' ? 'Ocupados' : 'Total']} />
-                  <Bar dataKey="ocupação" fill="#1A3E6E" radius={[4, 4, 0, 0]} name="Ocupação %" />
-                  <Bar dataKey="ocupados" fill="#1A5E6E" radius={[4, 4, 0, 0]} name="Quartos Ocupados" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="py-8 text-center text-sm text-gray-400">Sem dados de resorts</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Distribuição de quartos */}
-        <Card>
-          <CardTitle>Distribuição de Quartos</CardTitle>
-          <CardContent>
-            {roomDistData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={roomDistData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
+            {activityItems.length > 0 ? (
+              <div className="space-y-3">
+                {activityItems.map(item => (
+                  <div
+                    key={item.id}
+                    className="flex items-start gap-3 rounded-lg border border-gray-100 p-3 transition-colors hover:bg-gray-50"
                   >
-                    {roomDistData.map((_: any, i: number) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="py-8 text-center text-sm text-gray-400">Sem dados</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Check-ins / Check-outs hoje */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardTitle>Check-ins Esperados Hoje</CardTitle>
-          <CardContent>
-            {today?.checkIns?.length ? (
-              <ul className="space-y-2">
-                {today.checkIns.map((r: any) => (
-                  <li key={r.id} className="flex items-center justify-between rounded-md border p-3">
-                    <div>
-                      <p className="font-medium">{r.guestName}</p>
-                      <p className="text-sm text-gray-500">Quarto {r.room?.number}</p>
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100">
+                      {item.icon}
                     </div>
-                    <span className="text-sm text-gray-400">{r.room?.type}</span>
-                  </li>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900">{item.description}</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Badge variant={item.badgeVariant}>{item.module}</Badge>
+                        <span className="text-xs text-gray-400">
+                          {item.timestamp ? formatDateTime(item.timestamp) : '—'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : (
-              <p className="text-sm text-gray-500">Nenhum check-in hoje</p>
+              <p className="py-8 text-center text-sm text-gray-400">Sem atividade recente</p>
             )}
           </CardContent>
         </Card>
 
+        {/* Ações Rápidas */}
         <Card>
-          <CardTitle>Check-outs Esperados Hoje</CardTitle>
+          <CardTitle className="mb-4 flex items-center gap-2">
+            <Plus className="h-5 w-5 text-gray-400" />
+            Ações Rápidas
+          </CardTitle>
           <CardContent>
-            {today?.checkOuts?.length ? (
-              <ul className="space-y-2">
-                {today.checkOuts.map((r: any) => (
-                  <li key={r.id} className="flex items-center justify-between rounded-md border p-3">
-                    <div>
-                      <p className="font-medium">{r.guestName}</p>
-                      <p className="text-sm text-gray-500">Quarto {r.room?.number}</p>
-                    </div>
-                    <span className="text-sm text-gray-400">{r.room?.type}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">Nenhum check-out hoje</p>
-            )}
+            <div className="grid grid-cols-1 gap-2">
+              {QUICK_ACTIONS.map(action => {
+                const ActionIcon = action.icon
+                return (
+                  <Link key={action.href} href={action.href}>
+                    <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                      <ActionIcon className="h-4 w-4 shrink-0 text-primary" />
+                      {action.label}
+                    </Button>
+                  </Link>
+                )
+              })}
+            </div>
           </CardContent>
         </Card>
       </div>
