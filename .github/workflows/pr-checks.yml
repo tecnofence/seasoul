@@ -1,0 +1,183 @@
+name: PR Quality Checks
+
+on:
+  pull_request:
+    branches: [main, staging]
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://engeris:engeris_test@localhost:5432/engeris_one_test
+
+jobs:
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: engeris
+          POSTGRES_PASSWORD: engeris_test
+          POSTGRES_DB: engeris_one_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm 9
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @seasoul/db generate
+
+      - name: Run TypeScript type checking
+        run: pnpm -r exec tsc --noEmit
+
+  prisma-validate:
+    name: Prisma Schema Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm 9
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Prisma schema
+        run: pnpm --filter @seasoul/db exec prisma validate
+
+  build-check:
+    name: Build Check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: engeris
+          POSTGRES_PASSWORD: engeris_test
+          POSTGRES_DB: engeris_one_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm 9
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @seasoul/db generate
+
+      - name: Build all packages
+        run: pnpm build
+
+  pr-status-comment:
+    name: PR Status Comment
+    needs: [type-check, prisma-validate, build-check]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Comment PR with build status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const typeCheck = '${{ needs.type-check.result }}';
+            const prismaValidate = '${{ needs.prisma-validate.result }}';
+            const buildCheck = '${{ needs.build-check.result }}';
+
+            const icon = (result) => result === 'success' ? ':white_check_mark:' : ':x:';
+            const allPassed = [typeCheck, prismaValidate, buildCheck].every(r => r === 'success');
+
+            const body = [
+              `## ${allPassed ? ':white_check_mark:' : ':x:'} PR Quality Checks`,
+              '',
+              '| Check | Status |',
+              '|-------|--------|',
+              `| TypeScript Type Check | ${icon(typeCheck)} ${typeCheck} |`,
+              `| Prisma Schema Validation | ${icon(prismaValidate)} ${prismaValidate} |`,
+              `| Build Check | ${icon(buildCheck)} ${buildCheck} |`,
+              '',
+              `*Run [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`
+            ].join('\n');
+
+            // Find existing bot comment to update instead of creating duplicates
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(
+              (c) => c.user.type === 'Bot' && c.body.includes('PR Quality Checks')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
