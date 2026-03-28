@@ -288,36 +288,36 @@ async function main() {
 
   // ── PRODUTOS ──
   const products = await Promise.all([
-    // Bar
-    prisma.product.create({ data: { name: 'Cerveja Cuca', category: 'Bebidas', department: 'BAR', unitPrice: new Decimal('800'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Cerveja Nocal', category: 'Bebidas', department: 'BAR', unitPrice: new Decimal('800'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Água Mineral 0.5L', category: 'Bebidas', department: 'BAR', unitPrice: new Decimal('300'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Sumo Natural', category: 'Bebidas', department: 'BAR', unitPrice: new Decimal('1200'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Caipirinha', category: 'Cocktails', department: 'BAR', unitPrice: new Decimal('2500'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Mojito', category: 'Cocktails', department: 'BAR', unitPrice: new Decimal('2800'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Whisky Dose', category: 'Bebidas Espirituosas', department: 'BAR', unitPrice: new Decimal('3500'), taxRate: new Decimal('14') } }),
-    // Restaurante
-    prisma.product.create({ data: { name: 'Peixe Grelhado', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('5500'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Lagosta', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('12000'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Muamba de Galinha', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('4500'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Calulu de Peixe', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('4800'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Bife com Batatas', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('6000'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Salada Mista', category: 'Entradas', department: 'RESTAURANTE', unitPrice: new Decimal('1800'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Sopa do Dia', category: 'Entradas', department: 'RESTAURANTE', unitPrice: new Decimal('1200'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Pudim', category: 'Sobremesas', department: 'RESTAURANTE', unitPrice: new Decimal('1500'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Gelado 2 Bolas', category: 'Sobremesas', department: 'RESTAURANTE', unitPrice: new Decimal('1200'), taxRate: new Decimal('14') } }),
-    // SPA
-    prisma.product.create({ data: { name: 'Massagem Relaxante 60min', category: 'Massagens', department: 'SPA', unitPrice: new Decimal('15000'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Massagem Desportiva 45min', category: 'Massagens', department: 'SPA', unitPrice: new Decimal('12000'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Tratamento Facial', category: 'Tratamentos', department: 'SPA', unitPrice: new Decimal('10000'), taxRate: new Decimal('14') } }),
-    // Atividades
-    prisma.product.create({ data: { name: 'Aula de Surf 1h', category: 'Desportos Aquáticos', department: 'ATIVIDADES', unitPrice: new Decimal('8000'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Aluguer Kayak 1h', category: 'Desportos Aquáticos', department: 'ATIVIDADES', unitPrice: new Decimal('5000'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Passeio de Barco', category: 'Excursões', department: 'ATIVIDADES', unitPrice: new Decimal('20000'), taxRate: new Decimal('14') } }),
-    // Loja
-    prisma.product.create({ data: { name: 'T-shirt Sea and Soul', category: 'Merchandising', department: 'LOJA', unitPrice: new Decimal('3500'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Protetor Solar SPF50', category: 'Utilidades', department: 'LOJA', unitPrice: new Decimal('4000'), taxRate: new Decimal('14') } }),
-    prisma.product.create({ data: { name: 'Chapéu de Praia', category: 'Merchandising', department: 'LOJA', unitPrice: new Decimal('2500'), taxRate: new Decimal('14') } }),
+    // Bar — serviços de hotelaria: HOTEL_SERVICE 7%
+    prisma.product.create({ data: { name: 'Cerveja Cuca', category: 'Bebidas', department: 'BAR', unitPrice: new Decimal('800'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Cerveja Nocal', category: 'Bebidas', department: 'BAR', unitPrice: new Decimal('800'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Água Mineral 0.5L', category: 'Bebidas', department: 'BAR', unitPrice: new Decimal('300'), taxCategory: 'FOOD_REDUCED', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Sumo Natural', category: 'Bebidas', department: 'BAR', unitPrice: new Decimal('1200'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Caipirinha', category: 'Cocktails', department: 'BAR', unitPrice: new Decimal('2500'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Mojito', category: 'Cocktails', department: 'BAR', unitPrice: new Decimal('2800'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Whisky Dose', category: 'Bebidas Espirituosas', department: 'BAR', unitPrice: new Decimal('3500'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    // Restaurante — serviços de hotelaria: HOTEL_SERVICE 7%
+    prisma.product.create({ data: { name: 'Peixe Grelhado', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('5500'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Lagosta', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('12000'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Muamba de Galinha', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('4500'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Calulu de Peixe', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('4800'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Bife com Batatas', category: 'Pratos Principais', department: 'RESTAURANTE', unitPrice: new Decimal('6000'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Salada Mista', category: 'Entradas', department: 'RESTAURANTE', unitPrice: new Decimal('1800'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Sopa do Dia', category: 'Entradas', department: 'RESTAURANTE', unitPrice: new Decimal('1200'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Pudim', category: 'Sobremesas', department: 'RESTAURANTE', unitPrice: new Decimal('1500'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Gelado 2 Bolas', category: 'Sobremesas', department: 'RESTAURANTE', unitPrice: new Decimal('1200'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    // SPA — serviços de hotelaria: HOTEL_SERVICE 7%
+    prisma.product.create({ data: { name: 'Massagem Relaxante 60min', category: 'Massagens', department: 'SPA', unitPrice: new Decimal('15000'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Massagem Desportiva 45min', category: 'Massagens', department: 'SPA', unitPrice: new Decimal('12000'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Tratamento Facial', category: 'Tratamentos', department: 'SPA', unitPrice: new Decimal('10000'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    // Atividades — serviços de hotelaria: HOTEL_SERVICE 7%
+    prisma.product.create({ data: { name: 'Aula de Surf 1h', category: 'Desportos Aquáticos', department: 'ATIVIDADES', unitPrice: new Decimal('8000'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Aluguer Kayak 1h', category: 'Desportos Aquáticos', department: 'ATIVIDADES', unitPrice: new Decimal('5000'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    prisma.product.create({ data: { name: 'Passeio de Barco', category: 'Excursões', department: 'ATIVIDADES', unitPrice: new Decimal('20000'), taxCategory: 'HOTEL_SERVICE', taxRate: new Decimal('7') } }),
+    // Loja — retalho: STANDARD 14%
+    prisma.product.create({ data: { name: 'T-shirt Sea and Soul', category: 'Merchandising', department: 'LOJA', unitPrice: new Decimal('3500'), taxCategory: 'STANDARD', taxRate: new Decimal('14') } }),
+    prisma.product.create({ data: { name: 'Protetor Solar SPF50', category: 'Utilidades', department: 'LOJA', unitPrice: new Decimal('4000'), taxCategory: 'STANDARD', taxRate: new Decimal('14') } }),
+    prisma.product.create({ data: { name: 'Chapéu de Praia', category: 'Merchandising', department: 'LOJA', unitPrice: new Decimal('2500'), taxCategory: 'STANDARD', taxRate: new Decimal('14') } }),
   ])
 
   console.log(`✅ ${products.length} produtos criados`)
