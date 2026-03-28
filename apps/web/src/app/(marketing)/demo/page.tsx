@@ -184,7 +184,7 @@ export default function DemoPage() {
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
                     Numero de quartos
                   </label>
-                  <select className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none transition-colors focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20">
+                  <select className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20">
                     <option value="">Selecione...</option>
                     <option value="lt20">Menos de 20 quartos</option>
                     <option value="20-50">20 a 50 quartos</option>

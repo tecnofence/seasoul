@@ -43,11 +43,11 @@ export default function ActivitiesPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input placeholder="Pesquisar atividade..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <select className="rounded-md border px-3 py-2 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="rounded-md border bg-white px-3 py-2 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">Todos os estados</option>
           {Object.entries(STATUS_LABEL).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
         </select>
-        <select className="rounded-md border px-3 py-2 text-sm" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+        <select className="rounded-md border bg-white px-3 py-2 text-sm" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
           <option value="">Todas as categorias</option>
           {Object.entries(CATEGORY_LABEL).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
         </select>

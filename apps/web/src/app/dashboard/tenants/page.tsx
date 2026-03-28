@@ -71,7 +71,7 @@ export default function TenantsPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Plano</label>
-              <select className="w-full rounded-md border px-3 py-2" value={form.plan} onChange={(e) => setForm({ ...form, plan: e.target.value })}>
+              <select className="w-full rounded-md border bg-white px-3 py-2" value={form.plan} onChange={(e) => setForm({ ...form, plan: e.target.value })}>
                 <option value="STARTER">Starter</option>
                 <option value="PROFESSIONAL">Professional</option>
                 <option value="ENTERPRISE">Enterprise</option>

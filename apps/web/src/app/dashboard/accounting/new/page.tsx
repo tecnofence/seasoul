@@ -110,7 +110,7 @@ export default function NewAccountingEntryPage() {
               Tipo <span className="text-red-500">*</span>
             </label>
             <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A3E6E]/40"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A3E6E]/40"
               value={tipo}
               onChange={(e) => {
                 setTipo(e.target.value as EntryType)
@@ -157,7 +157,7 @@ export default function NewAccountingEntryPage() {
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Categoria</label>
               <select
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A3E6E]/40"
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A3E6E]/40"
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
               >
@@ -215,7 +215,7 @@ export default function NewAccountingEntryPage() {
               <span className="text-xs font-normal text-gray-400">(opcional)</span>
             </label>
             <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A3E6E]/40"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A3E6E]/40"
               value={conta}
               onChange={(e) => setConta(e.target.value)}
             >

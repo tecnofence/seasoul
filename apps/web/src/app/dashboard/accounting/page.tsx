@@ -64,11 +64,11 @@ export default function AccountingPage() {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <select className="rounded-md border px-3 py-2 text-sm" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+        <select className="rounded-md border bg-white px-3 py-2 text-sm" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
           <option value="">Todas as categorias</option>
           {Object.entries(CATEGORY_LABEL).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
         </select>
-        <select className="rounded-md border px-3 py-2 text-sm" value={reconciledFilter} onChange={(e) => setReconciledFilter(e.target.value)}>
+        <select className="rounded-md border bg-white px-3 py-2 text-sm" value={reconciledFilter} onChange={(e) => setReconciledFilter(e.target.value)}>
           <option value="">Todos</option>
           <option value="true">Reconciliado</option>
           <option value="false">Não Reconciliado</option>

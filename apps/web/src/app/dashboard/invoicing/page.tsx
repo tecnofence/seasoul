@@ -84,7 +84,7 @@ export default function InvoicingPage() {
           />
         </div>
         <select
-          className="rounded-md border px-3 py-2 text-sm"
+          className="rounded-md border bg-white px-3 py-2 text-sm"
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setPage(1) }}
         >
