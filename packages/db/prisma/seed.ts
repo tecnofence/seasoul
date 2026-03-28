@@ -508,35 +508,23 @@ async function main() {
   })
   console.log('✅ Tenant Sea and Soul criado:', seasoulTenant.name)
 
-  // ── MÓDULOS DO MARKETPLACE ──
+  // ── MÓDULOS DO MARKETPLACE (só hotelaria & restauração) ──
   const MODULE_CATALOG = [
-    { id: 'core',          name: 'Core',           category: 'Core',       basePrice: 0 },
-    { id: 'pms',           name: 'PMS',            category: 'Core',       basePrice: 0 },
-    { id: 'pos',           name: 'POS',            category: 'Core',       basePrice: 0 },
-    { id: 'finance',       name: 'Financeiro',     category: 'Core',       basePrice: 0 },
-    { id: 'stock',         name: 'Stock',          category: 'Operations', basePrice: 49 },
-    { id: 'hr',            name: 'RH',             category: 'Operations', basePrice: 49 },
-    { id: 'maintenance',   name: 'Manutenção',     category: 'Operations', basePrice: 29 },
-    { id: 'security',      name: 'Segurança',      category: 'Operations', basePrice: 29 },
-    { id: 'engineering',   name: 'Engenharia',     category: 'Vertical',   basePrice: 79 },
-    { id: 'electrical',    name: 'Elétrica',       category: 'Vertical',   basePrice: 79 },
-    { id: 'crm',           name: 'CRM',            category: 'Operations', basePrice: 39 },
-    { id: 'fleet',         name: 'Frota',          category: 'Operations', basePrice: 39 },
-    { id: 'contracts',     name: 'Contratos',      category: 'Operations', basePrice: 29 },
-    { id: 'spa',           name: 'Spa',            category: 'Vertical',   basePrice: 49 },
-    { id: 'events',        name: 'Eventos',        category: 'Vertical',   basePrice: 39 },
-    { id: 'real_estate',   name: 'Imobiliário',    category: 'Vertical',   basePrice: 79 },
-    { id: 'logistics',     name: 'Logística',      category: 'Vertical',   basePrice: 59 },
-    { id: 'education',     name: 'Educação',       category: 'Vertical',   basePrice: 59 },
-    { id: 'healthcare',    name: 'Saúde',          category: 'Vertical',   basePrice: 79 },
-    { id: 'agriculture',   name: 'Agricultura',    category: 'Vertical',   basePrice: 59 },
-    { id: 'manufacturing', name: 'Produção',       category: 'Vertical',   basePrice: 79 },
-    { id: 'consulting',    name: 'Consultoria',    category: 'Vertical',   basePrice: 49 },
-    { id: 'telecom',       name: 'Telecom',        category: 'Vertical',   basePrice: 59 },
-    { id: 'legal',         name: 'Jurídico',       category: 'Vertical',   basePrice: 49 },
-    { id: 'accounting',    name: 'Contabilidade',  category: 'Operations', basePrice: 49 },
-    { id: 'activities',    name: 'Atividades',     category: 'Vertical',   basePrice: 29 },
-    { id: 'retail',        name: 'Retalho',        category: 'Vertical',   basePrice: 49 },
+    // Core — incluído em todos os planos
+    { id: 'core',        name: 'Plataforma Core',     category: 'Core',       basePrice: 0  },
+    { id: 'pms',         name: 'PMS & Reservas',      category: 'Core',       basePrice: 0  },
+    { id: 'pos',         name: 'POS & Restauração',   category: 'Core',       basePrice: 0  },
+    { id: 'finance',     name: 'Faturação & Finanças',category: 'Core',       basePrice: 0  },
+    // Operações hoteleiras
+    { id: 'stock',       name: 'Stock & Compras',     category: 'Operations', basePrice: 49 },
+    { id: 'hr',          name: 'RH & Assiduidade',    category: 'Operations', basePrice: 49 },
+    { id: 'maintenance', name: 'Manutenção & Ops',    category: 'Operations', basePrice: 29 },
+    { id: 'security',    name: 'Segurança & Rondas',  category: 'Operations', basePrice: 29 },
+    { id: 'retail',      name: 'Loja do Resort',      category: 'Operations', basePrice: 29 },
+    // Lazer & experiências
+    { id: 'spa',         name: 'Spa & Bem-Estar',     category: 'Leisure',    basePrice: 49 },
+    { id: 'activities',  name: 'Atividades & Tours',  category: 'Leisure',    basePrice: 29 },
+    { id: 'events',      name: 'Eventos & Banquetes', category: 'Leisure',    basePrice: 39 },
   ]
 
   for (const mod of MODULE_CATALOG) {
@@ -550,7 +538,8 @@ async function main() {
 
   // ── MÓDULOS DO TENANT ──
   const allModules = MODULE_CATALOG.map(m => m.id)
-  const seaSoulModules = ['core', 'pms', 'pos', 'finance', 'stock', 'hr', 'maintenance', 'spa', 'events', 'activities']
+  // Sea and Soul tem todos os módulos (plano Enterprise)
+  const seaSoulModules = allModules
 
   for (const moduleId of allModules) {
     await prisma.tenantModule.upsert({
