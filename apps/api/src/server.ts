@@ -70,6 +70,7 @@ import accountingRoutes from './routes/accounting/index.js'
 import activitiesRoutes from './routes/activities/index.js'
 import retailRoutes from './routes/retail/index.js'
 import adminRoutes from './routes/admin/index.js'
+import publicRoutes from './routes/public/index.js'
 
 const app = Fastify({
   logger: {
@@ -217,6 +218,9 @@ await app.register(legalRoutes,         { prefix: '/v1/legal' })
 await app.register(accountingRoutes,    { prefix: '/v1/accounting' })
 await app.register(activitiesRoutes,   { prefix: '/v1/activities' })
 await app.register(retailRoutes,       { prefix: '/v1/retail' })
+
+// ── ROTAS — Públicas (sem autenticação) ──────
+await app.register(publicRoutes, { prefix: '/v1' })
 
 // ── Webhooks (TODO) ──────────────────────────
 // await app.register(seamWebhookRoutes, { prefix: '/webhooks/seam' })

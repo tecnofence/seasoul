@@ -1,38 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-const PUBLIC_PATHS = ['/api', '/_next', '/favicon.ico']
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const hostname = request.headers.get('host') || ''
+  const pathname = request.nextUrl.pathname
 
-  // Permitir rotas públicas
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // Skip for dashboard, admin, login, api routes, static files
+  if (
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/favicon')
+  ) {
     return NextResponse.next()
   }
 
-  // Verificar token de autenticação
-  const token =
-    request.cookies.get('token')?.value ||
-    request.headers.get('authorization')?.replace('Bearer ', '')
-
-  const isDashboard = pathname.startsWith('/dashboard')
-  const isLoginPage = pathname === '/login'
-
-  // If trying to access dashboard without token, redirect to login
-  if (isDashboard && !token) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
-  // If on login page with token, redirect to dashboard
-  if (isLoginPage && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  // Subdomain detection: resort.engerisone.com → /resort/...
+  const parts = hostname.split('.')
+  if (parts.length >= 3 && !hostname.includes('localhost')) {
+    const slug = parts[0]
+    if (slug && slug !== 'www' && slug !== 'app') {
+      const url = request.nextUrl.clone()
+      url.pathname = `/${slug}${pathname}`
+      return NextResponse.rewrite(url)
+    }
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
