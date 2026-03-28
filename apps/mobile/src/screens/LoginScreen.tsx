@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import api, { saveToken } from '../services/api';
+import api, { saveToken, saveUserInfo } from '../services/api';
 
 type Language = 'PT' | 'EN';
 
@@ -64,8 +64,9 @@ export default function LoginScreen({ navigation }: Props) {
     setLoading(true);
     try {
       const response = await api.post('/auth/login', { email, password });
-      const { token } = response.data.data;
+      const { token, user } = response.data.data;
       await saveToken(token);
+      await saveUserInfo({ id: user.id, name: user.name, role: user.role, resortId: user.resortId });
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch {
       Alert.alert(t.errorTitle, t.errorMessage);

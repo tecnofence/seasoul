@@ -67,4 +67,28 @@ export async function removeToken(): Promise<void> {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
 }
 
+// Funções auxiliares para gestão do perfil do utilizador
+const USER_KEY = 'user_info';
+
+export interface UserInfo {
+  id: string;
+  name: string;
+  role: string;
+  resortId?: string | null;
+}
+
+export async function saveUserInfo(info: UserInfo): Promise<void> {
+  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(info));
+}
+
+export async function getUserInfo(): Promise<UserInfo | null> {
+  const raw = await SecureStore.getItemAsync(USER_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+export async function removeUserInfo(): Promise<void> {
+  await SecureStore.deleteItemAsync(USER_KEY);
+}
+
 export default api;

@@ -3,166 +3,276 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { getToken, setOnUnauthorized } from '../services/api';
+import { getToken, getUserInfo, removeToken, removeUserInfo, setOnUnauthorized, type UserInfo } from '../services/api';
 
-// Screens
+// Auth
 import LoginScreen from '../screens/LoginScreen';
-import DashboardScreen from '../screens/DashboardScreen';
-import InvoicesScreen from '../screens/InvoicesScreen';
-import ClientsScreen from '../screens/ClientsScreen';
-import IncidentReportScreen from '../screens/IncidentReportScreen';
-import ProfileScreen from '../screens/ProfileScreen';
 
-// Tipos de navegação
+// Guest screens
+import MyStayScreen from '../screens/guest/MyStayScreen';
+import RoomServiceScreen from '../screens/guest/RoomServiceScreen';
+import SpaScreen from '../screens/guest/SpaScreen';
+import ConciergeScreen from '../screens/guest/ConciergeScreen';
+import GuestProfileScreen from '../screens/guest/GuestProfileScreen';
+
+// Staff screens
+import HotelDashboardScreen from '../screens/staff/HotelDashboardScreen';
+import AttendanceScreen from '../screens/staff/AttendanceScreen';
+import TasksScreen from '../screens/staff/TasksScreen';
+import StaffProfileScreen from '../screens/staff/StaffProfileScreen';
+
+// ─── Tipos de navegação ──────────────────────────────────────────────────────
+
 export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
 };
 
-export type MainTabParamList = {
-  Dashboard: undefined;
-  Faturas: undefined;
-  Clientes: undefined;
-  Incidentes: undefined;
+export type GuestTabParamList = {
+  Estadia: undefined;
+  Servicos: undefined;
+  Spa: undefined;
+  Concierge: undefined;
   Perfil: undefined;
 };
 
-const Stack = createStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator<MainTabParamList>();
+export type StaffTabParamList = {
+  Painel: undefined;
+  Presenca: undefined;
+  Tarefas: undefined;
+  PerfilEquipa: undefined;
+};
 
-const colors = {
-  primary: '#0A5C8A',
+const Stack = createStackNavigator<RootStackParamList>();
+const GuestTab = createBottomTabNavigator<GuestTabParamList>();
+const StaffTab = createBottomTabNavigator<StaffTabParamList>();
+
+// ─── Paletas de cores ────────────────────────────────────────────────────────
+
+const guestColors = {
+  primary: '#0A7EA4',
+  inactive: '#94A3B8',
+  background: '#FFFFFF',
+  border: '#E0F2FE',
+};
+
+const staffColors = {
+  primary: '#1A3E6E',
   inactive: '#9CA3AF',
   background: '#FFFFFF',
   border: '#E5E7EB',
 };
 
-// Tab Navigator — ecrãs principais
-function MainTabs() {
+// ─── Tab Navigator — Hóspede ─────────────────────────────────────────────────
+
+function GuestTabs({ onLogout }: { onLogout: () => void }) {
   return (
-    <Tab.Navigator
+    <GuestTab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.inactive,
+        tabBarActiveTintColor: guestColors.primary,
+        tabBarInactiveTintColor: guestColors.inactive,
         tabBarStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: guestColors.background,
           borderTopWidth: 1,
-          borderTopColor: colors.border,
-          height: 60,
+          borderTopColor: guestColors.border,
+          height: 62,
           paddingBottom: 8,
           paddingTop: 4,
         },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         headerStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: guestColors.primary,
           elevation: 0,
           shadowOpacity: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
         },
-        headerTitleStyle: {
-          fontWeight: '700',
-          fontSize: 18,
-          color: '#111827',
-        },
+        headerTitleStyle: { fontWeight: '700', fontSize: 18, color: '#FFFFFF' },
+        headerTintColor: '#FFFFFF',
       }}
     >
-      <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
+      <GuestTab.Screen
+        name="Estadia"
+        component={MyStayScreen}
         options={{
-          title: 'Início',
-          headerTitle: 'ENGERIS ONE',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
-          ),
+          title: 'A Minha Estadia',
+          headerTitle: 'Sea and Soul',
+          tabBarIcon: ({ color, size }) => <Ionicons name="bed-outline" size={size} color={color} />,
         }}
       />
-      <Tab.Screen
-        name="Faturas"
-        component={InvoicesScreen}
+      <GuestTab.Screen
+        name="Servicos"
+        component={RoomServiceScreen}
         options={{
-          title: 'Faturas',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size} color={color} />
-          ),
+          title: 'Quarto',
+          headerTitle: 'Serviço de Quarto',
+          tabBarIcon: ({ color, size }) => <Ionicons name="fast-food-outline" size={size} color={color} />,
         }}
       />
-      <Tab.Screen
-        name="Clientes"
-        component={ClientsScreen}
+      <GuestTab.Screen
+        name="Spa"
+        component={SpaScreen}
         options={{
-          title: 'Clientes',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
-          ),
+          title: 'Spa',
+          headerTitle: 'Spa & Atividades',
+          tabBarIcon: ({ color, size }) => <Ionicons name="leaf-outline" size={size} color={color} />,
         }}
       />
-      <Tab.Screen
-        name="Incidentes"
-        component={IncidentReportScreen}
+      <GuestTab.Screen
+        name="Concierge"
+        component={ConciergeScreen}
         options={{
-          title: 'Incidentes',
-          headerTitle: 'Registar Incidente',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="warning-outline" size={size} color={color} />
-          ),
+          title: 'Concierge',
+          headerTitle: 'Concierge',
+          tabBarIcon: ({ color, size }) => <Ionicons name="headset-outline" size={size} color={color} />,
         }}
       />
-      <Tab.Screen
+      <GuestTab.Screen
         name="Perfil"
-        component={ProfileScreen}
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
-          ),
+          headerTitle: 'O Meu Perfil',
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
         }}
-      />
-    </Tab.Navigator>
+      >
+        {() => <GuestProfileScreen onLogout={onLogout} />}
+      </GuestTab.Screen>
+    </GuestTab.Navigator>
   );
 }
 
-// Root Navigator — fluxo de autenticação
+// ─── Tab Navigator — Equipa ──────────────────────────────────────────────────
+
+function StaffTabs({ userInfo, onLogout }: { userInfo: UserInfo; onLogout: () => void }) {
+  return (
+    <StaffTab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: staffColors.primary,
+        tabBarInactiveTintColor: staffColors.inactive,
+        tabBarStyle: {
+          backgroundColor: staffColors.background,
+          borderTopWidth: 1,
+          borderTopColor: staffColors.border,
+          height: 62,
+          paddingBottom: 8,
+          paddingTop: 4,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        headerStyle: {
+          backgroundColor: staffColors.primary,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTitleStyle: { fontWeight: '700', fontSize: 18, color: '#FFFFFF' },
+        headerTintColor: '#FFFFFF',
+      }}
+    >
+      <StaffTab.Screen
+        name="Painel"
+        options={{
+          title: 'Início',
+          headerTitle: 'ENGERIS ONE',
+          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
+        }}
+      >
+        {() => <HotelDashboardScreen userName={userInfo.name} role={userInfo.role} />}
+      </StaffTab.Screen>
+      <StaffTab.Screen
+        name="Presenca"
+        component={AttendanceScreen}
+        options={{
+          title: 'Presença',
+          headerTitle: 'Registo de Presença',
+          tabBarIcon: ({ color, size }) => <Ionicons name="location-outline" size={size} color={color} />,
+        }}
+      />
+      <StaffTab.Screen
+        name="Tarefas"
+        options={{
+          title: 'Tarefas',
+          headerTitle: 'As Minhas Tarefas',
+          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
+        }}
+      >
+        {() => <TasksScreen role={userInfo.role} />}
+      </StaffTab.Screen>
+      <StaffTab.Screen
+        name="PerfilEquipa"
+        options={{
+          title: 'Perfil',
+          headerTitle: 'O Meu Perfil',
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+        }}
+      >
+        {() => <StaffProfileScreen userInfo={userInfo} onLogout={onLogout} />}
+      </StaffTab.Screen>
+    </StaffTab.Navigator>
+  );
+}
+
+// ─── Root Navigator — fluxo de autenticação ──────────────────────────────────
+
 export default function AppNavigator() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+
+  const handleLogout = async () => {
+    try {
+      await removeToken();
+      await removeUserInfo();
+    } catch {
+      // ignorar erros ao limpar sessão
+    }
+    setUserInfo(null);
+    setIsAuthenticated(false);
+  };
 
   useEffect(() => {
-    // Verificar se existe token guardado
     const checkAuth = async () => {
       try {
         const token = await getToken();
-        setIsAuthenticated(!!token);
+        if (token) {
+          const info = await getUserInfo();
+          setUserInfo(info);
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
       } catch {
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     };
+
     checkAuth();
 
-    // Registar callback para 401 — redirecionar para login
     setOnUnauthorized(() => {
-      setIsAuthenticated(false);
+      handleLogout();
     });
   }, []);
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color="#1A3E6E" />
       </View>
     );
   }
 
+  const isGuest = userInfo?.role === 'GUEST';
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isAuthenticated ? (
-        <Stack.Screen name="Main" component={MainTabs} />
+        isGuest ? (
+          <Stack.Screen name="Main">
+            {() => <GuestTabs onLogout={handleLogout} />}
+          </Stack.Screen>
+        ) : (
+          <Stack.Screen name="Main">
+            {() => <StaffTabs userInfo={userInfo!} onLogout={handleLogout} />}
+          </Stack.Screen>
+        )
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />
       )}
