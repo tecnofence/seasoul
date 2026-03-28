@@ -117,7 +117,7 @@ export default function RetailPage() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {sales.map((s: any) => (
-                  <tr key={s.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.push(`/dashboard/retail/sales/${s.id}`)}>
+                  <tr key={s.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.push(`/dashboard/retail/${s.id}`)}>
                     <td className="whitespace-nowrap px-4 py-3 text-sm">{s.clientName ?? '—'}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm">{s.storeName ?? s.store?.name ?? '—'}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm">{s.createdAt ? formatDateTime(s.createdAt) : '—'}</td>

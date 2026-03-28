@@ -33,7 +33,7 @@ export default function SpaPage() {
         <h1 className="text-2xl font-bold text-gray-900">Spa</h1>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => router.push('/dashboard/spa/bookings/new')}><Plus className="mr-2 h-4 w-4" /> Nova Reserva</Button>
-          <Button onClick={() => router.push('/dashboard/spa/services/new')}><Plus className="mr-2 h-4 w-4" /> Novo Serviço</Button>
+          <Button onClick={() => router.push('/dashboard/spa/new')}><Plus className="mr-2 h-4 w-4" /> Novo Serviço</Button>
         </div>
       </div>
 
@@ -42,7 +42,7 @@ export default function SpaPage() {
         {loadingServices ? <p className="text-gray-500">A carregar...</p> : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((s: any) => (
-              <div key={s.id} className="cursor-pointer rounded-lg border bg-white p-5 shadow-sm transition-shadow hover:shadow-md" onClick={() => router.push(`/dashboard/spa/services/${s.id}`)}>
+              <div key={s.id} className="cursor-pointer rounded-lg border bg-white p-5 shadow-sm transition-shadow hover:shadow-md" onClick={() => router.push(`/dashboard/spa/${s.id}`)}>
                 <div className="mb-3 flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Sparkles className="h-5 w-5 text-primary" /></div>
