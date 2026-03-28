@@ -18,6 +18,7 @@ import GuestProfileScreen from '../screens/guest/GuestProfileScreen';
 // Staff screens
 import HotelDashboardScreen from '../screens/staff/HotelDashboardScreen';
 import AttendanceScreen from '../screens/staff/AttendanceScreen';
+import TicketsScreen from '../screens/staff/TicketsScreen';
 import TasksScreen from '../screens/staff/TasksScreen';
 import StaffProfileScreen from '../screens/staff/StaffProfileScreen';
 
@@ -39,6 +40,7 @@ export type GuestTabParamList = {
 export type StaffTabParamList = {
   Painel: undefined;
   Presenca: undefined;
+  Chamados: undefined;
   Tarefas: undefined;
   PerfilEquipa: undefined;
 };
@@ -185,11 +187,20 @@ function StaffTabs({ userInfo, onLogout }: { userInfo: UserInfo; onLogout: () =>
         }}
       />
       <StaffTab.Screen
+        name="Chamados"
+        component={TicketsScreen}
+        options={{
+          title: 'Chamados',
+          headerTitle: 'Chamados de Manutenção',
+          tabBarIcon: ({ color, size }) => <Ionicons name="construct-outline" size={size} color={color} />,
+        }}
+      />
+      <StaffTab.Screen
         name="Tarefas"
         options={{
           title: 'Tarefas',
-          headerTitle: 'As Minhas Tarefas',
-          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
+          headerTitle: 'Tarefas do Dia',
+          tabBarIcon: ({ color, size }) => <Ionicons name="checkmark-circle-outline" size={size} color={color} />,
         }}
       >
         {() => <TasksScreen role={userInfo.role} />}
