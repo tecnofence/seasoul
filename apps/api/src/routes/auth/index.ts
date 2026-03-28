@@ -292,6 +292,103 @@ export default async function authRoutes(app: FastifyInstance) {
     return reply.send({ message: 'Sessão terminada com sucesso' })
   })
 
+  // ── POST /signup-tenant — Registo self-service de novo resort (trial) ──
+  app.post('/signup-tenant', async (request, reply) => {
+    const { z } = await import('zod')
+
+    const signupTenantSchema = z.object({
+      tenantName: z.string().min(2, 'Nome do resort obrigatório'),
+      slug: z
+        .string()
+        .min(2)
+        .regex(/^[a-z0-9-]+$/, 'Slug inválido — use apenas letras minúsculas, números e hífens'),
+      nif: z.string().optional(),
+      adminName: z.string().min(2, 'Nome do administrador obrigatório'),
+      email: z.string().email('Email inválido'),
+      phone: z.string().optional(),
+      password: z.string().min(8, 'Palavra-passe deve ter pelo menos 8 caracteres'),
+    })
+
+    const parsed = signupTenantSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+
+    const { tenantName, slug, nif, adminName, email, phone, password } = parsed.data
+
+    // Verificar slug duplicado
+    const slugExists = await app.prisma.tenant.findUnique({ where: { slug } })
+    if (slugExists) {
+      return reply.code(409).send({ error: 'Este slug já está em uso. Escolha outro.' })
+    }
+
+    // Verificar email duplicado
+    const emailExists = await app.prisma.user.findUnique({ where: { email } })
+    if (emailExists) {
+      return reply.code(409).send({ error: 'Este email já está registado.' })
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12)
+
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 14) // 14 dias de trial
+
+    // Criar tenant + módulos padrão + utilizador admin numa transação
+    const result = await app.prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({
+        data: {
+          name: tenantName,
+          slug,
+          nif: nif || null,
+          plan: 'STARTER',
+          maxUsers: 5,
+          maxBranches: 1,
+          expiresAt,
+          active: true,
+        },
+      })
+
+      // Activar módulos padrão (core, pms, finance)
+      const defaultModuleIds = ['core', 'pms', 'finance']
+      for (const moduleId of defaultModuleIds) {
+        const moduleExists = await tx.module.findUnique({ where: { id: moduleId } })
+        if (moduleExists) {
+          await tx.tenantModule.create({
+            data: {
+              tenantId: tenant.id,
+              moduleId,
+              status: 'ACTIVE',
+              active: true,
+              expiresAt,
+            },
+          })
+        }
+      }
+
+      const user = await tx.user.create({
+        data: {
+          tenantId: tenant.id,
+          name: adminName,
+          email,
+          passwordHash,
+          role: 'RESORT_MANAGER',
+          active: true,
+        },
+        select: { id: true },
+      })
+
+      return { tenantId: tenant.id, userId: user.id }
+    })
+
+    return reply.code(201).send({
+      data: {
+        tenantId: result.tenantId,
+        userId: result.userId,
+        message: 'Conta criada com sucesso. Período de experiência: 14 dias.',
+      },
+    })
+  })
+
   // ── GET /me — Perfil do utilizador autenticado ──
   app.get('/me', {
     preHandler: [app.authenticate],

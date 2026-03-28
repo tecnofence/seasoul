@@ -8,74 +8,41 @@ import { Card, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { CurrencyDisplay } from '@/components/ui/currency-display'
+import type { ReactNode } from 'react'
 import {
-  DollarSign,
-  FileText,
-  Users,
-  Briefcase,
   BedDouble,
+  DollarSign,
   Wrench,
-  ShieldCheck,
-  Zap,
-  Truck,
+  Users,
+  CalendarDays,
+  UserCheck,
+  ShoppingCart,
+  Sparkles,
   Package,
-  ClipboardList,
-  UserPlus,
-  HardHat,
-  AlertTriangle,
-  Handshake,
-  Plus,
+  ConciergeBell,
+  Calculator,
+  ShoppingBag,
   Clock,
+  Plus,
   Activity,
   type LucideIcon,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
 
-// ── Configuração dos módulos ──────────────────────
+// ── Tipos internos ────────────────────────────────
 
-interface ModuleConfig {
+interface ModuleCard {
   key: string
   label: string
   icon: LucideIcon
+  href: string
   endpoint: string
-  metricLabel: string
-  badgeVariant: 'default' | 'success' | 'warning' | 'danger' | 'info'
 }
-
-const MODULES: ModuleConfig[] = [
-  { key: 'reservations', label: 'Reservas', icon: BedDouble, endpoint: '/reservations', metricLabel: 'Reservas', badgeVariant: 'info' },
-  { key: 'engineering', label: 'Engenharia', icon: HardHat, endpoint: '/engineering', metricLabel: 'Projetos', badgeVariant: 'default' },
-  { key: 'security', label: 'Segurança', icon: ShieldCheck, endpoint: '/security', metricLabel: 'Contratos', badgeVariant: 'warning' },
-  { key: 'electrical', label: 'Eletricidade', icon: Zap, endpoint: '/electrical', metricLabel: 'Projetos', badgeVariant: 'info' },
-  { key: 'fleet', label: 'Frota', icon: Truck, endpoint: '/fleet', metricLabel: 'Veículos', badgeVariant: 'default' },
-  { key: 'stock', label: 'Stock', icon: Package, endpoint: '/stock', metricLabel: 'Itens', badgeVariant: 'success' },
-  { key: 'maintenance', label: 'Manutenção', icon: Wrench, endpoint: '/maintenance', metricLabel: 'Ordens', badgeVariant: 'warning' },
-  { key: 'hr', label: 'Recursos Humanos', icon: Users, endpoint: '/hr', metricLabel: 'Colaboradores', badgeVariant: 'default' },
-  { key: 'service-orders', label: 'Pedidos', icon: ClipboardList, endpoint: '/service-orders', metricLabel: 'Pedidos', badgeVariant: 'info' },
-  { key: 'incidents', label: 'Incidentes', icon: AlertTriangle, endpoint: '/security/incidents', metricLabel: 'Incidentes', badgeVariant: 'danger' },
-]
-
-// ── Ações rápidas ─────────────────────────────────
 
 interface QuickAction {
   label: string
   href: string
   icon: LucideIcon
 }
-
-const QUICK_ACTIONS: QuickAction[] = [
-  { label: 'Nova Fatura', href: '/dashboard/invoicing/new', icon: FileText },
-  { label: 'Novo Cliente', href: '/dashboard/clients/new', icon: UserPlus },
-  { label: 'Novo Projeto', href: '/dashboard/projects/new', icon: HardHat },
-  { label: 'Registar Incidente', href: '/dashboard/incidents/new', icon: AlertTriangle },
-  { label: 'Nova Reserva', href: '/dashboard/reservations/new', icon: BedDouble },
-  { label: 'Novo Contrato', href: '/dashboard/contracts/new', icon: Briefcase },
-  { label: 'Novo Veículo', href: '/dashboard/vehicles/new', icon: Truck },
-  { label: 'Novo Colaborador', href: '/dashboard/hr/new', icon: Users },
-]
-
-// ── Itens de atividade recente ────────────────────
 
 interface ActivityItem {
   id: string
@@ -86,182 +53,238 @@ interface ActivityItem {
   badgeVariant: 'default' | 'success' | 'warning' | 'danger' | 'info'
 }
 
-// ── Componente do cartão de módulo ────────────────
+// ── Configuração de módulos ───────────────────────
 
-function ModuleStatCard({ config }: { config: ModuleConfig }) {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: [`dashboard-module-${config.key}`],
-    queryFn: () => api.get(config.endpoint, { params: { limit: 1 } }).then(r => r.data),
+const MODULE_CARDS: ModuleCard[] = [
+  { key: 'reservations', label: 'Reservas',  icon: CalendarDays,  href: '/dashboard/reservations', endpoint: '/reservations' },
+  { key: 'guests',       label: 'Hóspedes',  icon: UserCheck,     href: '/dashboard/guests',        endpoint: '/guest/list'   },
+  { key: 'pos',          label: 'F&B / POS', icon: ShoppingCart,  href: '/dashboard/pos',           endpoint: '/pos/orders'   },
+  { key: 'spa',          label: 'Spa',        icon: Sparkles,      href: '/dashboard/spa',           endpoint: '/spa/bookings' },
+  { key: 'stock',        label: 'Stock',      icon: Package,       href: '/dashboard/stock',         endpoint: '/stock'        },
+  { key: 'hr',           label: 'RH',         icon: Users,         href: '/dashboard/hr',            endpoint: '/hr'           },
+]
+
+// ── Ações rápidas ─────────────────────────────────
+
+const QUICK_ACTIONS: QuickAction[] = [
+  { label: 'Nova Reserva',       href: '/dashboard/reservations/new',   icon: CalendarDays  },
+  { label: 'Novo Hóspede',       href: '/dashboard/guests/new',         icon: UserCheck     },
+  { label: 'Lançamento Contab.', href: '/dashboard/accounting/new',     icon: Calculator    },
+  { label: 'Ticket Manutenção',  href: '/dashboard/maintenance/new',    icon: Wrench        },
+  { label: 'Nova Venda',         href: '/dashboard/retail/new',         icon: ShoppingBag   },
+  { label: 'Reserva Spa',        href: '/dashboard/spa/bookings/new',   icon: Sparkles      },
+]
+
+// ── Componente: cartão de módulo ──────────────────
+
+function ModuleTile({ mod }: { mod: ModuleCard }) {
+  const { data, isLoading } = useQuery({
+    queryKey: [`dashboard-module-${mod.key}`],
+    queryFn: () => api.get(mod.endpoint, { params: { limit: 1 } }).then(r => r.data),
     staleTime: 60000,
     retry: 1,
   })
 
-  const total = data?.total ?? 0
-  const Icon = config.icon
+  const total: number = data?.total ?? 0
+  const Icon = mod.icon
 
   return (
-    <Card className="flex items-center gap-4 p-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-gray-500">{config.label}</p>
-        {isLoading ? (
-          <p className="text-lg font-bold text-gray-300">...</p>
-        ) : isError ? (
-          <p className="text-sm text-gray-400">Indisponível</p>
-        ) : (
-          <p className="text-lg font-bold text-gray-900">
-            {total} {config.metricLabel}
-          </p>
-        )}
-      </div>
-    </Card>
+    <Link href={mod.href}>
+      <Card className="group cursor-pointer p-4 transition-shadow hover:shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-gray-500">{mod.label}</p>
+            {isLoading ? (
+              <p className="text-sm font-bold text-gray-300">...</p>
+            ) : (
+              <p className="text-lg font-bold text-gray-900">{total}</p>
+            )}
+          </div>
+        </div>
+      </Card>
+    </Link>
   )
 }
 
 // ── Página principal ──────────────────────────────
 
 export default function DashboardPage() {
-  // KPI principal — Faturação
-  const { data: invoicingData, isLoading: invoicingLoading } = useQuery({
-    queryKey: ['dashboard-invoicing'],
-    queryFn: () => api.get('/invoicing', { params: { limit: 1 } }).then(r => r.data),
+  // Hóspedes in-house
+  const { data: checkedInData, isLoading: checkedInLoading } = useQuery({
+    queryKey: ['dashboard-checked-in'],
+    queryFn: () =>
+      api.get('/reservations', { params: { limit: 10, status: 'CHECKED_IN' } }).then(r => r.data),
     staleTime: 60000,
     retry: 1,
   })
 
-  // KPI — Clientes ativos
-  const { data: clientsData, isLoading: clientsLoading } = useQuery({
-    queryKey: ['dashboard-clients'],
-    queryFn: () => api.get('/crm', { params: { limit: 1, active: 'true' } }).then(r => r.data),
+  // Receita do mês — lançamentos contabilísticos de receita
+  const { data: accountingData, isLoading: accountingLoading } = useQuery({
+    queryKey: ['dashboard-accounting-revenue'],
+    queryFn: () =>
+      api.get('/accounting/entries', { params: { limit: 200, tipo: 'RECEITA' } }).then(r => r.data),
     staleTime: 60000,
     retry: 1,
   })
 
-  // KPI — Contratos ativos
-  const { data: contractsData, isLoading: contractsLoading } = useQuery({
-    queryKey: ['dashboard-contracts'],
-    queryFn: () => api.get('/contracts', { params: { limit: 1, status: 'ACTIVE' } }).then(r => r.data),
+  // Manutenção aberta
+  const { data: maintenanceData, isLoading: maintenanceLoading } = useQuery({
+    queryKey: ['dashboard-maintenance-open'],
+    queryFn: () =>
+      api.get('/maintenance', { params: { limit: 1, status: 'OPEN' } }).then(r => r.data),
     staleTime: 60000,
     retry: 1,
   })
 
-  // Receita total — soma dos valores das faturas recentes
-  const { data: revenueData, isLoading: revenueLoading } = useQuery({
-    queryKey: ['dashboard-revenue'],
-    queryFn: () => api.get('/invoicing', { params: { limit: 5, status: 'active', type: 'FT' } }).then(r => r.data),
+  // Total de colaboradores
+  const { data: hrData, isLoading: hrLoading } = useQuery({
+    queryKey: ['dashboard-hr-total'],
+    queryFn: () => api.get('/hr', { params: { limit: 1 } }).then(r => r.data),
     staleTime: 60000,
     retry: 1,
   })
 
-  // Atividade recente — últimas faturas
-  const { data: recentInvoices } = useQuery({
-    queryKey: ['dashboard-recent-invoices'],
-    queryFn: () => api.get('/invoicing', { params: { limit: 5 } }).then(r => r.data),
+  // Atividade recente — reservas
+  const { data: recentReservations } = useQuery({
+    queryKey: ['dashboard-recent-reservations'],
+    queryFn: () => api.get('/reservations', { params: { limit: 5 } }).then(r => r.data),
     staleTime: 60000,
     retry: 1,
   })
 
-  // Atividade recente — últimos incidentes
-  const { data: recentIncidents } = useQuery({
-    queryKey: ['dashboard-recent-incidents'],
-    queryFn: () => api.get('/security/incidents', { params: { limit: 3 } }).then(r => r.data),
+  // Atividade recente — pedidos de quarto
+  const { data: recentServiceOrders } = useQuery({
+    queryKey: ['dashboard-recent-service-orders'],
+    queryFn: () => api.get('/service-orders', { params: { limit: 5 } }).then(r => r.data),
     staleTime: 60000,
     retry: 1,
   })
 
-  // Atividade recente — últimos clientes (deals)
-  const { data: recentClients } = useQuery({
-    queryKey: ['dashboard-recent-clients'],
-    queryFn: () => api.get('/crm', { params: { limit: 3 } }).then(r => r.data),
+  // Atividade recente — reservas de spa
+  const { data: recentSpaBookings } = useQuery({
+    queryKey: ['dashboard-recent-spa'],
+    queryFn: () => api.get('/spa/bookings', { params: { limit: 5 } }).then(r => r.data),
     staleTime: 60000,
     retry: 1,
   })
 
-  // Computar receita total a partir das faturas
-  const totalRevenue = (revenueData?.data ?? []).reduce(
-    (acc: number, inv: any) => acc + (parseFloat(inv.totalAmount ?? inv.total ?? '0') || 0),
+  // ── Cálculos derivados ────────────────────────
+
+  const checkedInTotal: number = checkedInData?.total ?? 0
+
+  const monthRevenue: number = (accountingData?.data ?? []).reduce(
+    (acc: number, entry: any) => acc + (parseFloat(entry.valor ?? entry.amount ?? '0') || 0),
     0,
   )
 
-  // Montar lista de atividade recente
+  const openMaintenanceTotal: number = maintenanceData?.total ?? 0
+  const hrTotal: number = hrData?.total ?? 0
+
+  // ── Feed de atividade ────────────────────────
+
   const activityItems: ActivityItem[] = [
-    ...(recentInvoices?.data ?? []).map((inv: any) => ({
-      id: `inv-${inv.id}`,
-      icon: <FileText className="h-4 w-4 text-blue-600" />,
-      description: `Fatura ${inv.fullNumber ?? inv.id?.slice(0, 8)} — ${inv.clientName ?? 'Cliente'}`,
-      timestamp: inv.createdAt,
-      module: 'Faturação',
+    ...(recentReservations?.data ?? []).map((r: any) => ({
+      id: `res-${r.id}`,
+      icon: <BedDouble className="h-4 w-4 text-blue-600" />,
+      description: `Reserva: ${r.guestName ?? 'Hóspede'} — ${r.checkIn ? new Date(r.checkIn).toLocaleDateString('pt-PT') : ''}`,
+      timestamp: r.createdAt ?? '',
+      module: 'Reservas',
       badgeVariant: 'info' as const,
     })),
-    ...(recentIncidents?.data ?? []).map((inc: any) => ({
-      id: `inc-${inc.id}`,
-      icon: <AlertTriangle className="h-4 w-4 text-red-600" />,
-      description: `Incidente: ${inc.title ?? inc.description?.slice(0, 50) ?? 'Sem descrição'}`,
-      timestamp: inc.createdAt,
-      module: 'Segurança',
-      badgeVariant: 'danger' as const,
+    ...(recentServiceOrders?.data ?? []).map((o: any) => ({
+      id: `svc-${o.id}`,
+      icon: <ConciergeBell className="h-4 w-4 text-amber-600" />,
+      description: `Pedido: ${o.type ?? o.description?.slice(0, 40) ?? 'Sem descrição'}`,
+      timestamp: o.createdAt ?? '',
+      module: 'Serviços',
+      badgeVariant: 'warning' as const,
     })),
-    ...(recentClients?.data ?? []).map((cli: any) => ({
-      id: `cli-${cli.id}`,
-      icon: <Handshake className="h-4 w-4 text-green-600" />,
-      description: `Cliente: ${cli.name ?? 'Sem nome'}`,
-      timestamp: cli.createdAt,
-      module: 'CRM',
-      badgeVariant: 'success' as const,
+    ...(recentSpaBookings?.data ?? []).map((s: any) => ({
+      id: `spa-${s.id}`,
+      icon: <Sparkles className="h-4 w-4 text-purple-600" />,
+      description: `Spa: ${s.serviceName ?? s.guestName ?? 'Reserva'}`,
+      timestamp: s.createdAt ?? '',
+      module: 'Spa',
+      badgeVariant: 'default' as const,
     })),
   ]
     .filter(item => item.timestamp)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 8)
 
+  // ── Data actual ──────────────────────────────
+
+  const todayLabel = new Date().toLocaleDateString('pt-PT', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Painel de Controlo</h1>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Activity className="h-4 w-4" />
-          <span>Visão geral do sistema</span>
+
+      {/* ── Cabeçalho ─────────────────────────── */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Painel do Resort</h1>
+          <p className="text-sm text-gray-500">Sea and Soul Resorts — Angola</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-white px-4 py-2 text-sm text-gray-600 shadow-sm">
+          <Activity className="h-4 w-4 text-primary" />
+          <span className="capitalize">{todayLabel}</span>
         </div>
       </div>
 
-      {/* ── KPIs Principais ────────────────────── */}
+      {/* ── KPIs principais ───────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Receita Total"
-          value={revenueLoading ? '...' : formatKwanza(totalRevenue)}
+          title="Hóspedes In-House"
+          value={checkedInLoading ? '...' : checkedInTotal}
+          icon={<BedDouble className="h-8 w-8" />}
+          description="Quartos ocupados hoje"
+        />
+        <StatCard
+          title="Receita do Mês"
+          value={accountingLoading ? '...' : formatKwanza(monthRevenue)}
           icon={<DollarSign className="h-8 w-8" />}
+          description="Lançamentos este mês"
         />
         <StatCard
-          title="Faturas Emitidas"
-          value={invoicingLoading ? '...' : (invoicingData?.total ?? 0)}
-          icon={<FileText className="h-8 w-8" />}
+          title="Manutenção Aberta"
+          value={maintenanceLoading ? '...' : openMaintenanceTotal}
+          icon={<Wrench className="h-8 w-8" />}
+          description={
+            openMaintenanceTotal > 0 ? (
+              <span className="text-amber-600">Tickets por resolver</span>
+            ) : (
+              'Tickets por resolver'
+            )
+          }
         />
         <StatCard
-          title="Clientes Ativos"
-          value={clientsLoading ? '...' : (clientsData?.total ?? 0)}
+          title="Equipa Ativa"
+          value={hrLoading ? '...' : hrTotal}
           icon={<Users className="h-8 w-8" />}
-        />
-        <StatCard
-          title="Contratos Ativos"
-          value={contractsLoading ? '...' : (contractsData?.total ?? 0)}
-          icon={<Briefcase className="h-8 w-8" />}
+          description="Colaboradores"
         />
       </div>
 
-      {/* ── Estatísticas por Módulo ─────────────── */}
+      {/* ── Módulos do Resort ─────────────────── */}
       <div>
-        <h2 className="mb-3 text-lg font-semibold text-gray-900">Módulos Ativos</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-          {MODULES.map(mod => (
-            <ModuleStatCard key={mod.key} config={mod} />
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">Módulos do Resort</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+          {MODULE_CARDS.map(mod => (
+            <ModuleTile key={mod.key} mod={mod} />
           ))}
         </div>
       </div>
 
-      {/* ── Atividade Recente + Ações Rápidas ──── */}
+      {/* ── Atividade recente + Ações rápidas ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
         {/* Atividade Recente */}
         <Card className="lg:col-span-2">
           <CardTitle className="mb-4 flex items-center gap-2">
@@ -270,7 +293,7 @@ export default function DashboardPage() {
           </CardTitle>
           <CardContent>
             {activityItems.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {activityItems.map(item => (
                   <div
                     key={item.id}
@@ -280,7 +303,9 @@ export default function DashboardPage() {
                       {item.icon}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900">{item.description}</p>
+                      <p className="truncate text-sm font-medium text-gray-900">
+                        {item.description}
+                      </p>
                       <div className="mt-1 flex items-center gap-2">
                         <Badge variant={item.badgeVariant}>{item.module}</Badge>
                         <span className="text-xs text-gray-400">
@@ -292,7 +317,9 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-gray-400">Sem atividade recente</p>
+              <p className="py-8 text-center text-sm text-gray-400">
+                Sem atividade recente
+              </p>
             )}
           </CardContent>
         </Card>
@@ -309,7 +336,7 @@ export default function DashboardPage() {
                 const ActionIcon = action.icon
                 return (
                   <Link key={action.href} href={action.href}>
-                    <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                    <Button variant="ghost" className="w-full justify-start gap-2 text-left text-gray-700">
                       <ActionIcon className="h-4 w-4 shrink-0 text-primary" />
                       {action.label}
                     </Button>
@@ -319,6 +346,7 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+
       </div>
     </div>
   )

@@ -6,7 +6,7 @@ import api from '@/lib/api'
 import { Card, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Search, Plus, Filter, MoreVertical, Edit2, Shield, Eye } from 'lucide-react'
+import { Search, Plus, Filter, MoreVertical, Shield, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -32,10 +32,12 @@ export default function AdminTenantsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Empresas / Tenants</h1>
           <p className="text-sm text-gray-500">Gestão global de todas as organizações na plataforma.</p>
         </div>
-        <Button className="bg-indigo-600 hover:bg-indigo-700">
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Empresa
-        </Button>
+        <Link href="/admin/tenants/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Empresa
+          </Button>
+        </Link>
       </div>
 
       {/* Filtros */}
@@ -46,14 +48,14 @@ export default function AdminTenantsPage() {
             <input
               type="text"
               placeholder="Pesquisar por nome, NIF ou slug..."
-              className="w-full rounded-md border border-gray-200 py-2 pl-10 pr-4 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-200 py-2 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <div className="flex items-center gap-2">
             <select 
-              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
               value={filterPlan}
               onChange={(e) => setFilterPlan(e.target.value)}
             >
@@ -102,7 +104,7 @@ export default function AdminTenantsPage() {
                   <tr key={tenant.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 font-bold uppercase">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold uppercase">
                           {tenant.name[0]}
                         </div>
                         <div className="flex flex-col">
@@ -112,7 +114,7 @@ export default function AdminTenantsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant={tenant.plan === 'ENTERPRISE' ? 'success' : 'default'} className="bg-indigo-50 text-indigo-700 border-indigo-100">
+                      <Badge variant={tenant.plan === 'ENTERPRISE' ? 'success' : 'default'} className="bg-primary/10 text-primary border-primary/20">
                         {tenant.plan}
                       </Badge>
                     </td>
@@ -139,11 +141,11 @@ export default function AdminTenantsPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Link href={`/admin/tenants/${tenant.id}`}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-indigo-600">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-primary">
                             <Eye className="h-4 w-4" />
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-indigo-600">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-primary">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </div>

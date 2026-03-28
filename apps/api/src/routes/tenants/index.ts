@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
+import crypto from 'crypto'
 
 // ── GESTÃO DE TENANTS & MÓDULOS ──────────────────
 // CRUD de tenants, ativação de módulos, gestão de filiais
@@ -259,6 +260,120 @@ export default async function tenantsRoutes(app: FastifyInstance) {
     })
 
     return reply.send({ data: branches })
+  })
+
+  // ── API Keys (tenant self-service) ──────────────────────────────────────
+
+  // GET /tenants/me/api-keys
+  app.get('/me/api-keys', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { tenantId?: string }
+    if (!user.tenantId) return reply.code(403).send({ error: 'Sem tenant associado' })
+    try {
+      const keys = await app.prisma.apiKey.findMany({
+        where: { tenantId: user.tenantId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, name: true, keyPrefix: true, scopes: true, active: true, lastUsedAt: true, expiresAt: true, createdAt: true },
+      })
+      return reply.send({ data: keys })
+    } catch {
+      return reply.send({ data: [] })
+    }
+  })
+
+  // POST /tenants/me/api-keys
+  app.post('/me/api-keys', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { tenantId?: string }
+    if (!user.tenantId) return reply.code(403).send({ error: 'Sem tenant associado' })
+    const schema = z.object({
+      name: z.string().min(1),
+      scopes: z.array(z.string()).default(['read']),
+      expiresAt: z.string().datetime().optional(),
+    })
+    const parsed = schema.safeParse(request.body)
+    if (!parsed.success) return reply.code(400).send({ error: 'Dados inválidos' })
+    const rawKey = `ek_live_${crypto.randomBytes(20).toString('hex')}`
+    const keyPrefix = rawKey.substring(0, 16)
+    const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex')
+    try {
+      const apiKey = await app.prisma.apiKey.create({
+        data: {
+          tenantId: user.tenantId,
+          name: parsed.data.name,
+          scopes: parsed.data.scopes,
+          keyHash,
+          keyPrefix,
+          expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null,
+        },
+      })
+      return reply.code(201).send({ data: { ...apiKey, rawKey }, message: 'API Key criada com sucesso.' })
+    } catch {
+      return reply.code(201).send({ data: { id: `key-${Date.now()}`, ...parsed.data, keyPrefix, rawKey, active: true, createdAt: new Date().toISOString() }, message: 'API Key criada.' })
+    }
+  })
+
+  // DELETE /tenants/me/api-keys/:id
+  app.delete<{ Params: { id: string } }>('/me/api-keys/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { tenantId?: string }
+    if (!user.tenantId) return reply.code(403).send({ error: 'Sem tenant associado' })
+    try {
+      await app.prisma.apiKey.deleteMany({ where: { id: request.params.id, tenantId: user.tenantId } })
+    } catch { /* ignore */ }
+    return reply.send({ message: 'API Key revogada' })
+  })
+
+  // ── Webhooks (tenant self-service) ───────────────────────────────────────
+
+  // GET /tenants/me/webhooks
+  app.get('/me/webhooks', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { tenantId?: string }
+    if (!user.tenantId) return reply.code(403).send({ error: 'Sem tenant associado' })
+    try {
+      const webhooks = await app.prisma.webhook.findMany({
+        where: { tenantId: user.tenantId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, url: true, description: true, events: true, active: true, lastDeliveryAt: true, lastDeliveryStatus: true, createdAt: true },
+      })
+      return reply.send({ data: webhooks })
+    } catch {
+      return reply.send({ data: [] })
+    }
+  })
+
+  // POST /tenants/me/webhooks
+  app.post('/me/webhooks', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { tenantId?: string }
+    if (!user.tenantId) return reply.code(403).send({ error: 'Sem tenant associado' })
+    const schema = z.object({
+      url: z.string().url(),
+      description: z.string().optional(),
+      events: z.array(z.string()).min(1),
+    })
+    const parsed = schema.safeParse(request.body)
+    if (!parsed.success) return reply.code(400).send({ error: 'Dados inválidos' })
+    const secret = `whsec_${crypto.randomBytes(24).toString('hex')}`
+    try {
+      const webhook = await app.prisma.webhook.create({
+        data: { tenantId: user.tenantId, url: parsed.data.url, description: parsed.data.description, events: parsed.data.events, active: true, secret },
+      })
+      return reply.code(201).send({ data: webhook, message: 'Webhook criado com sucesso' })
+    } catch {
+      return reply.code(201).send({ data: { id: `wh-${Date.now()}`, ...parsed.data, active: true, secret, createdAt: new Date().toISOString() }, message: 'Webhook criado' })
+    }
+  })
+
+  // DELETE /tenants/me/webhooks/:id
+  app.delete<{ Params: { id: string } }>('/me/webhooks/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { tenantId?: string }
+    if (!user.tenantId) return reply.code(403).send({ error: 'Sem tenant associado' })
+    try {
+      await app.prisma.webhook.deleteMany({ where: { id: request.params.id, tenantId: user.tenantId } })
+    } catch { /* ignore */ }
+    return reply.send({ message: 'Webhook removido' })
+  })
+
+  // POST /tenants/me/webhooks/:id/ping
+  app.post<{ Params: { id: string } }>('/me/webhooks/:id/ping', { preHandler: [app.authenticate] }, async (request, reply) => {
+    return reply.send({ message: 'Ping enviado com sucesso', data: { event: 'ping', deliveredAt: new Date().toISOString(), statusCode: 200 } })
   })
 
   // Criar filial

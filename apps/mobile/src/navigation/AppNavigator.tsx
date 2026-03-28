@@ -12,17 +12,19 @@ import LoginScreen from '../screens/LoginScreen';
 import MyStayScreen from '../screens/guest/MyStayScreen';
 import RoomServiceScreen from '../screens/guest/RoomServiceScreen';
 import SpaScreen from '../screens/guest/SpaScreen';
-import ConciergeScreen from '../screens/guest/ConciergeScreen';
 import GuestProfileScreen from '../screens/guest/GuestProfileScreen';
+import GuestNotificationsScreen from '../screens/guest/NotificationsScreen';
 
 // Staff screens
 import HotelDashboardScreen from '../screens/staff/HotelDashboardScreen';
 import AttendanceScreen from '../screens/staff/AttendanceScreen';
+import StaffProfileScreen from '../screens/staff/StaffProfileScreen';
+import StaffNotificationsScreen from '../screens/staff/NotificationsScreen';
+import CheckInScreen from '../screens/staff/CheckInScreen';
 import TicketsScreen from '../screens/staff/TicketsScreen';
 import TasksScreen from '../screens/staff/TasksScreen';
-import StaffProfileScreen from '../screens/staff/StaffProfileScreen';
 
-// ─── Tipos de navegação ──────────────────────────────────────────────────────
+// ─── Tipos de navegação ───────────────────────────────────────────────────────
 
 export type RootStackParamList = {
   Login: undefined;
@@ -33,7 +35,7 @@ export type GuestTabParamList = {
   Estadia: undefined;
   Servicos: undefined;
   Spa: undefined;
-  Concierge: undefined;
+  Notificacoes: undefined;
   Perfil: undefined;
 };
 
@@ -45,47 +47,100 @@ export type StaffTabParamList = {
   PerfilEquipa: undefined;
 };
 
-const Stack = createStackNavigator<RootStackParamList>();
-const GuestTab = createBottomTabNavigator<GuestTabParamList>();
-const StaffTab = createBottomTabNavigator<StaffTabParamList>();
+// Stack interno para o Painel (permite navegar para CheckIn / Alertas a partir do dashboard)
+export type PainelStackParamList = {
+  PainelHome: undefined;
+  CheckIn: undefined;
+  Alertas: undefined;
+};
 
-// ─── Paletas de cores ────────────────────────────────────────────────────────
+const Stack       = createStackNavigator<RootStackParamList>();
+const GuestTab    = createBottomTabNavigator<GuestTabParamList>();
+const StaffTab    = createBottomTabNavigator<StaffTabParamList>();
+const PainelStack = createStackNavigator<PainelStackParamList>();
+
+// ─── Paletas de cores ─────────────────────────────────────────────────────────
 
 const guestColors = {
-  primary: '#0A7EA4',
-  inactive: '#94A3B8',
+  primary:    '#0A7EA4',
+  inactive:   '#94A3B8',
   background: '#FFFFFF',
-  border: '#E0F2FE',
+  border:     '#E0F2FE',
 };
 
 const staffColors = {
-  primary: '#1A3E6E',
-  inactive: '#9CA3AF',
+  primary:    '#1A3E6E',
+  inactive:   '#9CA3AF',
   background: '#FFFFFF',
-  border: '#E5E7EB',
+  border:     '#E5E7EB',
 };
 
-// ─── Tab Navigator — Hóspede ─────────────────────────────────────────────────
+// ─── Stack do Painel (HotelDashboard + CheckIn + Alertas) ────────────────────
+// Permite navegar para CheckIn e Notificações a partir do dashboard sem
+// ocupar um separador dedicado na barra inferior.
+
+function PainelNavigator({ userInfo }: { userInfo: UserInfo }) {
+  return (
+    <PainelStack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: staffColors.primary,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTitleStyle: { fontWeight: '700', fontSize: 18, color: '#FFFFFF' },
+        headerTintColor: '#FFFFFF',
+      }}
+    >
+      <PainelStack.Screen
+        name="PainelHome"
+        options={{
+          headerTitle: 'ENGERIS ONE',
+          headerRight: () => null, // o ícone de sino pode ser adicionado aqui futuramente
+        }}
+      >
+        {() => (
+          <HotelDashboardScreen
+            userName={userInfo.name}
+            role={userInfo.role}
+          />
+        )}
+      </PainelStack.Screen>
+      <PainelStack.Screen
+        name="CheckIn"
+        component={CheckInScreen}
+        options={{ headerTitle: 'Check-in / Check-out' }}
+      />
+      <PainelStack.Screen
+        name="Alertas"
+        component={StaffNotificationsScreen}
+        options={{ headerTitle: 'Alertas e Notificações' }}
+      />
+    </PainelStack.Navigator>
+  );
+}
+
+// ─── Tab Navigator — Hóspede ──────────────────────────────────────────────────
 
 function GuestTabs({ onLogout }: { onLogout: () => void }) {
   return (
     <GuestTab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: guestColors.primary,
+        tabBarActiveTintColor:   guestColors.primary,
         tabBarInactiveTintColor: guestColors.inactive,
         tabBarStyle: {
           backgroundColor: guestColors.background,
-          borderTopWidth: 1,
-          borderTopColor: guestColors.border,
-          height: 62,
-          paddingBottom: 8,
-          paddingTop: 4,
+          borderTopWidth:  1,
+          borderTopColor:  guestColors.border,
+          height:          62,
+          paddingBottom:   8,
+          paddingTop:      4,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         headerStyle: {
           backgroundColor: guestColors.primary,
-          elevation: 0,
-          shadowOpacity: 0,
+          elevation:       0,
+          shadowOpacity:   0,
         },
         headerTitleStyle: { fontWeight: '700', fontSize: 18, color: '#FFFFFF' },
         headerTintColor: '#FFFFFF',
@@ -95,7 +150,7 @@ function GuestTabs({ onLogout }: { onLogout: () => void }) {
         name="Estadia"
         component={MyStayScreen}
         options={{
-          title: 'A Minha Estadia',
+          title:       'A Minha Estadia',
           headerTitle: 'Sea and Soul',
           tabBarIcon: ({ color, size }) => <Ionicons name="bed-outline" size={size} color={color} />,
         }}
@@ -104,7 +159,7 @@ function GuestTabs({ onLogout }: { onLogout: () => void }) {
         name="Servicos"
         component={RoomServiceScreen}
         options={{
-          title: 'Quarto',
+          title:       'Quarto',
           headerTitle: 'Serviço de Quarto',
           tabBarIcon: ({ color, size }) => <Ionicons name="fast-food-outline" size={size} color={color} />,
         }}
@@ -113,24 +168,24 @@ function GuestTabs({ onLogout }: { onLogout: () => void }) {
         name="Spa"
         component={SpaScreen}
         options={{
-          title: 'Spa',
+          title:       'Spa',
           headerTitle: 'Spa & Atividades',
           tabBarIcon: ({ color, size }) => <Ionicons name="leaf-outline" size={size} color={color} />,
         }}
       />
       <GuestTab.Screen
-        name="Concierge"
-        component={ConciergeScreen}
+        name="Notificacoes"
+        component={GuestNotificationsScreen}
         options={{
-          title: 'Concierge',
-          headerTitle: 'Concierge',
-          tabBarIcon: ({ color, size }) => <Ionicons name="headset-outline" size={size} color={color} />,
+          title:       'Notificações',
+          headerTitle: 'Notificações',
+          tabBarIcon: ({ color, size }) => <Ionicons name="notifications-outline" size={size} color={color} />,
         }}
       />
       <GuestTab.Screen
         name="Perfil"
         options={{
-          title: 'Perfil',
+          title:       'Perfil',
           headerTitle: 'O Meu Perfil',
           tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
         }}
@@ -141,74 +196,88 @@ function GuestTabs({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-// ─── Tab Navigator — Equipa ──────────────────────────────────────────────────
+// ─── Tab Navigator — Equipa ───────────────────────────────────────────────────
+// Separadores:
+//   1. Painel    → PainelNavigator (stack: Dashboard → CheckIn, Dashboard → Alertas)
+//   2. Presença  → AttendanceScreen
+//   3. Chamados  → TicketsScreen
+//   4. Tarefas   → TasksScreen
+//   5. Perfil    → StaffProfileScreen
 
 function StaffTabs({ userInfo, onLogout }: { userInfo: UserInfo; onLogout: () => void }) {
   return (
     <StaffTab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: staffColors.primary,
+        tabBarActiveTintColor:   staffColors.primary,
         tabBarInactiveTintColor: staffColors.inactive,
         tabBarStyle: {
           backgroundColor: staffColors.background,
-          borderTopWidth: 1,
-          borderTopColor: staffColors.border,
-          height: 62,
-          paddingBottom: 8,
-          paddingTop: 4,
+          borderTopWidth:  1,
+          borderTopColor:  staffColors.border,
+          height:          62,
+          paddingBottom:   8,
+          paddingTop:      4,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         headerStyle: {
           backgroundColor: staffColors.primary,
-          elevation: 0,
-          shadowOpacity: 0,
+          elevation:       0,
+          shadowOpacity:   0,
         },
         headerTitleStyle: { fontWeight: '700', fontSize: 18, color: '#FFFFFF' },
         headerTintColor: '#FFFFFF',
       }}
     >
+      {/* 1. Painel — stack interno com CheckIn e Alertas acessíveis */}
       <StaffTab.Screen
         name="Painel"
         options={{
-          title: 'Início',
-          headerTitle: 'ENGERIS ONE',
+          title:          'Início',
+          headerShown:    false, // o header é gerido pelo PainelNavigator
           tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
         }}
       >
-        {() => <HotelDashboardScreen userName={userInfo.name} role={userInfo.role} />}
+        {() => <PainelNavigator userInfo={userInfo} />}
       </StaffTab.Screen>
+
+      {/* 2. Presença — registo GPS obrigatório */}
       <StaffTab.Screen
         name="Presenca"
         component={AttendanceScreen}
         options={{
-          title: 'Presença',
+          title:       'Presença',
           headerTitle: 'Registo de Presença',
           tabBarIcon: ({ color, size }) => <Ionicons name="location-outline" size={size} color={color} />,
         }}
       />
+
+      {/* 3. Chamados — manutenção e resolução de tickets */}
       <StaffTab.Screen
         name="Chamados"
         component={TicketsScreen}
         options={{
-          title: 'Chamados',
+          title:       'Chamados',
           headerTitle: 'Chamados de Manutenção',
           tabBarIcon: ({ color, size }) => <Ionicons name="construct-outline" size={size} color={color} />,
         }}
       />
+
+      {/* 4. Tarefas — checklist diária de toda a equipa */}
       <StaffTab.Screen
         name="Tarefas"
+        component={TasksScreen}
         options={{
-          title: 'Tarefas',
+          title:       'Tarefas',
           headerTitle: 'Tarefas do Dia',
-          tabBarIcon: ({ color, size }) => <Ionicons name="checkmark-circle-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="checkmark-done-outline" size={size} color={color} />,
         }}
-      >
-        {() => <TasksScreen role={userInfo.role} />}
-      </StaffTab.Screen>
+      />
+
+      {/* 5. Perfil */}
       <StaffTab.Screen
         name="PerfilEquipa"
         options={{
-          title: 'Perfil',
+          title:       'Perfil',
           headerTitle: 'O Meu Perfil',
           tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
         }}
@@ -219,12 +288,12 @@ function StaffTabs({ userInfo, onLogout }: { userInfo: UserInfo; onLogout: () =>
   );
 }
 
-// ─── Root Navigator — fluxo de autenticação ──────────────────────────────────
+// ─── Root Navigator — fluxo de autenticação ───────────────────────────────────
 
 export default function AppNavigator() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading]         = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [userInfo, setUserInfo]           = useState<UserInfo | null>(null);
 
   const handleLogout = async () => {
     try {
@@ -293,9 +362,9 @@ export default function AppNavigator() {
 
 const styles = StyleSheet.create({
   loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex:            1,
+    alignItems:      'center',
+    justifyContent:  'center',
     backgroundColor: '#F9FAFB',
   },
 });

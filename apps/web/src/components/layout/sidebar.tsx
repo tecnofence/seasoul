@@ -44,6 +44,7 @@ import {
   Compass,
   Store,
   BarChart3,
+  Webhook,
   type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/lib/auth'
@@ -120,6 +121,7 @@ const allNavItems: NavItem[] = [
   { href: '/dashboard/audit-log',     label: 'Auditoria',        icon: Shield,          module: 'core',    category: 'finance' },
 
   // ── ADMINISTRAÇÃO ──
+  { href: '/dashboard/integrations',  label: 'Integrações',      icon: Webhook,         module: 'core',    category: 'admin' },
   { href: '/dashboard/tenants',       label: 'Tenants',          icon: Building2,       module: 'admin',   category: 'admin' },
   { href: '/dashboard/settings',      label: 'Configurações',    icon: Settings,        module: 'admin',   category: 'admin' },
 ]

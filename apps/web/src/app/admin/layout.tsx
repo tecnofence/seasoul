@@ -37,9 +37,9 @@ export default function AdminLayout({
             <div className="flex items-center gap-2">
               <div className="flex flex-col items-end">
                 <span className="text-sm font-semibold text-gray-900">Super Admin</span>
-                <span className="text-[10px] uppercase text-indigo-600 font-bold">Acesso Total</span>
+                <span className="text-[10px] uppercase text-primary font-bold">Acesso Total</span>
               </div>
-              <UserCircle className="h-8 w-8 text-indigo-600" />
+              <UserCircle className="h-8 w-8 text-primary" />
             </div>
           </div>
         </header>

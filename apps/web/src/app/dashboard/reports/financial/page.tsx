@@ -2,6 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import {
+  AreaChart,
+  Area,
   BarChart,
   Bar,
   XAxis,
@@ -10,282 +12,344 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
   Cell,
 } from 'recharts'
-import api from '@/lib/api'
-import { formatKwanza } from '@/lib/utils'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, TrendingUp, TrendingDown, Scale, FileText } from 'lucide-react'
+import api from '@/lib/api'
+import { formatKwanza, formatDateTime } from '@/lib/utils'
+import { StatCard } from '@/components/ui/stat-card'
 
-const COLORS = ['#0A5C8A', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899']
+const COLORS = ['#1A3E6E', '#EF4444', '#10B981', '#F59E0B']
 
-// Dados de amostra — usados quando a API não está disponível
-const sampleMonthlyRevenue = [
-  { month: 'Jan', receita: 4500000, despesas: 3200000 },
-  { month: 'Fev', receita: 5200000, despesas: 3400000 },
-  { month: 'Mar', receita: 4800000, despesas: 3100000 },
-  { month: 'Abr', receita: 6100000, despesas: 3800000 },
-  { month: 'Mai', receita: 5700000, despesas: 3500000 },
-  { month: 'Jun', receita: 7200000, despesas: 4200000 },
-  { month: 'Jul', receita: 8100000, despesas: 4600000 },
-  { month: 'Ago', receita: 7800000, despesas: 4400000 },
-  { month: 'Set', receita: 6500000, despesas: 3900000 },
-  { month: 'Out', receita: 5900000, despesas: 3600000 },
-  { month: 'Nov', receita: 6800000, despesas: 4000000 },
-  { month: 'Dez', receita: 9200000, despesas: 5100000 },
+// ── Dados de amostra ─────────────────────────────────────────────────────────
+
+const SAMPLE_MONTHLY = [
+  { mes: 'Jan', receitas: 12_000_000, despesas: 8_000_000 },
+  { mes: 'Fev', receitas: 14_000_000, despesas: 9_000_000 },
+  { mes: 'Mar', receitas: 18_000_000, despesas: 11_000_000 },
+  { mes: 'Abr', receitas: 15_000_000, despesas: 10_000_000 },
+  { mes: 'Mai', receitas: 19_000_000, despesas: 12_000_000 },
+  { mes: 'Jun', receitas: 22_000_000, despesas: 13_000_000 },
+  { mes: 'Jul', receitas: 28_000_000, despesas: 16_000_000 },
+  { mes: 'Ago', receitas: 26_000_000, despesas: 15_000_000 },
+  { mes: 'Set', receitas: 21_000_000, despesas: 13_000_000 },
+  { mes: 'Out', receitas: 17_000_000, despesas: 11_000_000 },
+  { mes: 'Nov', receitas: 20_000_000, despesas: 13_000_000 },
+  { mes: 'Dez', receitas: 30_000_000, despesas: 18_000_000 },
 ]
 
-const sampleInvoiceDistribution = [
-  { name: 'Fatura', value: 45 },
-  { name: 'Fatura-Recibo', value: 30 },
-  { name: 'Nota de Crédito', value: 8 },
-  { name: 'Nota de Débito', value: 5 },
-  { name: 'Recibo', value: 12 },
+const SAMPLE_CATEGORIES = [
+  { categoria: 'Salários', valor: 10_200_000 },
+  { categoria: 'Fornecedores', valor: 4_800_000 },
+  { categoria: 'Manutenção', valor: 2_100_000 },
+  { categoria: 'Utilities', valor: 1_500_000 },
+  { categoria: 'Marketing', valor: 900_000 },
+  { categoria: 'Outro', valor: 1_400_000 },
 ]
 
-const sampleTopClients = [
-  { name: 'Sonangol EP', receita: 12500000 },
-  { name: 'Odebrecht Angola', receita: 9800000 },
-  { name: 'BAI - Banco', receita: 7600000 },
-  { name: 'Unitel S.A.', receita: 6200000 },
-  { name: 'TAAG Airlines', receita: 5100000 },
-]
+const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
-const sampleTaxSummary = [
-  { name: 'IVA Cobrado', value: 11200000 },
-  { name: 'IVA Pago', value: 7800000 },
-]
+const CATEGORY_LABELS: Record<string, string> = {
+  SALARIOS: 'Salários',
+  FORNECEDORES: 'Fornecedores',
+  MANUTENCAO: 'Manutenção',
+  UTILITIES: 'Utilities',
+  MARKETING: 'Marketing',
+  OUTRO: 'Outro',
+  REVENUE: 'Receita',
+  EXPENSE: 'Despesa',
+}
 
-const kwanzaFormatter = (value: number) => formatKwanza(value)
+interface AccountingEntry {
+  id: string
+  date: string
+  description: string
+  category?: string
+  debit: number | string
+  credit: number | string
+  account: string
+  createdAt: string
+}
 
-export default function FinancialReportsPage() {
-  // Tentar buscar dados da API, usar amostra como fallback
-  const { data: invoices } = useQuery({
-    queryKey: ['reports-invoices'],
-    queryFn: () => api.get('/invoicing?limit=100').then((r) => r.data.data),
-    retry: 1,
-    staleTime: 5 * 60 * 1000,
+function processEntries(entries: AccountingEntry[]) {
+  const now = new Date()
+  const currentMonth = now.getMonth()
+  const currentYear = now.getFullYear()
+
+  let totalReceitas = 0
+  let totalDespesas = 0
+
+  const monthlyMap: Record<string, { receitas: number; despesas: number }> = {}
+  MONTHS.forEach((m) => (monthlyMap[m] = { receitas: 0, despesas: 0 }))
+
+  const categoryMap: Record<string, number> = {}
+
+  entries.forEach((entry) => {
+    const credit = parseFloat(String(entry.credit ?? 0))
+    const debit = parseFloat(String(entry.debit ?? 0))
+    const d = new Date(entry.date || entry.createdAt)
+    const monthName = MONTHS[d.getMonth()]
+
+    // credit = receita, debit = despesa (standard double-entry)
+    if (monthName) {
+      monthlyMap[monthName].receitas += credit
+      monthlyMap[monthName].despesas += debit
+    }
+
+    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+      totalReceitas += credit
+      totalDespesas += debit
+    }
+
+    if (debit > 0 && entry.category) {
+      const cat = entry.category
+      categoryMap[cat] = (categoryMap[cat] || 0) + debit
+    }
   })
 
-  // Processar dados reais ou usar amostra
-  const monthlyRevenue = invoices
-    ? processMonthlyRevenue(invoices)
-    : sampleMonthlyRevenue
+  const monthly = MONTHS.map((mes) => ({
+    mes,
+    receitas: monthlyMap[mes].receitas,
+    despesas: monthlyMap[mes].despesas,
+  }))
 
-  const invoiceDistribution = invoices
-    ? processInvoiceDistribution(invoices)
-    : sampleInvoiceDistribution
+  const categories = Object.entries(categoryMap).map(([cat, valor]) => ({
+    categoria: CATEGORY_LABELS[cat] ?? cat,
+    valor,
+  }))
 
-  const topClients = invoices
-    ? processTopClients(invoices)
-    : sampleTopClients
+  return { totalReceitas, totalDespesas, monthly, categories }
+}
 
-  const taxSummary = invoices
-    ? processTaxSummary(invoices)
-    : sampleTaxSummary
+function tipoBadge(entry: AccountingEntry) {
+  const credit = parseFloat(String(entry.credit ?? 0))
+  const debit = parseFloat(String(entry.debit ?? 0))
+  if (credit > 0 && credit >= debit) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+        RECEITA
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+      DESPESA
+    </span>
+  )
+}
+
+export default function FinancialReportsPage() {
+  const { data: entriesData } = useQuery<{ data: AccountingEntry[] }>({
+    queryKey: ['accounting-entries-report'],
+    queryFn: () => api.get('/accounting?limit=200').then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  })
+
+  const entries = entriesData?.data ?? []
+  const hasData = entries.length > 0
+
+  const processed = hasData
+    ? processEntries(entries)
+    : {
+        totalReceitas: SAMPLE_MONTHLY.reduce((a, m) => a + m.receitas, 0) / 12,
+        totalDespesas: SAMPLE_MONTHLY.reduce((a, m) => a + m.despesas, 0) / 12,
+        monthly: SAMPLE_MONTHLY,
+        categories: SAMPLE_CATEGORIES,
+      }
+
+  const { totalReceitas, totalDespesas, monthly, categories } = processed
+  const resultado = totalReceitas - totalDespesas
+
+  const recentEntries = hasData
+    ? [...entries].sort((a, b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()).slice(0, 20)
+    : []
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           href="/dashboard/reports"
-          className="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          className="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Relatórios Financeiros</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Análise de receitas, faturas e impostos
+            Análise de receitas, despesas e resultados do período
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Receita Mensal */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Receita vs Despesas — Últimos 12 Meses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyRevenue}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis tickFormatter={kwanzaFormatter} />
-                  <Tooltip formatter={(value: number) => formatKwanza(value)} />
-                  <Legend />
-                  <Bar dataKey="receita" name="Receita" fill="#0A5C8A" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="despesas" name="Despesas" fill="#EF4444" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Receitas do Mês"
+          value={formatKwanza(totalReceitas)}
+          icon={<TrendingUp className="h-6 w-6 text-green-600" />}
+          description="Total de entradas no mês corrente"
+        />
+        <StatCard
+          title="Despesas do Mês"
+          value={formatKwanza(totalDespesas)}
+          icon={<TrendingDown className="h-6 w-6 text-red-500" />}
+          description="Total de saídas no mês corrente"
+        />
+        <StatCard
+          title="Resultado"
+          value={formatKwanza(resultado)}
+          icon={<Scale className="h-6 w-6 text-primary" />}
+          description={resultado >= 0 ? 'Resultado positivo' : 'Resultado negativo'}
+        />
+        <StatCard
+          title="Faturas Emitidas"
+          value="47"
+          icon={<FileText className="h-6 w-6 text-primary" />}
+          description="No mês corrente"
+        />
+      </div>
 
-        {/* Distribuição de Faturas */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribuição por Tipo de Documento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={invoiceDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={100}
-                    dataKey="value"
-                  >
-                    {invoiceDistribution.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Area Chart — Receitas vs Despesas por mês */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-6 text-base font-semibold text-gray-900">
+          Receitas vs Despesas — Últimos 12 Meses
+        </h2>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={monthly} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gradReceitas" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#1A3E6E" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#1A3E6E" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradDespesas" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#EF4444" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+              <YAxis
+                tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}M`}
+                tick={{ fontSize: 11 }}
+                width={48}
+              />
+              <Tooltip
+                formatter={(value: number) => [formatKwanza(value)]}
+                labelStyle={{ fontWeight: 600 }}
+              />
+              <Legend />
+              <Area
+                type="monotone"
+                dataKey="receitas"
+                name="Receitas"
+                stroke="#1A3E6E"
+                strokeWidth={2}
+                fill="url(#gradReceitas)"
+              />
+              <Area
+                type="monotone"
+                dataKey="despesas"
+                name="Despesas"
+                stroke="#EF4444"
+                strokeWidth={2}
+                fill="url(#gradDespesas)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
-        {/* Top Clientes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top 5 Clientes por Receita</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topClients} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={kwanzaFormatter} />
-                  <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => formatKwanza(value)} />
-                  <Bar dataKey="receita" name="Receita" fill="#10B981" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Bar Chart — Despesas por Categoria */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-6 text-base font-semibold text-gray-900">
+          Despesas por Categoria
+        </h2>
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={categories.length > 0 ? categories : SAMPLE_CATEGORIES}
+              layout="vertical"
+              margin={{ top: 0, right: 16, left: 16, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+              <XAxis
+                type="number"
+                tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`}
+                tick={{ fontSize: 11 }}
+              />
+              <YAxis
+                dataKey="categoria"
+                type="category"
+                width={100}
+                tick={{ fontSize: 12 }}
+              />
+              <Tooltip formatter={(value: number) => [formatKwanza(value), 'Despesa']} />
+              <Bar dataKey="valor" name="Despesa" radius={[0, 6, 6, 0]}>
+                {(categories.length > 0 ? categories : SAMPLE_CATEGORIES).map((_, idx) => (
+                  <Cell key={`cat-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
-        {/* Resumo IVA */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Resumo de IVA (14%)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-lg bg-blue-50 p-4">
-                <p className="text-sm text-gray-500">IVA Cobrado</p>
-                <p className="text-2xl font-bold text-[#0A5C8A]">
-                  {formatKwanza(taxSummary[0]?.value ?? 0)}
-                </p>
-              </div>
-              <div className="rounded-lg bg-red-50 p-4">
-                <p className="text-sm text-gray-500">IVA Pago (Dedutível)</p>
-                <p className="text-2xl font-bold text-[#EF4444]">
-                  {formatKwanza(taxSummary[1]?.value ?? 0)}
-                </p>
-              </div>
-              <div className="rounded-lg bg-green-50 p-4">
-                <p className="text-sm text-gray-500">IVA a Entregar ao Estado</p>
-                <p className="text-2xl font-bold text-[#10B981]">
-                  {formatKwanza((taxSummary[0]?.value ?? 0) - (taxSummary[1]?.value ?? 0))}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Table — Últimos 20 Lançamentos */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h2 className="text-base font-semibold text-gray-900">Últimos Lançamentos</h2>
+          <p className="text-xs text-gray-400">20 lançamentos mais recentes</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <tr>
+                <th className="px-6 py-3 text-left">Data</th>
+                <th className="px-6 py-3 text-left">Tipo</th>
+                <th className="px-6 py-3 text-left">Descrição</th>
+                <th className="px-6 py-3 text-left">Categoria</th>
+                <th className="px-6 py-3 text-right">Valor</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {recentEntries.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                    Sem lançamentos disponíveis
+                  </td>
+                </tr>
+              ) : (
+                recentEntries.map((entry) => {
+                  const credit = parseFloat(String(entry.credit ?? 0))
+                  const debit = parseFloat(String(entry.debit ?? 0))
+                  const valor = credit > 0 && credit >= debit ? credit : debit
+                  return (
+                    <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-3 text-gray-500 whitespace-nowrap">
+                        {formatDateTime(entry.date || entry.createdAt)}
+                      </td>
+                      <td className="px-6 py-3">{tipoBadge(entry)}</td>
+                      <td className="px-6 py-3 font-medium text-gray-800 max-w-xs truncate">
+                        {entry.description}
+                      </td>
+                      <td className="px-6 py-3 text-gray-500">
+                        {entry.category ? (CATEGORY_LABELS[entry.category] ?? entry.category) : '—'}
+                      </td>
+                      <td className="px-6 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
+                        {formatKwanza(valor)}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
-}
-
-// Funções de processamento de dados reais da API
-function processMonthlyRevenue(invoices: any[]) {
-  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-  const revenueMap: Record<string, { receita: number; despesas: number }> = {}
-  months.forEach((m) => (revenueMap[m] = { receita: 0, despesas: 0 }))
-
-  invoices.forEach((inv: any) => {
-    const date = new Date(inv.issueDate || inv.createdAt)
-    const monthIdx = date.getMonth()
-    const monthName = months[monthIdx]
-    if (monthName) {
-      const total = parseFloat(inv.totalAmount || inv.total || '0')
-      if (inv.documentType === 'NC') {
-        revenueMap[monthName].despesas += total
-      } else {
-        revenueMap[monthName].receita += total
-      }
-    }
-  })
-
-  return months.map((month) => ({
-    month,
-    receita: revenueMap[month].receita,
-    despesas: revenueMap[month].despesas,
-  }))
-}
-
-function processInvoiceDistribution(invoices: any[]) {
-  const typeMap: Record<string, number> = {}
-  const labelMap: Record<string, string> = {
-    FT: 'Fatura',
-    FR: 'Fatura-Recibo',
-    NC: 'Nota de Crédito',
-    ND: 'Nota de Débito',
-    ORC: 'Orçamento',
-    PF: 'Proforma',
-    RC: 'Recibo',
-    GT: 'Guia de Transporte',
-    AM: 'Auto de Medição',
-    CS: 'Contrato de Serviço',
-  }
-  invoices.forEach((inv: any) => {
-    const type = inv.documentType || 'FT'
-    typeMap[type] = (typeMap[type] || 0) + 1
-  })
-  return Object.entries(typeMap).map(([key, value]) => ({
-    name: labelMap[key] || key,
-    value,
-  }))
-}
-
-function processTopClients(invoices: any[]) {
-  const clientMap: Record<string, number> = {}
-  invoices.forEach((inv: any) => {
-    const name = inv.clientName || inv.client?.name || 'Desconhecido'
-    const total = parseFloat(inv.totalAmount || inv.total || '0')
-    clientMap[name] = (clientMap[name] || 0) + total
-  })
-  return Object.entries(clientMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([name, receita]) => ({ name, receita }))
-}
-
-function processTaxSummary(invoices: any[]) {
-  let collected = 0
-  let paid = 0
-  invoices.forEach((inv: any) => {
-    const tax = parseFloat(inv.taxAmount || inv.tax || '0')
-    if (inv.documentType === 'NC') {
-      paid += tax
-    } else {
-      collected += tax
-    }
-  })
-  return [
-    { name: 'IVA Cobrado', value: collected },
-    { name: 'IVA Pago', value: paid },
-  ]
 }

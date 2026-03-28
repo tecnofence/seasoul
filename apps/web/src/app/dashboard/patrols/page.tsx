@@ -4,13 +4,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { StatCard } from '@/components/ui/stat-card'
 import { Button } from '@/components/ui/button'
-import { Route, MapPin, Clock, CheckCircle, Plus } from 'lucide-react'
+import { Route, MapPin, Clock, CheckCircle, Plus, Shield, AlertCircle, Activity } from 'lucide-react'
 
 const STATUS_LABEL: Record<string, string> = { SCHEDULED: 'Agendada', IN_PROGRESS: 'Em Curso', COMPLETED: 'Concluída', INTERRUPTED: 'Interrompida' }
 const STATUS_COLOR: Record<string, string> = { SCHEDULED: 'bg-blue-100 text-blue-700', IN_PROGRESS: 'bg-amber-100 text-amber-700', COMPLETED: 'bg-green-100 text-green-700', INTERRUPTED: 'bg-red-100 text-red-700' }
 
 export default function PatrolsPage() {
+  const router = useRouter()
   const [statusFilter, setStatusFilter] = useState('')
 
   const { data, isLoading } = useQuery({
@@ -18,23 +20,61 @@ export default function PatrolsPage() {
     queryFn: () => api.get('/security/patrols', { params: { status: statusFilter || undefined, limit: 50 } }).then((r) => r.data),
   })
 
+  const { data: allData } = useQuery({
+    queryKey: ['patrols-all'],
+    queryFn: () => api.get('/security/patrols', { params: { limit: 200 } }).then((r) => r.data),
+  })
+
   const patrols = data?.data ?? []
+  const allPatrols: any[] = allData?.data ?? []
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  const todayPatrols = allPatrols.filter((p) => {
+    const d = p.startedAt ? new Date(p.startedAt) : null
+    return d && d >= today && d < tomorrow
+  })
+  const inProgress = allPatrols.filter((p) => p.status === 'IN_PROGRESS').length
+  const completed = allPatrols.filter((p) => p.status === 'COMPLETED').length
+  const interrupted = allPatrols.filter((p) => p.status === 'INTERRUPTED').length
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Segurança — Rondas</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Rondas de Segurança</h1>
+          <p className="text-sm text-gray-500">Monitorização e registo de rondas de segurança</p>
+        </div>
         <Button onClick={() => router.push('/dashboard/patrols/new')}>
           <Plus className="mr-2 h-4 w-4" /> Nova Ronda
         </Button>
-        <div className="flex gap-2">
-          {Object.entries(STATUS_LABEL).map(([k, v]) => (
-            <button key={k} onClick={() => setStatusFilter(statusFilter === k ? '' : k)}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${statusFilter === k ? STATUS_COLOR[k] : 'bg-gray-100 text-gray-600'}`}>
-              {v}
-            </button>
-          ))}
-        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard title="Rondas Hoje" value={todayPatrols.length} icon={<Shield className="h-5 w-5 text-primary" />} />
+        <StatCard title="Em Curso" value={inProgress} icon={<Activity className="h-5 w-5 text-amber-500" />} description={inProgress > 0 ? 'Ativas agora' : 'Nenhuma ativa'} />
+        <StatCard title="Concluídas" value={completed} icon={<CheckCircle className="h-5 w-5 text-green-500" />} />
+        <StatCard title="Interrompidas" value={interrupted} icon={<AlertCircle className="h-5 w-5 text-red-500" />} />
+      </div>
+
+      {/* Filter chips */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setStatusFilter('')}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${statusFilter === '' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+        >
+          Todas
+        </button>
+        {Object.entries(STATUS_LABEL).map(([k, v]) => (
+          <button key={k} onClick={() => setStatusFilter(statusFilter === k ? '' : k)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${statusFilter === k ? STATUS_COLOR[k] + ' ring-2 ring-offset-1 ring-primary/30' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            {v}
+          </button>
+        ))}
       </div>
 
       {isLoading ? <p className="text-gray-500">A carregar...</p> : (

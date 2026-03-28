@@ -1,202 +1,238 @@
 'use client'
 
-import { Building2, BedDouble, CalendarCheck, TrendingUp, Wifi, WifiOff } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts'
+import { Building2, CheckCircle, Users, TrendingUp } from 'lucide-react'
+import api from '@/lib/api'
+import { formatKwanza, formatDateTime } from '@/lib/utils'
+import { StatCard } from '@/components/ui/stat-card'
 
-const kpis = [
-  {
-    title: 'Total de Tenants',
-    value: '3',
-    icon: Building2,
-    iconColor: 'text-indigo-600',
-    iconBg: 'bg-indigo-50',
-    description: '3 activos',
-    descriptionColor: 'text-green-600',
-  },
-  {
-    title: 'Quartos Geridos',
-    value: '451',
-    icon: BedDouble,
-    iconColor: 'text-purple-600',
-    iconBg: 'bg-purple-50',
-    description: 'Em 3 propriedades',
-    descriptionColor: 'text-gray-500',
-  },
-  {
-    title: 'Reservas este mês',
-    value: '1.247',
-    icon: CalendarCheck,
-    iconColor: 'text-emerald-600',
-    iconBg: 'bg-emerald-50',
-    description: '+18% vs mês anterior',
-    descriptionColor: 'text-green-600',
-  },
-  {
-    title: 'Receita Plataforma',
-    value: '15.897 USD',
-    icon: TrendingUp,
-    iconColor: 'text-amber-600',
-    iconBg: 'bg-amber-50',
-    description: 'Este mês',
-    descriptionColor: 'text-gray-500',
-  },
+const COLORS = ['#1A3E6E', '#0A5C8A', '#10B981', '#F59E0B']
+
+const MODULE_ADOPTION = [
+  { key: 'finance', label: 'Financeiro', pct: 100 },
+  { key: 'pms', label: 'PMS — Gestão de Propriedade', pct: 80 },
+  { key: 'pos', label: 'Ponto de Venda (POS)', pct: 65 },
+  { key: 'stock', label: 'Gestão de Stock', pct: 60 },
+  { key: 'hr', label: 'Recursos Humanos', pct: 55 },
+  { key: 'maintenance', label: 'Manutenção', pct: 50 },
+  { key: 'spa', label: 'Spa & Bem-estar', pct: 45 },
+  { key: 'retail', label: 'Retalho', pct: 35 },
 ]
 
-const moduleUsage = [
-  { name: 'PMS — Gestão de Propriedade', usage: 100, color: 'bg-indigo-500' },
-  { name: 'Faturação AGT', usage: 97, color: 'bg-purple-500' },
-  { name: 'Recursos Humanos', usage: 89, color: 'bg-emerald-500' },
-  { name: 'Spa & Bem-estar', usage: 76, color: 'bg-pink-500' },
-  { name: 'Gestão de Stock', usage: 71, color: 'bg-amber-500' },
-]
+const ACTION_LABELS: Record<string, { label: string; color: string }> = {
+  LOGIN: { label: 'Login', color: 'bg-blue-100 text-blue-700' },
+  LOGOUT: { label: 'Logout', color: 'bg-gray-100 text-gray-600' },
+  CREATE: { label: 'Criação', color: 'bg-green-100 text-green-700' },
+  UPDATE: { label: 'Atualização', color: 'bg-amber-100 text-amber-700' },
+  DELETE: { label: 'Eliminação', color: 'bg-red-100 text-red-700' },
+  SUSPEND: { label: 'Suspensão', color: 'bg-orange-100 text-orange-700' },
+  MODULE_TOGGLE: { label: 'Módulo', color: 'bg-primary/10 text-primary' },
+  INVOICE_EMIT: { label: 'Fatura', color: 'bg-emerald-100 text-emerald-700' },
+}
 
-const tenants = [
-  {
-    name: 'Sea and Soul Resorts',
-    location: 'Cabo Ledo, Angola',
-    plan: 'Profissional',
-    rooms: 312,
-    status: 'Online' as const,
-  },
-  {
-    name: 'Palmeira Hotel',
-    location: 'Luanda, Angola',
-    plan: 'Essencial',
-    rooms: 89,
-    status: 'Online' as const,
-  },
-  {
-    name: 'Demo Resort',
-    location: 'Ambiente de Teste',
-    plan: 'Essencial',
-    rooms: 50,
-    status: 'Offline' as const,
-  },
-]
+interface OverviewData {
+  totalTenants: number
+  activeTenants: number
+  totalUsers: number
+  estimatedMonthlyRevenue: number
+  planDistribution: { plan: string; count: number }[]
+}
 
-const recentActivity = [
-  { id: 1, event: 'Novo check-in — Sea and Soul', time: 'há 5 min' },
-  { id: 2, event: 'Fatura emitida #2026/0142 — Palmeira Hotel', time: 'há 12 min' },
-  { id: 3, event: 'Novo utilizador registado — Sea and Soul', time: 'há 34 min' },
-  { id: 4, event: 'Backup concluído com sucesso — Sistema', time: 'há 1 h' },
-  { id: 5, event: 'Módulo Spa activado — Sea and Soul', time: 'há 3 h' },
-]
+interface AuditEntry {
+  id: string
+  action: string
+  entity: string
+  createdAt: string
+  userEmail?: string
+}
 
-function StatusBadge({ status }: { status: 'Online' | 'Offline' }) {
-  if (status === 'Online') {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-        <Wifi className="h-3 w-3" />
-        Online
-      </span>
-    )
-  }
+const PLAN_LABELS: Record<string, string> = {
+  STARTER: 'Starter',
+  PROFESSIONAL: 'Professional',
+  ENTERPRISE: 'Enterprise',
+  CUSTOM: 'Custom',
+}
+
+function ActionBadge({ action }: { action: string }) {
+  const meta = ACTION_LABELS[action] ?? { label: action, color: 'bg-gray-100 text-gray-600' }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-500">
-      <WifiOff className="h-3 w-3" />
-      Offline
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${meta.color}`}>
+      {meta.label}
     </span>
   )
 }
 
 export default function AnalyticsPage() {
+  const { data: overview, isLoading: loadingOverview } = useQuery<OverviewData>({
+    queryKey: ['admin-analytics-overview'],
+    queryFn: () => api.get('/admin/analytics/overview').then((r) => r.data.data),
+    staleTime: 2 * 60 * 1000,
+    retry: 1,
+  })
+
+  const { data: auditData } = useQuery<{ data: AuditEntry[] }>({
+    queryKey: ['admin-audit-log-recent'],
+    queryFn: () => api.get('/admin/audit-log?limit=5').then((r) => r.data),
+    staleTime: 60 * 1000,
+    retry: 1,
+  })
+
+  const recentActivity = auditData?.data ?? []
+
+  const planDistribution = (overview?.planDistribution ?? []).map((p) => ({
+    name: PLAN_LABELS[p.plan] ?? p.plan,
+    count: p.count,
+  }))
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Analytics Global</h1>
-        <p className="text-sm text-gray-500">Visão consolidada de toda a actividade da plataforma ENGERIS ONE.</p>
+        <p className="text-sm text-gray-500">
+          Visão consolidada de toda a actividade da plataforma ENGERIS ONE.
+        </p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <div key={kpi.title} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-500">{kpi.title}</p>
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${kpi.iconBg}`}>
-                <kpi.icon className={`h-5 w-5 ${kpi.iconColor}`} />
-              </div>
-            </div>
-            <p className="mt-3 text-3xl font-bold text-gray-900">{kpi.value}</p>
-            <p className={`mt-1 text-xs font-medium ${kpi.descriptionColor}`}>{kpi.description}</p>
-          </div>
-        ))}
+        <StatCard
+          title="Total de Tenants"
+          value={loadingOverview ? '—' : (overview?.totalTenants ?? 0).toString()}
+          icon={<Building2 className="h-6 w-6 text-primary" />}
+          description="Todas as propriedades registadas"
+        />
+        <StatCard
+          title="Tenants Ativos"
+          value={loadingOverview ? '—' : (overview?.activeTenants ?? 0).toString()}
+          icon={<CheckCircle className="h-6 w-6 text-green-600" />}
+          description={
+            overview
+              ? `${Math.round((overview.activeTenants / Math.max(overview.totalTenants, 1)) * 100)}% do total`
+              : 'A carregar...'
+          }
+        />
+        <StatCard
+          title="Total de Utilizadores"
+          value={loadingOverview ? '—' : (overview?.totalUsers ?? 0).toString()}
+          icon={<Users className="h-6 w-6 text-primary" />}
+          description="Utilizadores em todos os tenants"
+        />
+        <StatCard
+          title="MRR Estimado"
+          value={
+            loadingOverview
+              ? '—'
+              : formatKwanza(overview?.estimatedMonthlyRevenue ?? 0)
+          }
+          icon={<TrendingUp className="h-6 w-6 text-green-600" />}
+          description="Receita mensal recorrente estimada"
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Module Usage */}
-        <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-6 text-base font-semibold text-gray-900">Módulos Mais Usados</h2>
-          <div className="space-y-5">
-            {moduleUsage.map((mod) => (
-              <div key={mod.name}>
+      {/* Plan Distribution + Module Adoption */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Plan Distribution BarChart */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-6 text-base font-semibold text-gray-900">
+            Distribuição por Plano
+          </h2>
+          {planDistribution.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={planDistribution} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    formatter={(value: number) => [value, 'Tenants']}
+                    labelStyle={{ fontWeight: 600 }}
+                  />
+                  <Bar dataKey="count" name="Tenants" radius={[6, 6, 0, 0]}>
+                    {planDistribution.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex h-64 items-center justify-center text-sm text-gray-400">
+              {loadingOverview ? 'A carregar...' : 'Sem dados de distribuição'}
+            </div>
+          )}
+        </div>
+
+        {/* Module Adoption */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-6 text-base font-semibold text-gray-900">
+            Adoção de Módulos
+          </h2>
+          <div className="space-y-4">
+            {MODULE_ADOPTION.map((mod, idx) => (
+              <div key={mod.key}>
                 <div className="mb-1.5 flex items-center justify-between text-sm">
-                  <span className="font-medium text-gray-700">{mod.name}</span>
-                  <span className="font-semibold text-gray-900">{mod.usage}%</span>
+                  <span className="font-medium text-gray-700">{mod.label}</span>
+                  <span className="font-semibold text-gray-900">{mod.pct}%</span>
                 </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${mod.color}`}
-                    style={{ width: `${mod.usage}%` }}
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${mod.pct}%`,
+                      backgroundColor: COLORS[idx % COLORS.length],
+                    }}
                   />
                 </div>
               </div>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Recent Activity */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-6 text-base font-semibold text-gray-900">Actividade Recente</h2>
-          <ul className="space-y-4">
-            {recentActivity.map((item) => (
-              <li key={item.id} className="flex items-start gap-3">
-                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-indigo-400" />
-                <div className="min-w-0">
-                  <p className="text-sm text-gray-700">{item.event}</p>
-                  <p className="text-xs text-gray-400">{item.time}</p>
+      {/* Recent Activity Feed */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h2 className="text-base font-semibold text-gray-900">Actividade Recente</h2>
+          <p className="text-xs text-gray-400">Últimas 5 entradas do registo de auditoria</p>
+        </div>
+        {recentActivity.length === 0 ? (
+          <div className="px-6 py-8 text-center text-sm text-gray-400">
+            Sem actividade recente
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-50">
+            {recentActivity.map((entry) => (
+              <li
+                key={entry.id}
+                className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
+              >
+                <ActionBadge action={entry.action} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-gray-800">
+                    {entry.entity}
+                  </p>
+                  {entry.userEmail && (
+                    <p className="truncate text-xs text-gray-400">{entry.userEmail}</p>
+                  )}
                 </div>
+                <time className="shrink-0 text-xs text-gray-400">
+                  {formatDateTime(entry.createdAt)}
+                </time>
               </li>
             ))}
           </ul>
-        </div>
-      </div>
-
-      {/* Tenants Table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">Tenants Activos</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              <tr>
-                <th className="px-6 py-3 text-left">Empresa</th>
-                <th className="px-6 py-3 text-left">Localização</th>
-                <th className="px-6 py-3 text-left">Plano</th>
-                <th className="px-6 py-3 text-left">Quartos</th>
-                <th className="px-6 py-3 text-left">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {tenants.map((tenant) => (
-                <tr key={tenant.name} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{tenant.name}</td>
-                  <td className="px-6 py-4 text-gray-500">{tenant.location}</td>
-                  <td className="px-6 py-4">
-                    <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-                      {tenant.plan}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 font-semibold text-gray-700">{tenant.rooms}</td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={tenant.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        )}
       </div>
     </div>
   )
