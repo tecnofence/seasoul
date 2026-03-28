@@ -476,7 +476,42 @@ export const PLAN_MODULES: Record<string, string[]> = {
 
 // ── CONSTANTES DE NEGÓCIO ─────────────────────
 
-export const ANGOLA_TAX_RATE    = 14     // IVA Angola (%)
+// IVA Angola — Lei 7/19 + Lei 32/21 + Decreto Presidencial 71/25
+export const ANGOLA_TAX_RATE         = 14  // Taxa padrão (%)
+export const ANGOLA_HOTEL_TAX_RATE   = 7   // Hotelaria & restauração (Art. 14.º/2 Lei 32/21) — condicional às 4 exigências AGT
+export const ANGOLA_FOOD_TAX_RATE    = 7   // Alimentos Anexo I Lei 32/21 (carnes, peixe, leite, arroz, farinhas, óleos, etc.)
+export const ANGOLA_AGRI_TAX_RATE    = 5   // Agrícola Anexo I (animais vivos, sementes, fertilizantes)
+export const ANGOLA_EXEMPT_RATE      = 0   // Isenções (medicamentos, livros, etc.)
+
+// Imposto Cativo — retenção na fonte por tipo de cliente (Art. 21.º/6 CIVA)
+export const AGT_CATIVO_STATE_PCT    = 100 // Entidades estatais e autarquias retêm 100% do IVA
+export const AGT_CATIVO_BANK_PCT     = 50  // Bancos, seguradoras, telecoms retêm 50% do IVA
+export const AGT_CATIVO_OIL_PCT      = 100 // Empresas petrolíferas retêm 100%
+
+// Prazos legais
+export const AGT_INVOICE_DEADLINE_DAYS = 5 // Prazo de emissão: 5 dias úteis (Art. 8.º/1 DP 71/25)
+
+// Categorias fiscais para produtos e serviços
+export const TAX_CATEGORIES = {
+  STANDARD:      { rate: 14, label: 'Taxa Normal 14%',           description: 'Retalho, serviços gerais' },
+  HOTEL_SERVICE: { rate: 7,  label: 'Hotelaria & Restauração 7%', description: 'Alojamento, restaurante, bar, spa — taxa condicional AGT' },
+  FOOD_REDUCED:  { rate: 7,  label: 'Alimentos Reduzidos 7%',    description: 'Carnes, peixe, leite, arroz, farinhas, óleos (Anexo I)' },
+  AGRI_REDUCED:  { rate: 5,  label: 'Agrícola Reduzido 5%',      description: 'Animais vivos, sementes, fertilizantes (Anexo I)' },
+  EXEMPT:        { rate: 0,  label: 'Isento',                    description: 'Medicamentos, livros, transporte público' },
+} as const
+
+export type TaxCategory = keyof typeof TAX_CATEGORIES
+
+// Tipos de cliente para imposto cativo
+export const CLIENT_CATIVO_TYPES = {
+  PRIVATE:    { cativoPct: 0,   label: 'Particular / Empresa Privada' },
+  STATE:      { cativoPct: 100, label: 'Entidade Estatal / Autarquia' },
+  BANK:       { cativoPct: 50,  label: 'Banco / Seguradora / Telecom' },
+  OIL:        { cativoPct: 100, label: 'Empresa Petrolífera' },
+} as const
+
+export type ClientCativoType = keyof typeof CLIENT_CATIVO_TYPES
+
 export const DEFAULT_CHECKIN_HOUR  = 14  // 14:00
 export const DEFAULT_CHECKOUT_HOUR = 12  // 12:00
 export const NORMAL_DAILY_HOURS    = 8

@@ -45,6 +45,8 @@ const saleItemSchema = z.object({
   quantity: z.number().int().positive(),
   unitPrice: z.number().positive(),
   discount: z.number().min(0).default(0),
+  // taxRate: taxa IVA aplicável ao produto (14% padrão, 7% hotelaria/alimentos, 0% isentos)
+  taxRate: z.number().min(0).max(100).default(14),
 })
 
 const createSaleSchema = z.object({
@@ -252,19 +254,19 @@ export default async function retailRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Loja não encontrada neste tenant' })
     }
 
-    // Calcular totais com Decimal
+    // Calcular totais com Decimal — taxa por linha (14% padrão, 7% hotelaria/alimentos)
     let subtotal = new Decimal('0')
+    let taxAmount = new Decimal('0')
     const itemsWithTotals = parsed.data.items.map((item) => {
-      const lineTotal = new Decimal(String(item.unitPrice))
+      const lineBase = new Decimal(String(item.unitPrice))
         .times(item.quantity)
         .minus(new Decimal(String(item.discount)))
         .toDecimalPlaces(2)
-      subtotal = subtotal.plus(lineTotal)
-      return { ...item, lineTotal: lineTotal.toNumber() }
+      const lineTax = lineBase.times(new Decimal(String(item.taxRate)).div(100)).toDecimalPlaces(2)
+      subtotal = subtotal.plus(lineBase)
+      taxAmount = taxAmount.plus(lineTax)
+      return { ...item, lineTotal: lineBase.plus(lineTax).toNumber() }
     })
-
-    const taxRate = new Decimal('0.14') // IVA Angola 14%
-    const taxAmount = subtotal.times(taxRate).toDecimalPlaces(2)
     const totalAmount = subtotal.plus(taxAmount).toDecimalPlaces(2)
 
     const sale = await app.prisma.retailSale.create({

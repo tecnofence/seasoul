@@ -376,20 +376,24 @@ enum BookingSource {
 }
 // ── PRODUTOS ─────────────────────────────────
 model Product {
-  id         String     @id @default(cuid())
-  name       String
-  category   String
-  department String
-  unitPrice  Decimal    @db.Decimal(15, 2) // FIX: Float → Decimal
-  taxRate    Decimal    @db.Decimal(5, 2)  @default(14) // FIX: Float → Decimal
-  currency   Currency   @default(AOA)
-  active     Boolean    @default(true)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id          String     @id @default(cuid())
+  name        String
+  category    String
+  department  String
+  unitPrice   Decimal    @db.Decimal(15, 2)
+  taxRate     Decimal    @db.Decimal(5, 2)  @default(14)
+  // taxCategory: STANDARD(14%) | HOTEL_SERVICE(7%) | FOOD_REDUCED(7%) | AGRI_REDUCED(5%) | EXEMPT(0%)
+  // Quando hotel AGT-certificado: HOTEL_SERVICE aplica 7% em vez de 14%
+  taxCategory String     @default("STANDARD")
+  currency    Currency   @default(AOA)
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  saleItems  SaleItem[]
+  saleItems   SaleItem[]
 
   @@index([department, active])
+  @@index([taxCategory])
 }
 
 // ── VENDAS / POS ─────────────────────────────
@@ -880,6 +884,10 @@ model Invoice {
   agtStatus       String?                 // pending, submitted, accepted, rejected
   agtQrCode       String?
   agtSubmittedAt  DateTime?
+  // Imposto Cativo (Art. 21.º/6 CIVA)
+  // PRIVATE=0% | STATE=100% | BANK=50% | OIL=100%
+  clientCativoType  String?  @default("PRIVATE")  // tipo de cliente para retenção
+  cativoAmount      Decimal? @db.Decimal(15, 2)   // valor de IVA retido pelo cliente
   // Referências
   relatedInvoiceId String?                // para NC referenciando FT
   saleId          String?                 // ligação a Sale (POS)
