@@ -39,6 +39,30 @@ async function main() {
 
   console.log('✅ Resorts criados:', caboLedo.name, '|', sangano.name)
 
+  // ── PALMEIRA HOTEL (demo client) ──
+  const palmeira = await prisma.resort.upsert({
+    where: { slug: 'palmeira' },
+    update: {},
+    create: {
+      name: 'Palmeira Beach Hotel',
+      slug: 'palmeira',
+      lat: -8.8147,
+      lng: 13.2302,
+      geofenceRadius: 200,
+    },
+  })
+  console.log('✅ Resort demo criado:', palmeira.name)
+
+  // Quartos para Palmeira
+  const palmeiraRooms = await Promise.all([
+    prisma.room.upsert({ where: { id: 'palmeira-room-101' }, update: {}, create: { id: 'palmeira-room-101', resortId: palmeira.id, number: '101', type: 'STANDARD', floor: 1, capacity: 2, pricePerNight: new Decimal('35000'), status: 'AVAILABLE' } }),
+    prisma.room.upsert({ where: { id: 'palmeira-room-201' }, update: {}, create: { id: 'palmeira-room-201', resortId: palmeira.id, number: '201', type: 'SUPERIOR', floor: 2, capacity: 2, pricePerNight: new Decimal('50000'), status: 'AVAILABLE' } }),
+    prisma.room.upsert({ where: { id: 'palmeira-room-301' }, update: {}, create: { id: 'palmeira-room-301', resortId: palmeira.id, number: '301', type: 'SUPERIOR', floor: 3, capacity: 2, pricePerNight: new Decimal('75000'), status: 'AVAILABLE' } }),
+    prisma.room.upsert({ where: { id: 'palmeira-room-401' }, update: {}, create: { id: 'palmeira-room-401', resortId: palmeira.id, number: '401', type: 'SUITE', floor: 4, capacity: 4, pricePerNight: new Decimal('120000'), status: 'AVAILABLE' } }),
+    prisma.room.upsert({ where: { id: 'palmeira-room-501' }, update: {}, create: { id: 'palmeira-room-501', resortId: palmeira.id, number: '501', type: 'SUITE', floor: 5, capacity: 6, pricePerNight: new Decimal('250000'), status: 'AVAILABLE' } }),
+  ])
+  console.log('✅ Quartos Palmeira:', palmeiraRooms.length)
+
   // ── UTILIZADORES ──
   const users = await Promise.all([
     prisma.user.upsert({
@@ -433,6 +457,33 @@ async function main() {
   })
 
   console.log('✅ Tenants criados:', engeris.name, '|', seaSoul.name)
+
+  // ── PALMEIRA TENANT (demo client) ──
+  const palmeiraTenant = await prisma.tenant.upsert({
+    where: { slug: 'palmeira' },
+    update: {},
+    create: {
+      name: 'Palmeira Beach Hotel',
+      slug: 'palmeira',
+      plan: 'PROFESSIONAL',
+      primaryColor: '#D97706',
+      active: true,
+    },
+  })
+  console.log('✅ Tenant Palmeira criado:', palmeiraTenant.name)
+
+  const seasoulTenant = await prisma.tenant.upsert({
+    where: { slug: 'seaandsoul' },
+    update: {},
+    create: {
+      name: 'Sea and Soul Resorts',
+      slug: 'seaandsoul',
+      plan: 'ENTERPRISE',
+      primaryColor: '#1A3E6E',
+      active: true,
+    },
+  })
+  console.log('✅ Tenant Sea and Soul criado:', seasoulTenant.name)
 
   // ── MÓDULOS DO TENANT ──
   const allModules = ['core', 'pms', 'pos', 'finance', 'stock', 'hr', 'maintenance', 'security', 'engineering', 'electrical', 'crm', 'fleet', 'contracts', 'spa', 'events', 'real_estate', 'logistics', 'education', 'healthcare', 'agriculture', 'manufacturing', 'consulting', 'telecom', 'legal', 'accounting', 'activities', 'retail']

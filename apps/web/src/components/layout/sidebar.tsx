@@ -238,22 +238,22 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
         )}
 
-        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 space-y-8 overflow-y-auto px-4 py-6">
           {categories.map((category) => {
             const categoryItems = visibleItems.filter((item) => item.category === category.id)
             if (categoryItems.length === 0) return null
 
             return (
-              <div key={category.id} className="space-y-1">
+              <div key={category.id} className="space-y-3">
                 {/* Cabeçalho da Categoria */}
                 <h3 className={cn(
-                  "px-3 text-xs font-bold uppercase tracking-wider",
+                  "px-3 text-[10px] font-black uppercase tracking-[0.2em]",
                   category.isCore ? "text-primary/70" : "text-gray-400"
                 )}>
                   {category.label}
                 </h3>
 
-                <div className="mt-2 space-y-1">
+                <div className="mt-4 space-y-2">
                   {categoryItems.map((item) => {
                     const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
                     return (
@@ -261,13 +261,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                         key={item.href}
                         href={item.href}
                         className={cn(
-                          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                          'flex items-center gap-4 rounded-xl px-4 py-3 text-base font-bold transition-all duration-300',
                           isActive
-                            ? 'bg-primary/10 text-primary'
+                            ? 'bg-primary/10 text-primary shadow-sm'
                             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
                         )}
                       >
-                        <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-primary" : "text-gray-400")} />
+                        <item.icon className={cn("h-6 w-6 shrink-0", isActive ? "text-primary" : "text-gray-400")} />
                         {item.label}
                       </Link>
                     )
@@ -278,13 +278,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           })}
         </nav>
 
-        <div className="border-t p-3">
+        <div className="border-t p-4 pb-8">
           <button
             onClick={logout}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            className="flex w-full items-center gap-4 rounded-xl px-4 py-3 text-base font-bold text-gray-600 transition-all hover:bg-gray-100 hover:text-red-600"
           >
-            <LogOut className="h-5 w-5 shrink-0" />
-            Sair
+            <LogOut className="h-6 w-6 shrink-0" />
+            Terminar Sessão
           </button>
         </div>
       </aside>
