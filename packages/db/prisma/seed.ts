@@ -575,257 +575,111 @@ async function main() {
   ])
   console.log('✅ Utilizadores multi-tenant criados')
 
-  // ── SEGURANÇA ELETRÓNICA ──
-  const t = engeris.id
+  // ── SEGURANÇA DO RESORT ──
   await Promise.all([
-    prisma.securityContract.create({ data: { tenantId: t, clientName: 'Banco BAI', contractType: 'MONITORING', monthlyValue: new Decimal('450000'), startDate: new Date('2025-01-01'), endDate: new Date('2027-12-31'), status: 'ACTIVE', notes: 'Monitorização 24/7 — Agência Talatona' } }),
-    prisma.securityContract.create({ data: { tenantId: t, clientName: 'Sonangol EP', contractType: 'MIXED', monthlyValue: new Decimal('1200000'), startDate: new Date('2025-03-01'), status: 'ACTIVE', notes: 'CCTV + Controlo de Acesso — Terminal Luanda' } }),
-    prisma.securityContract.create({ data: { tenantId: t, clientName: 'Condomínio Talatona', contractType: 'PATROL', monthlyValue: new Decimal('280000'), startDate: new Date('2024-06-01'), endDate: new Date('2025-05-31'), status: 'EXPIRED', notes: 'Patrulha Noturna' } }),
+    prisma.securityIncident.create({ data: { tenantId: seasoulTenant.id, title: 'Acesso não autorizado — Piscina', type: 'INTRUSION', severity: 'LOW', status: 'RESOLVED', location: 'Zona Piscina, Cabo Ledo', description: 'Visitante externo entrou na área restrita — acompanhado à saída' } }),
+    prisma.securityIncident.create({ data: { tenantId: seasoulTenant.id, title: 'Equipamento avariado — Câmara Portão', type: 'EQUIPMENT_FAILURE', severity: 'LOW', status: 'RESOLVED', location: 'Portão Principal, Cabo Ledo', description: 'Câmara CCTV do portão principal sem imagem — substituída a 27/03' } }),
   ])
   await Promise.all([
-    prisma.securityIncident.create({ data: { tenantId: t, title: 'Alarme disparado — Zona B', type: 'ALARM_TRIGGER', severity: 'MEDIUM', status: 'RESOLVED', location: 'Agência Talatona, Zona B', description: 'Falso alarme causado por animal' } }),
-    prisma.securityIncident.create({ data: { tenantId: t, title: 'Tentativa de intrusão', type: 'INTRUSION', severity: 'HIGH', status: 'INVESTIGATING', location: 'Terminal Luanda, Portão 3', description: 'Detetado indivíduo não autorizado no perímetro' } }),
+    prisma.securityPatrol.create({ data: { tenantId: seasoulTenant.id, guardName: 'Eduardo Fonseca', guardId: 'EF-001', route: 'Rota A — Perímetro Praia', startedAt: new Date('2026-03-26T22:00:00'), endedAt: new Date('2026-03-27T06:00:00'), status: 'COMPLETED', checkpoints: [{ point: 'Portão Principal', time: '22:10', ok: true }, { point: 'Acesso Praia', time: '23:00', ok: true }, { point: 'Zona de Villas', time: '00:30', ok: true }, { point: 'Bar da Piscina', time: '02:00', ok: true }] } }),
+    prisma.securityPatrol.create({ data: { tenantId: seasoulTenant.id, guardName: 'Manuel Segurança', guardId: 'MS-002', route: 'Rota B — Interior Resort', startedAt: new Date('2026-03-27T22:00:00'), status: 'IN_PROGRESS', checkpoints: [{ point: 'Receção', time: '22:05', ok: true }, { point: 'Bloco A', time: '22:45', ok: true }] } }),
   ])
-  // Instalações de segurança
-  const secContracts = await prisma.securityContract.findMany({ where: { tenantId: t }, take: 2 })
-  if (secContracts.length > 0) {
-    await Promise.all([
-      prisma.securityInstallation.create({ data: { tenantId: t, contractId: secContracts[0].id, clientName: 'Banco BAI', address: 'Agência Talatona, Luanda', installationType: 'CCTV', scheduledDate: new Date('2025-02-15'), status: 'COMPLETED', notes: 'Câmara PTZ exterior — entrada principal', equipmentList: [{ name: 'Câmara Hikvision PTZ', qty: 4 }, { name: 'NVR 16ch', qty: 1 }] } }),
-      prisma.securityInstallation.create({ data: { tenantId: t, contractId: secContracts[0].id, clientName: 'Banco BAI', address: 'Agência Talatona — Zona Cofre', installationType: 'ALARM', scheduledDate: new Date('2025-03-01'), status: 'COMPLETED', notes: 'Central de alarme wireless', equipmentList: [{ name: 'Central Ajax Hub', qty: 1 }, { name: 'Sensor PIR', qty: 8 }] } }),
-      prisma.securityInstallation.create({ data: { tenantId: t, contractId: secContracts[1].id, clientName: 'Sonangol EP', address: 'Terminal Luanda — Portão Principal', installationType: 'ACCESS_CONTROL', scheduledDate: new Date('2025-04-01'), status: 'IN_PROGRESS', notes: 'Controlo de acesso biométrico', equipmentList: [{ name: 'Leitor Biométrico ZKTeco', qty: 6 }, { name: 'Torniquete', qty: 2 }] } }),
-    ])
-  }
-  // Patrulhas
-  await Promise.all([
-    prisma.securityPatrol.create({ data: { tenantId: t, guardName: 'Eduardo Fonseca', guardId: 'EF-001', route: 'Rota A — Perímetro Norte', startedAt: new Date('2026-03-26T20:00:00'), endedAt: new Date('2026-03-27T04:00:00'), status: 'COMPLETED', checkpoints: [{ point: 'Portão Norte', time: '20:15', ok: true }, { point: 'Estacionamento', time: '21:00', ok: true }, { point: 'Edifício B', time: '22:30', ok: true }] } }),
-    prisma.securityPatrol.create({ data: { tenantId: t, guardName: 'Manuel Segurança', guardId: 'MS-002', route: 'Rota B — Perímetro Sul', startedAt: new Date('2026-03-27T20:00:00'), status: 'IN_PROGRESS', checkpoints: [{ point: 'Portão Sul', time: '20:10', ok: true }] } }),
-  ])
-  console.log('✅ Segurança: 3 contratos, 2 incidentes, 3 instalações, 2 patrulhas')
-
-  // ── ENGENHARIA ──
-  const engProject = await prisma.engineeringProject.create({ data: { tenantId: t, name: 'Edifício Comercial Talatona', clientName: 'Imobiliária Angola', projectType: 'CONSTRUCTION', budget: new Decimal('85000000'), startDate: new Date('2025-02-01'), estimatedEnd: new Date('2026-08-01'), status: 'IN_PROGRESS', address: 'Talatona, Luanda' } })
-  await prisma.engineeringProject.create({ data: { tenantId: t, name: 'Renovação Hotel Marginal', clientName: 'Hotel Marginal SA', projectType: 'RENOVATION', budget: new Decimal('12000000'), startDate: new Date('2025-06-01'), estimatedEnd: new Date('2025-12-01'), status: 'PLANNING', address: 'Marginal de Luanda' } })
-  await prisma.constructionWork.create({ data: { tenantId: t, projectId: engProject.id, name: 'Fundações', description: 'Escavação e fundações profundas', startDate: new Date('2025-02-15'), status: 'COMPLETED', progress: 100 } })
-  await prisma.constructionWork.create({ data: { tenantId: t, projectId: engProject.id, name: 'Estrutura Piso 1-5', description: 'Betão armado pisos 1 a 5', startDate: new Date('2025-05-01'), status: 'IN_PROGRESS', progress: 65 } })
-  await prisma.budgetItem.create({ data: { tenantId: t, projectId: engProject.id, description: 'Betão C30/37', unit: 'm³', quantity: new Decimal('450'), unitPrice: new Decimal('35000'), total: new Decimal('15750000') } })
-  // Mais orçamentos e autos de medição
-  await Promise.all([
-    prisma.budgetItem.create({ data: { tenantId: t, projectId: engProject.id, description: 'Aço A500', unit: 'kg', quantity: new Decimal('12000'), unitPrice: new Decimal('650'), total: new Decimal('7800000') } }),
-    prisma.budgetItem.create({ data: { tenantId: t, projectId: engProject.id, description: 'Cofragem', unit: 'm²', quantity: new Decimal('800'), unitPrice: new Decimal('4500'), total: new Decimal('3600000') } }),
-    prisma.budgetItem.create({ data: { tenantId: t, projectId: engProject.id, description: 'Mão de Obra — Pedreiros', unit: 'dia', quantity: new Decimal('200'), unitPrice: new Decimal('8000'), total: new Decimal('1600000') } }),
-  ])
-  await prisma.workMeasurement.create({ data: { tenantId: t, projectId: engProject.id, number: 1, period: 'Maio 2025', items: [{ description: 'Escavação', qty: 150, unit: 'm³', unitPrice: 3500, total: 525000 }, { description: 'Betão fundações', qty: 80, unit: 'm³', unitPrice: 35000, total: 2800000 }], subtotal: new Decimal('3325000'), taxAmount: new Decimal('465500'), totalAmount: new Decimal('3790500'), approvedBy: 'Eng. Paulo Gestor', approvedAt: new Date('2025-06-01') } })
-  await prisma.workMeasurement.create({ data: { tenantId: t, projectId: engProject.id, number: 2, period: 'Julho 2025', items: [{ description: 'Betão pisos 1-3', qty: 200, unit: 'm³', unitPrice: 35000, total: 7000000 }, { description: 'Aço', qty: 8000, unit: 'kg', unitPrice: 650, total: 5200000 }], subtotal: new Decimal('12200000'), taxAmount: new Decimal('1708000'), totalAmount: new Decimal('13908000') } })
-  console.log('✅ Engenharia: 2 projetos, 2 obras, 4 orçamentos, 2 medições')
-
-  // ── ELETRICIDADE ──
-  const elecProject = await prisma.electricalProject.create({ data: { tenantId: t, name: 'Instalação Elétrica — Edifício Talatona', clientName: 'Imobiliária Angola', projectType: 'NEW_INSTALLATION', voltageLevel: 'LOW', budget: new Decimal('8500000'), startDate: new Date('2025-04-01'), status: 'IN_PROGRESS', address: 'Talatona, Luanda' } })
-  await prisma.electricalInspection.create({ data: { tenantId: t, projectId: elecProject.id, address: 'Talatona, Luanda — Piso 3', clientName: 'Imobiliária Angola', inspectionType: 'INITIAL', scheduledDate: new Date('2025-07-15'), inspectorName: 'Eng. Fernando Dias', status: 'SCHEDULED' } })
-  await prisma.electricalCertification.create({ data: { tenantId: t, projectId: elecProject.id, clientName: 'Imobiliária Angola', address: 'Talatona, Luanda', certType: 'INSTALLATION_CERT', status: 'PENDING' } })
-  console.log('✅ Eletricidade: 1 projeto, 1 inspeção, 1 certificação')
-
-  // ── CRM ──
-  const client1 = await prisma.client.create({ data: { tenantId: t, name: 'Banco BAI', nif: '5401234567', type: 'COMPANY', email: 'contratos@bai.ao', phone: '+244 222 111 222', address: 'Largo do Kinaxixi, Luanda' } })
-  const client2 = await prisma.client.create({ data: { tenantId: t, name: 'Sonangol EP', nif: '5409876543', type: 'COMPANY', email: 'procurement@sonangol.co.ao', phone: '+244 222 333 444' } })
-  await prisma.client.create({ data: { tenantId: t, name: 'João Almeida', nif: '0012345678', type: 'INDIVIDUAL', phone: '+244 923 555 111', email: 'joao.almeida@gmail.com' } })
-  await prisma.client.create({ data: { tenantId: t, name: 'Governo Provincial Benguela', type: 'GOVERNMENT', phone: '+244 272 222 333' } })
-  await Promise.all([
-    prisma.deal.create({ data: { tenantId: t, clientId: client1.id, title: 'CCTV Agências Norte', stage: 'PROPOSAL', value: new Decimal('15000000'), probability: 60, assignedTo: 'Paulo Gestor' } }),
-    prisma.deal.create({ data: { tenantId: t, clientId: client2.id, title: 'Manutenção Elétrica Refinaria', stage: 'NEGOTIATION', value: new Decimal('45000000'), probability: 75, assignedTo: 'Paulo Gestor' } }),
-    prisma.deal.create({ data: { tenantId: t, clientId: client1.id, title: 'Upgrade Alarmes Sede', stage: 'WON', value: new Decimal('3500000'), probability: 100 } }),
-  ])
-  console.log('✅ CRM: 4 clientes, 3 deals')
-
-  // ── FROTAS ──
-  const v1 = await prisma.vehicle.create({ data: { tenantId: t, plate: 'LD-45-89-AB', brand: 'Toyota', model: 'Hilux', year: 2023, type: 'VAN', fuelType: 'DIESEL', mileage: 45200, status: 'AVAILABLE' } })
-  await prisma.vehicle.create({ data: { tenantId: t, plate: 'LD-78-12-CD', brand: 'Mitsubishi', model: 'L200', year: 2024, type: 'VAN', fuelType: 'DIESEL', mileage: 12300, status: 'AVAILABLE' } })
-  await prisma.vehicle.create({ data: { tenantId: t, plate: 'LD-22-33-EF', brand: 'Toyota', model: 'Corolla', year: 2022, type: 'CAR', fuelType: 'GASOLINE', mileage: 67800, status: 'MAINTENANCE' } })
-  await prisma.fuelLog.create({ data: { tenantId: t, vehicleId: v1.id, date: new Date('2026-03-20'), liters: new Decimal('65'), pricePerLiter: new Decimal('350'), totalCost: new Decimal('22750'), mileage: 45200 } })
-  await Promise.all([
-    prisma.fuelLog.create({ data: { tenantId: t, vehicleId: v1.id, date: new Date('2026-03-10'), liters: new Decimal('70'), pricePerLiter: new Decimal('350'), totalCost: new Decimal('24500'), mileage: 44500 } }),
-    prisma.fuelLog.create({ data: { tenantId: t, vehicleId: v1.id, date: new Date('2026-02-28'), liters: new Decimal('60'), pricePerLiter: new Decimal('350'), totalCost: new Decimal('21000'), mileage: 43800 } }),
-    prisma.fuelLog.create({ data: { tenantId: t, vehicleId: v1.id, date: new Date('2026-02-15'), liters: new Decimal('68'), pricePerLiter: new Decimal('350'), totalCost: new Decimal('23800'), mileage: 43000 } }),
-  ])
-  console.log('✅ Frotas: 3 veículos, 4 abastecimentos')
-
-  // ── CONTRATOS DE SERVIÇO ──
-  await Promise.all([
-    prisma.serviceContract.create({ data: { tenantId: t, clientName: 'Banco BAI', title: 'Manutenção Preventiva AVAC', contractType: 'MAINTENANCE', monthlyValue: new Decimal('350000'), startDate: new Date('2025-01-01'), endDate: new Date('2025-12-31'), status: 'ACTIVE' } }),
-    prisma.serviceContract.create({ data: { tenantId: t, clientName: 'UNITEL', title: 'Suporte Técnico Infraestrutura', contractType: 'SUPPORT', monthlyValue: new Decimal('520000'), startDate: new Date('2025-03-01'), status: 'ACTIVE' } }),
-  ])
-  console.log('✅ Contratos: 2 contratos de serviço')
+  console.log('✅ Segurança resort: 2 incidentes, 2 patrulhas')
 
   // ── SPA ──
-  const spaService = await prisma.spaService.create({ data: { tenantId: t, name: 'Massagem Relaxante', category: 'MASSAGE', duration: 60, price: new Decimal('15000'), description: 'Massagem completa com óleos essenciais' } })
-  await prisma.spaService.create({ data: { tenantId: t, name: 'Tratamento Facial Premium', category: 'FACIAL', duration: 45, price: new Decimal('12000') } })
-  await prisma.spaBooking.create({ data: { tenantId: t, serviceId: spaService.id, clientName: 'Sofia Fernandes', clientPhone: '+244 923 100 002', date: new Date('2026-04-01T10:00:00'), totalPrice: new Decimal('15000'), status: 'CONFIRMED' } })
+  const spaService = await prisma.spaService.create({ data: { tenantId: seasoulTenant.id, name: 'Massagem Relaxante', category: 'MASSAGE', duration: 60, price: new Decimal('15000'), description: 'Massagem completa com óleos essenciais' } })
+  await prisma.spaService.create({ data: { tenantId: seasoulTenant.id, name: 'Tratamento Facial Premium', category: 'FACIAL', duration: 45, price: new Decimal('12000') } })
+  await prisma.spaBooking.create({ data: { tenantId: seasoulTenant.id, serviceId: spaService.id, clientName: 'Sofia Fernandes', clientPhone: '+244 923 100 002', date: new Date('2026-04-01T10:00:00'), totalPrice: new Decimal('15000'), status: 'CONFIRMED' } })
   console.log('✅ Spa: 2 serviços, 1 reserva')
 
   // ── EVENTOS ──
   await Promise.all([
-    prisma.event.create({ data: { tenantId: t, title: 'Conferência ENGERIS 2026', eventType: 'CONFERENCE', location: 'Hotel EPIC Sana, Luanda', startDate: new Date('2026-06-15'), endDate: new Date('2026-06-16'), maxCapacity: 200, price: new Decimal('25000'), status: 'PLANNED', organizer: 'Marketing ENGERIS' } }),
-    prisma.event.create({ data: { tenantId: t, title: 'Workshop Segurança Eletrónica', eventType: 'WORKSHOP', location: 'Sede ENGERIS', startDate: new Date('2026-05-10'), maxCapacity: 30, status: 'CONFIRMED' } }),
+    prisma.event.create({ data: { tenantId: seasoulTenant.id, title: 'Casamento na Praia — Família Silva', eventType: 'WEDDING', location: 'Terraço Cabo Ledo', startDate: new Date('2026-05-10'), endDate: new Date('2026-05-11'), maxCapacity: 120, price: new Decimal('250000'), status: 'CONFIRMED', organizer: 'Receção' } }),
+    prisma.event.create({ data: { tenantId: seasoulTenant.id, title: 'Jantar de Gala — Fim de Ano', eventType: 'GALA', location: 'Restaurante Principal', startDate: new Date('2026-12-31'), maxCapacity: 80, price: new Decimal('35000'), status: 'PLANNED', organizer: 'F&B Manager' } }),
   ])
   console.log('✅ Eventos: 2 eventos')
 
-  // ── IMOBILIÁRIO ──
+  // ── CONTABILIDADE (Sea & Soul) ──
   await Promise.all([
-    prisma.property.create({ data: { tenantId: t, title: 'Apartamento T3 Talatona', propertyType: 'APARTMENT', purpose: 'SALE', address: 'Condomínio Vida Pacífica', city: 'Luanda', area: new Decimal('120'), bedrooms: 3, bathrooms: 2, price: new Decimal('45000000'), status: 'AVAILABLE', ownerName: 'Imobiliária Angola' } }),
-    prisma.property.create({ data: { tenantId: t, title: 'Armazém Industrial Viana', propertyType: 'WAREHOUSE', purpose: 'RENT', address: 'Zona Industrial Viana', city: 'Luanda', area: new Decimal('500'), rentPrice: new Decimal('800000'), status: 'AVAILABLE' } }),
-    prisma.property.create({ data: { tenantId: t, title: 'Terreno Kilamba', propertyType: 'LAND', purpose: 'SALE', city: 'Luanda', area: new Decimal('1000'), price: new Decimal('25000000'), status: 'RESERVED' } }),
-  ])
-  console.log('✅ Imobiliário: 3 imóveis')
-
-  // ── LOGÍSTICA ──
-  await Promise.all([
-    prisma.shipment.create({ data: { tenantId: t, trackingCode: 'ENG-2026-001', origin: 'Luanda', destination: 'Benguela', clientName: 'Ferro Angola', shipmentType: 'PALLET', weight: new Decimal('1200'), status: 'IN_TRANSIT', estimatedDelivery: new Date('2026-04-02'), cost: new Decimal('180000') } }),
-    prisma.shipment.create({ data: { tenantId: t, trackingCode: 'ENG-2026-002', origin: 'Luanda', destination: 'Cabinda', clientName: 'SONANGOL', shipmentType: 'CONTAINER', weight: new Decimal('5000'), status: 'PENDING', cost: new Decimal('750000') } }),
-  ])
-  console.log('✅ Logística: 2 envios')
-
-  // ── EDUCAÇÃO ──
-  const course = await prisma.course.create({ data: { tenantId: t, name: 'Segurança em Instalações Elétricas', code: 'SEG-ELEC-01', category: 'SAFETY', instructor: 'Eng. Fernando Dias', duration: 40, maxStudents: 20, price: new Decimal('75000'), status: 'ACTIVE' } })
-  await prisma.course.create({ data: { tenantId: t, name: 'Gestão de Projetos', code: 'GP-01', category: 'MANAGEMENT', instructor: 'Dr. Ana Mendes', duration: 60, price: new Decimal('120000') } })
-  await prisma.enrollment.create({ data: { tenantId: t, courseId: course.id, studentName: 'Marco Técnico', studentEmail: 'tecnico@engeris.ao', status: 'IN_PROGRESS' } })
-  await Promise.all([
-    prisma.enrollment.create({ data: { tenantId: t, courseId: course.id, studentName: 'Eduardo Fonseca', studentEmail: 'seguranca@engeris.ao', status: 'ENROLLED' } }),
-    prisma.enrollment.create({ data: { tenantId: t, courseId: course.id, studentName: 'Ana Instaladora', studentEmail: 'ana@engeris.ao', status: 'COMPLETED', completedAt: new Date('2026-02-28'), grade: new Decimal('16.5') } }),
-    prisma.enrollment.create({ data: { tenantId: t, courseId: course.id, studentName: 'Pedro Eletricista', status: 'IN_PROGRESS' } }),
-  ])
-  console.log('✅ Educação: 2 cursos, 4 inscrições')
-
-  // ── SAÚDE ──
-  const patient = await prisma.patient.create({ data: { tenantId: t, name: 'António Luís', phone: '+244 923 456 789', gender: 'M', bloodType: 'A+' } })
-  await prisma.appointment.create({ data: { tenantId: t, patientId: patient.id, doctorName: 'Dr. Maria Santos', specialty: 'GENERAL', date: new Date('2026-04-05T09:00:00'), duration: 30, status: 'SCHEDULED', cost: new Decimal('8000') } })
-  const patient2 = await prisma.patient.create({ data: { tenantId: t, name: 'Beatriz Martins', phone: '+244 923 111 222', email: 'beatriz@email.com', gender: 'F', bloodType: 'O+', allergies: 'Penicilina' } })
-  const patient3 = await prisma.patient.create({ data: { tenantId: t, name: 'Carlos Mendes', phone: '+244 923 333 444', gender: 'M', bloodType: 'B-' } })
-  await Promise.all([
-    prisma.appointment.create({ data: { tenantId: t, patientId: patient.id, doctorName: 'Dr. Maria Santos', specialty: 'CARDIOLOGY', date: new Date('2026-04-12T10:00:00'), duration: 45, status: 'SCHEDULED', cost: new Decimal('15000') } }),
-    prisma.appointment.create({ data: { tenantId: t, patientId: patient2.id, doctorName: 'Dr. José Lima', specialty: 'DENTAL', date: new Date('2026-04-08T14:00:00'), duration: 30, status: 'CONFIRMED', cost: new Decimal('12000') } }),
-    prisma.appointment.create({ data: { tenantId: t, patientId: patient2.id, doctorName: 'Dr. Maria Santos', specialty: 'GENERAL', date: new Date('2026-03-20T09:00:00'), duration: 30, status: 'COMPLETED', cost: new Decimal('8000'), diagnosis: 'Gripe sazonal', prescription: 'Paracetamol 1g 3x/dia' } }),
-    prisma.appointment.create({ data: { tenantId: t, patientId: patient3.id, doctorName: 'Dra. Ana Fisio', specialty: 'PHYSIOTHERAPY', date: new Date('2026-04-15T11:00:00'), duration: 60, status: 'SCHEDULED', cost: new Decimal('18000') } }),
-  ])
-  console.log('✅ Saúde: 3 pacientes, 5 consultas')
-
-  // ── AGRICULTURA ──
-  const farm = await prisma.farm.create({ data: { tenantId: t, name: 'Fazenda Bengo', location: 'Bengo', totalArea: new Decimal('150') } })
-  await prisma.crop.create({ data: { tenantId: t, farmId: farm.id, name: 'Milho', variety: 'Híbrido', area: new Decimal('50'), plantedDate: new Date('2026-01-15'), status: 'GROWING' } })
-  await prisma.crop.create({ data: { tenantId: t, farmId: farm.id, name: 'Mandioca', area: new Decimal('30'), plantedDate: new Date('2025-11-01'), status: 'READY' } })
-  await prisma.harvest.create({ data: { tenantId: t, farmId: farm.id, cropName: 'Café', quantity: new Decimal('2500'), unit: 'kg', quality: 'A', harvestDate: new Date('2026-02-20'), revenue: new Decimal('3750000') } })
-  console.log('✅ Agricultura: 1 fazenda, 2 culturas, 1 colheita')
-
-  // ── MANUFATURA ──
-  await prisma.productionOrder.create({ data: { tenantId: t, orderNumber: 'OP-2026-001', productName: 'Quadro Elétrico 400V', quantity: new Decimal('25'), priority: 'HIGH', status: 'IN_PRODUCTION', startDate: new Date('2026-03-15'), expectedEnd: new Date('2026-04-15'), cost: new Decimal('2500000'), supervisor: 'Carlos Mendes' } })
-  console.log('✅ Manufatura: 1 ordem de produção')
-
-  // ── CONSULTORIA ──
-  const consulting = await prisma.consultingProject.create({ data: { tenantId: t, title: 'Auditoria Energética — Sonangol', clientName: 'Sonangol EP', projectType: 'AUDIT', startDate: new Date('2026-02-01'), budget: new Decimal('8000000'), hourlyRate: new Decimal('50000'), status: 'ACTIVE', teamLead: 'Eng. Paulo Gestor' } })
-  await prisma.timeLog.create({ data: { tenantId: t, projectId: consulting.id, userName: 'Paulo Gestor', date: new Date('2026-03-25'), hours: new Decimal('6'), description: 'Análise de consumo energético — refinaria', billable: true } })
-  const consulting2 = await prisma.consultingProject.create({ data: { tenantId: t, title: 'Plano Diretor TI — UNITEL', clientName: 'UNITEL', projectType: 'TECHNOLOGY', startDate: new Date('2026-01-15'), budget: new Decimal('12000000'), hourlyRate: new Decimal('65000'), status: 'ACTIVE', teamLead: 'Dr. Ana Mendes' } })
-  await Promise.all([
-    prisma.timeLog.create({ data: { tenantId: t, projectId: consulting.id, userName: 'Marco Técnico', date: new Date('2026-03-26'), hours: new Decimal('8'), description: 'Levantamento equipamentos — subestação', billable: true } }),
-    prisma.timeLog.create({ data: { tenantId: t, projectId: consulting.id, userName: 'Paulo Gestor', date: new Date('2026-03-20'), hours: new Decimal('4'), description: 'Reunião com cliente — relatório intercalar', billable: true } }),
-    prisma.timeLog.create({ data: { tenantId: t, projectId: consulting2.id, userName: 'Dr. Ana Mendes', date: new Date('2026-03-22'), hours: new Decimal('7'), description: 'Análise infraestrutura de rede', billable: true } }),
-    prisma.timeLog.create({ data: { tenantId: t, projectId: consulting2.id, userName: 'Marco Técnico', date: new Date('2026-03-24'), hours: new Decimal('3'), description: 'Documentação — arquitetura proposta', billable: false } }),
-  ])
-  console.log('✅ Consultoria: 2 projetos, 5 registos de horas')
-
-  // ── TELECOMUNICAÇÕES ──
-  await prisma.telecomSubscription.create({ data: { tenantId: t, clientName: 'ENGERIS — Sede', planName: 'Empresarial 100Mbps', planType: 'INTERNET', monthlyValue: new Decimal('85000'), startDate: new Date('2025-01-01'), status: 'ACTIVE' } })
-  await Promise.all([
-    prisma.telecomSubscription.create({ data: { tenantId: t, clientName: 'ENGERIS — Benguela', planName: 'Empresarial 50Mbps', planType: 'INTERNET', monthlyValue: new Decimal('55000'), startDate: new Date('2025-03-01'), status: 'ACTIVE' } }),
-    prisma.telecomSubscription.create({ data: { tenantId: t, clientName: 'Banco BAI — Voz', planName: 'Centralex 20 Extensões', planType: 'FIXED', monthlyValue: new Decimal('120000'), startDate: new Date('2025-06-01'), endDate: new Date('2026-05-31'), status: 'ACTIVE' } }),
-    prisma.telecomSubscription.create({ data: { tenantId: t, clientName: 'Staff ENGERIS', planName: 'Frota Móvel 15 linhas', planType: 'MOBILE', monthlyValue: new Decimal('95000'), startDate: new Date('2025-01-01'), status: 'ACTIVE' } }),
-  ])
-  console.log('✅ Telecom: 4 subscrições')
-
-  // ── JURÍDICO ──
-  await prisma.legalCase.create({ data: { tenantId: t, caseNumber: 'PROC-2026-042', title: 'Disputa Contratual — Fornecedor XYZ', caseType: 'CONTRACT', clientName: 'ENGERIS', lawyer: 'Dr. Ricardo Nunes', status: 'IN_PROGRESS', priority: 'HIGH', filingDate: new Date('2026-01-15'), fees: new Decimal('2500000') } })
-  await prisma.legalCase.create({ data: { tenantId: t, caseNumber: 'PROC-2025-118', title: 'Cobrança Judicial — Cliente Moroso', caseType: 'COMMERCIAL', clientName: 'ENGERIS', lawyer: 'Dr. Ricardo Nunes', status: 'HEARING', priority: 'NORMAL', filingDate: new Date('2025-08-20'), nextHearing: new Date('2026-04-10'), fees: new Decimal('1200000') } })
-  await prisma.legalCase.create({ data: { tenantId: t, caseNumber: 'PROC-2026-015', title: 'Licenciamento Atividade — Cabinda', caseType: 'ADMINISTRATIVE', clientName: 'ENGERIS', lawyer: 'Dra. Teresa Faria', status: 'OPEN', priority: 'LOW', filingDate: new Date('2026-02-01'), fees: new Decimal('500000') } })
-  console.log('✅ Jurídico: 3 processos')
-
-  // ── CONTABILIDADE ──
-  await Promise.all([
-    prisma.accountingEntry.create({ data: { tenantId: t, entryNumber: 'LC-2026-001', date: new Date('2026-03-01'), description: 'Receita Contrato BAI — Março', account: '71.1.1', debit: new Decimal('0'), credit: new Decimal('450000'), category: 'REVENUE', reference: 'FT' } }),
-    prisma.accountingEntry.create({ data: { tenantId: t, entryNumber: 'LC-2026-002', date: new Date('2026-03-01'), description: 'Salários — Março', account: '63.1.1', debit: new Decimal('1850000'), credit: new Decimal('0'), category: 'EXPENSE' } }),
-    prisma.accountingEntry.create({ data: { tenantId: t, entryNumber: 'LC-2026-003', date: new Date('2026-03-15'), description: 'Receita Projeto Talatona', account: '71.2.1', debit: new Decimal('0'), credit: new Decimal('8500000'), category: 'REVENUE', reference: 'FT' } }),
-  ])
-  await Promise.all([
-    prisma.accountingEntry.create({ data: { tenantId: t, entryNumber: 'LC-2026-004', date: new Date('2026-03-20'), description: 'Combustível Frotas — Março', account: '62.3.1', debit: new Decimal('67300'), credit: new Decimal('0'), category: 'EXPENSE' } }),
-    prisma.accountingEntry.create({ data: { tenantId: t, entryNumber: 'LC-2026-005', date: new Date('2026-03-25'), description: 'Receita Consultoria Sonangol', account: '71.3.1', debit: new Decimal('0'), credit: new Decimal('3000000'), category: 'REVENUE', reference: 'FT' } }),
-    prisma.accountingEntry.create({ data: { tenantId: t, entryNumber: 'LC-2026-006', date: new Date('2026-03-10'), description: 'Renda Escritório Benguela', account: '62.2.1', debit: new Decimal('250000'), credit: new Decimal('0'), category: 'EXPENSE' } }),
-    prisma.accountingEntry.create({ data: { tenantId: t, entryNumber: 'LC-2026-007', date: new Date('2026-03-28'), description: 'Venda Loja Talatona', account: '71.1.2', debit: new Decimal('0'), credit: new Decimal('84930'), category: 'REVENUE', reference: 'FT' } }),
-    prisma.accountingEntry.create({ data: { tenantId: t, entryNumber: 'LC-2026-008', date: new Date('2026-03-05'), description: 'Seguro Veículos', account: '62.6.1', debit: new Decimal('180000'), credit: new Decimal('0'), category: 'EXPENSE' } }),
+    prisma.accountingEntry.create({ data: { tenantId: seasoulTenant.id, entryNumber: 'LC-2026-001', date: new Date('2026-03-01'), description: 'Receita Alojamento — Março', account: '71.1.1', debit: new Decimal('0'), credit: new Decimal('4250000'), category: 'REVENUE', reference: 'FT' } }),
+    prisma.accountingEntry.create({ data: { tenantId: seasoulTenant.id, entryNumber: 'LC-2026-002', date: new Date('2026-03-01'), description: 'Receita Restaurante & Bar — Março', account: '71.1.2', debit: new Decimal('0'), credit: new Decimal('1380000'), category: 'REVENUE', reference: 'FT' } }),
+    prisma.accountingEntry.create({ data: { tenantId: seasoulTenant.id, entryNumber: 'LC-2026-003', date: new Date('2026-03-01'), description: 'Receita Spa & Atividades — Março', account: '71.1.3', debit: new Decimal('0'), credit: new Decimal('520000'), category: 'REVENUE', reference: 'FT' } }),
+    prisma.accountingEntry.create({ data: { tenantId: seasoulTenant.id, entryNumber: 'LC-2026-004', date: new Date('2026-03-05'), description: 'Salários Colaboradores — Março', account: '63.1.1', debit: new Decimal('1980000'), credit: new Decimal('0'), category: 'EXPENSE' } }),
+    prisma.accountingEntry.create({ data: { tenantId: seasoulTenant.id, entryNumber: 'LC-2026-005', date: new Date('2026-03-10'), description: 'Compras de Alimentos & Bebidas', account: '62.1.1', debit: new Decimal('420000'), credit: new Decimal('0'), category: 'EXPENSE' } }),
+    prisma.accountingEntry.create({ data: { tenantId: seasoulTenant.id, entryNumber: 'LC-2026-006', date: new Date('2026-03-15'), description: 'Manutenção e Reparações', account: '62.3.1', debit: new Decimal('185000'), credit: new Decimal('0'), category: 'EXPENSE' } }),
+    prisma.accountingEntry.create({ data: { tenantId: seasoulTenant.id, entryNumber: 'LC-2026-007', date: new Date('2026-03-20'), description: 'Eletricidade & Água — Março', account: '62.5.1', debit: new Decimal('320000'), credit: new Decimal('0'), category: 'EXPENSE' } }),
+    prisma.accountingEntry.create({ data: { tenantId: seasoulTenant.id, entryNumber: 'LC-2026-008', date: new Date('2026-03-28'), description: 'Receita Loja do Resort', account: '71.2.1', debit: new Decimal('0'), credit: new Decimal('156000'), category: 'REVENUE', reference: 'FT' } }),
   ])
   console.log('✅ Contabilidade: 8 lançamentos')
 
   // ── ATIVIDADES ──
-  const activity = await prisma.activity.create({ data: { tenantId: t, name: 'Surf em Cabo Ledo', category: 'WATER', duration: 120, maxParticipants: 8, price: new Decimal('12000'), difficulty: 'MODERATE', status: 'ACTIVE', location: 'Praia de Cabo Ledo' } })
-  await prisma.activity.create({ data: { tenantId: t, name: 'Trilho do Miradouro', category: 'NATURE', duration: 180, maxParticipants: 15, price: new Decimal('8000'), difficulty: 'EASY', status: 'ACTIVE' } })
-  await prisma.activityBooking.create({ data: { tenantId: t, activityId: activity.id, clientName: 'John Smith', clientEmail: 'john@email.com', participants: 3, date: new Date('2026-04-10T08:00:00'), totalPrice: new Decimal('36000'), status: 'CONFIRMED' } })
-  await prisma.activity.create({ data: { tenantId: t, name: 'Passeio de Barco ao Pôr do Sol', category: 'WATER', duration: 150, maxParticipants: 12, price: new Decimal('20000'), difficulty: 'EASY', status: 'ACTIVE', location: 'Marina de Luanda' } })
+  const activity = await prisma.activity.create({ data: { tenantId: seasoulTenant.id, name: 'Surf em Cabo Ledo', category: 'WATER', duration: 120, maxParticipants: 8, price: new Decimal('12000'), difficulty: 'MODERATE', status: 'ACTIVE', location: 'Praia de Cabo Ledo' } })
+  await prisma.activity.create({ data: { tenantId: seasoulTenant.id, name: 'Trilho do Miradouro', category: 'NATURE', duration: 180, maxParticipants: 15, price: new Decimal('8000'), difficulty: 'EASY', status: 'ACTIVE' } })
+  await prisma.activityBooking.create({ data: { tenantId: seasoulTenant.id, activityId: activity.id, clientName: 'John Smith', clientEmail: 'john@email.com', participants: 3, date: new Date('2026-04-10T08:00:00'), totalPrice: new Decimal('36000'), status: 'CONFIRMED' } })
+  await prisma.activity.create({ data: { tenantId: seasoulTenant.id, name: 'Passeio de Barco ao Pôr do Sol', category: 'WATER', duration: 150, maxParticipants: 12, price: new Decimal('20000'), difficulty: 'EASY', status: 'ACTIVE', location: 'Marina Cabo Ledo' } })
   await Promise.all([
-    prisma.activityBooking.create({ data: { tenantId: t, activityId: activity.id, clientName: 'Sofia Fernandes', clientPhone: '+244 923 100 002', participants: 2, date: new Date('2026-04-12T07:00:00'), totalPrice: new Decimal('24000'), status: 'BOOKED' } }),
-    prisma.activityBooking.create({ data: { tenantId: t, activityId: activity.id, clientName: 'Roberto Almeida', participants: 1, date: new Date('2026-04-15T09:00:00'), totalPrice: new Decimal('12000'), status: 'CONFIRMED' } }),
+    prisma.activityBooking.create({ data: { tenantId: seasoulTenant.id, activityId: activity.id, clientName: 'Sofia Fernandes', clientPhone: '+244 923 100 002', participants: 2, date: new Date('2026-04-12T07:00:00'), totalPrice: new Decimal('24000'), status: 'BOOKED' } }),
+    prisma.activityBooking.create({ data: { tenantId: seasoulTenant.id, activityId: activity.id, clientName: 'Roberto Almeida', participants: 1, date: new Date('2026-04-15T09:00:00'), totalPrice: new Decimal('12000'), status: 'CONFIRMED' } }),
   ])
   console.log('✅ Atividades: 3 atividades, 3 reservas')
 
-  // ── RETALHO ──
-  const store = await prisma.retailStore.create({ data: { tenantId: t, name: 'Loja ENGERIS — Talatona', code: 'LJ-TAL-01', address: 'Centro Comercial Xyami', city: 'Luanda', manager: 'Ana Loja', openTime: '09:00', closeTime: '21:00' } })
-  await prisma.retailSale.create({ data: { tenantId: t, storeId: store.id, saleNumber: 'VND-001', clientName: 'Cliente Balcão', items: [{ name: 'Cabo Elétrico 2.5mm 100m', qty: 5, price: 8500, total: 42500 }, { name: 'Disjuntor 32A', qty: 10, price: 3200, total: 32000 }], subtotal: new Decimal('74500'), taxAmount: new Decimal('10430'), discount: new Decimal('0'), totalAmount: new Decimal('84930'), paymentMethod: 'CARD' } })
-  const store2 = await prisma.retailStore.create({ data: { tenantId: t, name: 'Loja ENGERIS — Benguela', code: 'LJ-BEN-01', address: 'Av. Norton de Matos, 120', city: 'Benguela', manager: 'Pedro Loja', openTime: '08:30', closeTime: '18:30' } })
+  // ── LOJA DO RESORT ──
+  const store = await prisma.retailStore.create({ data: { tenantId: seasoulTenant.id, name: 'Loja Sea & Soul — Cabo Ledo', code: 'LJ-CL-01', address: 'Hall Receção, Cabo Ledo Resort', city: 'Cabo Ledo', manager: 'Maria Silva', openTime: '08:00', closeTime: '20:00' } })
+  await prisma.retailSale.create({ data: { tenantId: seasoulTenant.id, storeId: store.id, saleNumber: 'VND-001', clientName: 'John Smith', items: [{ name: 'T-shirt Sea and Soul', qty: 2, price: 3500, total: 7000 }, { name: 'Chapéu de Praia', qty: 1, price: 2500, total: 2500 }], subtotal: new Decimal('9500'), taxAmount: new Decimal('1330'), discount: new Decimal('0'), totalAmount: new Decimal('10830'), paymentMethod: 'CARD' } })
+  const store2 = await prisma.retailStore.create({ data: { tenantId: seasoulTenant.id, name: 'Loja Sea & Soul — Sangano', code: 'LJ-SG-01', address: 'Receção Sangano Resort', city: 'Sangano', manager: 'Gabriel Santos', openTime: '08:00', closeTime: '20:00' } })
   await Promise.all([
-    prisma.retailSale.create({ data: { tenantId: t, storeId: store.id, saleNumber: 'VND-002', clientName: 'Eletricista João', clientNif: '0023456789', items: [{ name: 'Fio Elétrico 4mm 100m', qty: 3, price: 12500, total: 37500 }], subtotal: new Decimal('37500'), taxAmount: new Decimal('5250'), discount: new Decimal('0'), totalAmount: new Decimal('42750'), paymentMethod: 'CASH' } }),
-    prisma.retailSale.create({ data: { tenantId: t, storeId: store.id, saleNumber: 'VND-003', clientName: 'Condomínio ABC', items: [{ name: 'Lâmpada LED 12W', qty: 50, price: 1200, total: 60000 }, { name: 'Interruptor duplo', qty: 20, price: 800, total: 16000 }], subtotal: new Decimal('76000'), taxAmount: new Decimal('10640'), discount: new Decimal('0'), totalAmount: new Decimal('86640'), paymentMethod: 'TRANSFER' } }),
-    prisma.retailSale.create({ data: { tenantId: t, storeId: store2.id, saleNumber: 'VND-004', clientName: 'Cliente Balcão', items: [{ name: 'Tomada tripla', qty: 10, price: 2500, total: 25000 }], subtotal: new Decimal('25000'), taxAmount: new Decimal('3500'), discount: new Decimal('0'), totalAmount: new Decimal('28500'), paymentMethod: 'CARD' } }),
+    prisma.retailSale.create({ data: { tenantId: seasoulTenant.id, storeId: store.id, saleNumber: 'VND-002', clientName: 'Sofia Fernandes', items: [{ name: 'Protetor Solar SPF50', qty: 2, price: 4000, total: 8000 }], subtotal: new Decimal('8000'), taxAmount: new Decimal('1120'), discount: new Decimal('0'), totalAmount: new Decimal('9120'), paymentMethod: 'CASH' } }),
+    prisma.retailSale.create({ data: { tenantId: seasoulTenant.id, storeId: store.id, saleNumber: 'VND-003', clientName: 'Roberto Almeida', items: [{ name: 'T-shirt Sea and Soul', qty: 1, price: 3500, total: 3500 }, { name: 'Garrafa Personalizada', qty: 1, price: 2000, total: 2000 }], subtotal: new Decimal('5500'), taxAmount: new Decimal('770'), discount: new Decimal('0'), totalAmount: new Decimal('6270'), paymentMethod: 'ROOM_CHARGE' } }),
+    prisma.retailSale.create({ data: { tenantId: seasoulTenant.id, storeId: store2.id, saleNumber: 'VND-004', clientName: 'Marie Dupont', items: [{ name: 'Chapéu de Praia', qty: 2, price: 2500, total: 5000 }], subtotal: new Decimal('5000'), taxAmount: new Decimal('700'), discount: new Decimal('0'), totalAmount: new Decimal('5700'), paymentMethod: 'CARD' } }),
   ])
-  console.log('✅ Retalho: 2 lojas, 4 vendas')
+  console.log('✅ Loja do Resort: 2 lojas, 4 vendas')
 
-  // ── FATURAÇÃO ──
-  const ftSeries = await prisma.invoiceSeries.create({ data: { tenantId: t, documentType: 'FT', series: 'A', prefix: 'FT A', lastNumber: 0 } })
-  await prisma.invoiceSeries.create({ data: { tenantId: t, documentType: 'FR', series: 'A', prefix: 'FR A', lastNumber: 0 } })
-  await prisma.invoiceSeries.create({ data: { tenantId: t, documentType: 'NC', series: 'A', prefix: 'NC A', lastNumber: 0 } })
-  // Série TREINO para Sea & Soul
-  await prisma.invoiceSeries.create({ data: { tenantId: seaSoul.id, documentType: 'FT', series: 'A', prefix: 'FT A', lastNumber: 0 } })
-  await prisma.invoiceSeries.create({ data: { tenantId: seaSoul.id, documentType: 'FT', series: 'TREINO', prefix: 'FT-TREINO', lastNumber: 0, isTraining: true } })
+  // ── FATURAÇÃO (Sea & Soul) ──
+  const ftSeries = await prisma.invoiceSeries.create({ data: { tenantId: seasoulTenant.id, documentType: 'FT', series: 'A', prefix: 'FT A', lastNumber: 0 } })
+  await prisma.invoiceSeries.create({ data: { tenantId: seasoulTenant.id, documentType: 'FR', series: 'A', prefix: 'FR A', lastNumber: 0 } })
+  const ncSeries = await prisma.invoiceSeries.create({ data: { tenantId: seasoulTenant.id, documentType: 'NC', series: 'A', prefix: 'NC A', lastNumber: 0 } })
+  // Série TREINO
+  await prisma.invoiceSeries.create({ data: { tenantId: seasoulTenant.id, documentType: 'FT', series: 'TREINO', prefix: 'FT-TREINO', lastNumber: 0, isTraining: true } })
 
-  // Fatura exemplo
-  const invoice = await prisma.invoice.create({ data: { tenantId: t, seriesId: ftSeries.id, documentType: 'FT', number: 1, fullNumber: 'FT A/00001', clientName: 'Banco BAI', clientNif: '5401234567', subtotal: new Decimal('450000'), taxAmount: new Decimal('63000'), totalAmount: new Decimal('513000'), currency: 'AOA' } })
-  await prisma.invoiceSeries.update({ where: { id: ftSeries.id }, data: { lastNumber: 1 } })
-  await prisma.invoiceItem.create({ data: { invoiceId: invoice.id, description: 'Serviço de Monitorização — Março 2026', quantity: new Decimal('1'), unitPrice: new Decimal('450000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('450000') } })
+  // Fatura alojamento — Roberto Almeida (4 noites)
+  const inv1 = await prisma.invoice.create({ data: { tenantId: seasoulTenant.id, seriesId: ftSeries.id, documentType: 'FT', number: 1, fullNumber: 'FT A/00001', clientName: 'Roberto Almeida', subtotal: new Decimal('100000'), taxAmount: new Decimal('14000'), totalAmount: new Decimal('114000'), currency: 'AOA', paymentMethod: 'CARD' } })
+  await prisma.invoiceItem.create({ data: { invoiceId: inv1.id, description: 'Alojamento — Quarto 101 (4 noites × 25.000 KZ)', quantity: new Decimal('4'), unitPrice: new Decimal('25000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('100000') } })
 
-  // Mais faturas
-  const inv2 = await prisma.invoice.create({ data: { tenantId: t, seriesId: ftSeries.id, documentType: 'FT', number: 2, fullNumber: 'FT A/00002', clientName: 'Sonangol EP', clientNif: '5409876543', subtotal: new Decimal('1200000'), taxAmount: new Decimal('168000'), totalAmount: new Decimal('1368000'), currency: 'AOA' } })
+  // Fatura alojamento — John Smith (7 noites suite)
+  const inv2 = await prisma.invoice.create({ data: { tenantId: seasoulTenant.id, seriesId: ftSeries.id, documentType: 'FT', number: 2, fullNumber: 'FT A/00002', clientName: 'John Smith', subtotal: new Decimal('525000'), taxAmount: new Decimal('73500'), totalAmount: new Decimal('598500'), currency: 'AOA', paymentMethod: 'CARD' } })
   await Promise.all([
-    prisma.invoiceItem.create({ data: { invoiceId: inv2.id, description: 'CCTV — Manutenção Mensal', quantity: new Decimal('1'), unitPrice: new Decimal('800000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('800000') } }),
-    prisma.invoiceItem.create({ data: { invoiceId: inv2.id, description: 'Controlo de Acesso — Manutenção', quantity: new Decimal('1'), unitPrice: new Decimal('400000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('400000') } }),
+    prisma.invoiceItem.create({ data: { invoiceId: inv2.id, description: 'Alojamento — Suite 301 (7 noites × 75.000 KZ)', quantity: new Decimal('7'), unitPrice: new Decimal('75000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('525000') } }),
   ])
 
-  const inv3 = await prisma.invoice.create({ data: { tenantId: t, seriesId: ftSeries.id, documentType: 'FT', number: 3, fullNumber: 'FT A/00003', clientName: 'Imobiliária Angola', clientNif: '5415678901', subtotal: new Decimal('3790500'), taxAmount: new Decimal('530670'), totalAmount: new Decimal('4321170'), currency: 'AOA' } })
-  await prisma.invoiceItem.create({ data: { invoiceId: inv3.id, description: 'Auto de Medição #1 — Fundações Edifício Talatona', quantity: new Decimal('1'), unitPrice: new Decimal('3790500'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('3790500') } })
+  // Fatura consumos restaurante
+  const inv3 = await prisma.invoice.create({ data: { tenantId: seasoulTenant.id, seriesId: ftSeries.id, documentType: 'FT', number: 3, fullNumber: 'FT A/00003', clientName: 'John Smith', subtotal: new Decimal('32600'), taxAmount: new Decimal('4564'), totalAmount: new Decimal('37164'), currency: 'AOA', paymentMethod: 'ROOM_CHARGE' } })
+  await Promise.all([
+    prisma.invoiceItem.create({ data: { invoiceId: inv3.id, description: 'Lagosta Grelhada', quantity: new Decimal('2'), unitPrice: new Decimal('12000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('24000') } }),
+    prisma.invoiceItem.create({ data: { invoiceId: inv3.id, description: 'Cerveja Cuca', quantity: new Decimal('4'), unitPrice: new Decimal('800'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('3200') } }),
+    prisma.invoiceItem.create({ data: { invoiceId: inv3.id, description: 'Caipirinha', quantity: new Decimal('2'), unitPrice: new Decimal('2500'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('5000') } }),
+    prisma.invoiceItem.create({ data: { invoiceId: inv3.id, description: 'Pudim', quantity: new Decimal('2'), unitPrice: new Decimal('1500'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('3000') } }),
+  ])
 
-  const inv4 = await prisma.invoice.create({ data: { tenantId: t, seriesId: ftSeries.id, documentType: 'FT', number: 4, fullNumber: 'FT A/00004', clientName: 'João Almeida', subtotal: new Decimal('75000'), taxAmount: new Decimal('10500'), totalAmount: new Decimal('85500'), currency: 'AOA', paymentMethod: 'CARD' } })
-  await prisma.invoiceItem.create({ data: { invoiceId: inv4.id, description: 'Curso Segurança em Instalações Elétricas', quantity: new Decimal('1'), unitPrice: new Decimal('75000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('75000') } })
+  // Fatura spa
+  const inv4 = await prisma.invoice.create({ data: { tenantId: seasoulTenant.id, seriesId: ftSeries.id, documentType: 'FT', number: 4, fullNumber: 'FT A/00004', clientName: 'Sofia Fernandes', subtotal: new Decimal('15000'), taxAmount: new Decimal('2100'), totalAmount: new Decimal('17100'), currency: 'AOA', paymentMethod: 'CARD' } })
+  await prisma.invoiceItem.create({ data: { invoiceId: inv4.id, description: 'Massagem Relaxante 60min', quantity: new Decimal('1'), unitPrice: new Decimal('15000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('15000') } })
 
-  // Nota de crédito
-  const ncSeries = await prisma.invoiceSeries.findFirst({ where: { tenantId: t, documentType: 'NC', series: 'A' } })
-  if (ncSeries) {
-    await prisma.invoice.create({ data: { tenantId: t, seriesId: ncSeries.id, documentType: 'NC', number: 1, fullNumber: 'NC A/00001', clientName: 'Condomínio Talatona', subtotal: new Decimal('280000'), taxAmount: new Decimal('39200'), totalAmount: new Decimal('319200'), currency: 'AOA', relatedInvoiceId: invoice.id, notes: 'Crédito referente a contrato expirado' } })
-    await prisma.invoiceSeries.update({ where: { id: ncSeries.id }, data: { lastNumber: 1 } })
-  }
+  // Nota de crédito (cancelamento parcial)
+  const nc1 = await prisma.invoice.create({ data: { tenantId: seasoulTenant.id, seriesId: ncSeries.id, documentType: 'NC', number: 1, fullNumber: 'NC A/00001', clientName: 'Roberto Almeida', subtotal: new Decimal('50000'), taxAmount: new Decimal('7000'), totalAmount: new Decimal('57000'), currency: 'AOA', relatedInvoiceId: inv1.id, notes: 'Devolução depósito — alteração de datas' } })
+  await prisma.invoiceItem.create({ data: { invoiceId: nc1.id, description: 'Crédito — depósito devolvido', quantity: new Decimal('1'), unitPrice: new Decimal('50000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('50000') } })
 
   await prisma.invoiceSeries.update({ where: { id: ftSeries.id }, data: { lastNumber: 4 } })
-  console.log('✅ Faturação: 5 séries, 5 faturas + 1 nota de crédito')
+  await prisma.invoiceSeries.update({ where: { id: ncSeries.id }, data: { lastNumber: 1 } })
+  console.log('✅ Faturação: 4 séries, 4 faturas + 1 nota de crédito')
 
   // ── RESUMO FINAL ──
   console.log('')
   console.log('🎉 Seed ENGERIS ONE completo!')
   console.log('═══════════════════════════════════════')
   console.log(`   Tenants:        2 (ENGERIS + Sea & Soul)`)
-  console.log(`   Módulos:        ${allModules.length + seaSoulModules.length}`)
+  console.log(`   Módulos:        ${MODULE_CATALOG.length} (hotelaria & restauração)`)
   console.log(`   Filiais:        5`)
-  console.log(`   Resorts:        2`)
+  console.log(`   Resorts:        2 (Cabo Ledo + Sangano)`)
   console.log(`   Utilizadores:   ${users.length + 3}`)
   console.log(`   Quartos:        ${createdRooms.length}`)
   console.log(`   Tarifas:        ${tariffs.length}`)
@@ -833,27 +687,15 @@ async function main() {
   console.log(`   Fornecedores:   ${suppliers.length}`)
   console.log(`   Stock:          ${stockItems.length}`)
   console.log(`   Colaboradores:  ${employees.length}`)
-  console.log(`   Segurança:      3 contratos, 2 incidentes, 3 instalações, 2 patrulhas`)
-  console.log(`   Engenharia:     2 projetos, 2 obras, 4 orçamentos, 2 medições`)
-  console.log(`   Eletricidade:   1 projeto, 1 inspeção, 1 certificação`)
-  console.log(`   CRM:            4 clientes, 3 deals`)
-  console.log(`   Frotas:         3 veículos, 4 abastecimentos`)
-  console.log(`   Contratos:      2 contratos de serviço`)
+  console.log(`   Hóspedes:       ${guests.length}`)
+  console.log(`   Reservas:       ${reservations.length}`)
+  console.log(`   Segurança:      2 incidentes, 2 patrulhas`)
   console.log(`   Spa:            2 serviços, 1 reserva`)
-  console.log(`   Eventos:        2 eventos`)
-  console.log(`   Imobiliário:    3 imóveis`)
-  console.log(`   Logística:      2 envios`)
-  console.log(`   Educação:       2 cursos, 4 inscrições`)
-  console.log(`   Saúde:          3 pacientes, 5 consultas`)
-  console.log(`   Agricultura:    1 fazenda, 2 culturas, 1 colheita`)
-  console.log(`   Manufatura:     1 ordem de produção`)
-  console.log(`   Consultoria:    2 projetos, 5 registos de horas`)
-  console.log(`   Telecom:        4 subscrições`)
-  console.log(`   Jurídico:       3 processos`)
-  console.log(`   Contabilidade:  8 lançamentos`)
   console.log(`   Atividades:     3 atividades, 3 reservas`)
+  console.log(`   Eventos:        2 eventos`)
   console.log(`   Retalho:        2 lojas, 4 vendas`)
-  console.log(`   Faturação:      5 séries, 6 faturas`)
+  console.log(`   Contabilidade:  8 lançamentos`)
+  console.log(`   Faturação:      4 séries, 4 faturas + 1 NC`)
   console.log('═══════════════════════════════════════')
   console.log('')
   console.log('Credenciais:')
