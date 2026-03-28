@@ -1,16 +1,43 @@
 import Link from 'next/link'
+import {
+  BedDouble,
+  ShoppingCart,
+  Package,
+  Users,
+  Shield,
+  Wrench,
+  HeartPulse,
+  Sparkles,
+  Calculator,
+  BarChart3,
+  Globe,
+  Building2,
+  type LucideIcon,
+} from 'lucide-react'
 
 export const metadata = {
   title: 'Funcionalidades — ENGERIS ONE',
   description: 'Todos os módulos da plataforma ENGERIS ONE para gestão hoteleira em África.',
 }
 
-const categories = [
+interface Category {
+  icon: LucideIcon
+  name: string
+  color: string
+  headerColor: string
+  iconBg: string
+  iconColor: string
+  modules: string[]
+}
+
+const categories: Category[] = [
   {
-    icon: '🏨',
+    icon: BedDouble,
     name: 'Alojamento & Reservas',
     color: 'bg-blue-50 border-blue-100',
     headerColor: 'text-blue-700',
+    iconBg: 'bg-blue-100',
+    iconColor: 'text-blue-600',
     modules: [
       'PMS (Property Management)',
       'Reservas & Check-in/out',
@@ -21,10 +48,12 @@ const categories = [
     ],
   },
   {
-    icon: '🧾',
+    icon: ShoppingCart,
     name: 'Ponto de Venda',
     color: 'bg-emerald-50 border-emerald-100',
     headerColor: 'text-emerald-700',
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-600',
     modules: [
       'POS Restaurante',
       'POS Bar',
@@ -34,10 +63,12 @@ const categories = [
     ],
   },
   {
-    icon: '📦',
+    icon: Package,
     name: 'Stock & Inventário',
     color: 'bg-orange-50 border-orange-100',
     headerColor: 'text-orange-700',
+    iconBg: 'bg-orange-100',
+    iconColor: 'text-orange-600',
     modules: [
       'Controlo de Stock',
       'Movimentos de Inventário',
@@ -46,10 +77,12 @@ const categories = [
     ],
   },
   {
-    icon: '👥',
+    icon: Users,
     name: 'Recursos Humanos',
     color: 'bg-violet-50 border-violet-100',
     headerColor: 'text-violet-700',
+    iconBg: 'bg-violet-100',
+    iconColor: 'text-violet-600',
     modules: [
       'Colaboradores',
       'Presenças & GPS',
@@ -59,10 +92,12 @@ const categories = [
     ],
   },
   {
-    icon: '🔒',
+    icon: Shield,
     name: 'Segurança',
     color: 'bg-red-50 border-red-100',
     headerColor: 'text-red-700',
+    iconBg: 'bg-red-100',
+    iconColor: 'text-red-600',
     modules: [
       'Rondas & Patrulhas',
       'Ocorrências',
@@ -71,10 +106,12 @@ const categories = [
     ],
   },
   {
-    icon: '⚙️',
+    icon: Wrench,
     name: 'Operações',
     color: 'bg-slate-50 border-slate-200',
     headerColor: 'text-slate-700',
+    iconBg: 'bg-slate-100',
+    iconColor: 'text-slate-600',
     modules: [
       'Manutenção',
       'Inspeções',
@@ -83,10 +120,12 @@ const categories = [
     ],
   },
   {
-    icon: '🏥',
+    icon: HeartPulse,
     name: 'Saúde In-House',
     color: 'bg-teal-50 border-teal-100',
     headerColor: 'text-teal-700',
+    iconBg: 'bg-teal-100',
+    iconColor: 'text-teal-600',
     modules: [
       'Enfermaria do Resort',
       'Registo de Ocorrências Médicas',
@@ -94,10 +133,12 @@ const categories = [
     ],
   },
   {
-    icon: '💆',
+    icon: Sparkles,
     name: 'Spa & Lazer',
     color: 'bg-pink-50 border-pink-100',
     headerColor: 'text-pink-700',
+    iconBg: 'bg-pink-100',
+    iconColor: 'text-pink-600',
     modules: [
       'Serviços Spa',
       'Agendamentos Spa',
@@ -106,10 +147,12 @@ const categories = [
     ],
   },
   {
-    icon: '💰',
+    icon: Calculator,
     name: 'Financeiro & Contabilidade',
     color: 'bg-yellow-50 border-yellow-100',
     headerColor: 'text-yellow-700',
+    iconBg: 'bg-yellow-100',
+    iconColor: 'text-yellow-600',
     modules: [
       'Contabilidade Geral',
       'Contas a Receber / Pagar',
@@ -118,10 +161,12 @@ const categories = [
     ],
   },
   {
-    icon: '📊',
+    icon: BarChart3,
     name: 'Analytics & BI',
     color: 'bg-indigo-50 border-indigo-100',
     headerColor: 'text-indigo-700',
+    iconBg: 'bg-indigo-100',
+    iconColor: 'text-indigo-600',
     modules: [
       'Dashboard Executivo',
       'Relatórios Operacionais',
@@ -130,10 +175,12 @@ const categories = [
     ],
   },
   {
-    icon: '🌐',
+    icon: Globe,
     name: 'Site Público & Reservas Online',
     color: 'bg-cyan-50 border-cyan-100',
     headerColor: 'text-cyan-700',
+    iconBg: 'bg-cyan-100',
+    iconColor: 'text-cyan-600',
     modules: [
       'Website do Hotel',
       'Motor de Reservas',
@@ -142,10 +189,12 @@ const categories = [
     ],
   },
   {
-    icon: '🏢',
+    icon: Building2,
     name: 'Multi-propriedade',
     color: 'bg-lime-50 border-lime-100',
     headerColor: 'text-lime-700',
+    iconBg: 'bg-lime-100',
+    iconColor: 'text-lime-600',
     modules: [
       'Gestão Multi-resort',
       'Comparação Entre Propriedades',
@@ -238,45 +287,44 @@ export default function FuncionalidadesPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category) => (
-              <div
-                key={category.name}
-                className={`rounded-2xl border p-6 transition-shadow hover:shadow-md ${category.color}`}
-              >
-                {/* Card header */}
-                <div className="mb-4 flex items-center gap-3">
-                  <span
-                    className="text-3xl"
-                    role="img"
-                    aria-label={category.name}
-                  >
-                    {category.icon}
-                  </span>
-                  <div>
-                    <h3 className={`text-base font-bold ${category.headerColor}`}>
-                      {category.name}
-                    </h3>
-                    <p className="text-xs text-gray-400">
-                      {category.modules.length} módulo
-                      {category.modules.length !== 1 ? 's' : ''}
-                    </p>
+            {categories.map((category) => {
+              const Icon = category.icon
+              return (
+                <div
+                  key={category.name}
+                  className={`rounded-2xl border p-6 transition-shadow hover:shadow-md ${category.color}`}
+                >
+                  {/* Card header */}
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${category.iconBg}`}>
+                      <Icon className={`h-5 w-5 ${category.iconColor}`} />
+                    </div>
+                    <div>
+                      <h3 className={`text-base font-bold ${category.headerColor}`}>
+                        {category.name}
+                      </h3>
+                      <p className="text-xs text-gray-400">
+                        {category.modules.length} módulo
+                        {category.modules.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Module list */}
-                <ul className="space-y-2">
-                  {category.modules.map((mod) => (
-                    <li
-                      key={mod}
-                      className="flex items-start gap-2 text-sm text-gray-700"
-                    >
-                      <span className="mt-0.5 shrink-0 text-green-500">✓</span>
-                      {mod}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+                  {/* Module list */}
+                  <ul className="space-y-2">
+                    {category.modules.map((mod) => (
+                      <li
+                        key={mod}
+                        className="flex items-start gap-2 text-sm text-gray-700"
+                      >
+                        <span className="mt-0.5 shrink-0 text-green-500">✓</span>
+                        {mod}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -296,17 +344,14 @@ export default function FuncionalidadesPage() {
             <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
               {[
                 {
-                  icon: '🔗',
                   title: 'Integração nativa',
                   desc: 'Todos os módulos partilham a mesma base de dados em tempo real.',
                 },
                 {
-                  icon: '🇦🇴',
                   title: 'Feito para Angola',
                   desc: 'IVA 14%, faturação AGT, NIF e KZ integrados de raiz.',
                 },
                 {
-                  icon: '📱',
                   title: 'App Mobile',
                   desc: 'Colaboradores acedem no smartphone a partir de qualquer lugar do resort.',
                 },
@@ -315,7 +360,6 @@ export default function FuncionalidadesPage() {
                   key={item.title}
                   className="rounded-2xl bg-white/10 p-5 text-left"
                 >
-                  <div className="mb-3 text-2xl">{item.icon}</div>
                   <h4 className="mb-1 font-semibold">{item.title}</h4>
                   <p className="text-sm leading-relaxed text-blue-200">{item.desc}</p>
                 </div>
