@@ -84,13 +84,13 @@ const categories = [
   },
   {
     icon: '🏥',
-    name: 'Saúde & Bem-estar',
+    name: 'Saúde In-House',
     color: 'bg-teal-50 border-teal-100',
     headerColor: 'text-teal-700',
     modules: [
-      'Clínica / Enfermaria',
-      'Pacientes',
-      'Agendamentos Médicos',
+      'Enfermaria do Resort',
+      'Registo de Ocorrências Médicas',
+      'Protocolos de Emergência',
     ],
   },
   {
@@ -211,8 +211,8 @@ export default function FuncionalidadesPage() {
       <div className="border-b border-gray-100 bg-gray-50 px-6 py-6">
         <div className="mx-auto grid max-w-5xl grid-cols-2 gap-4 text-center md:grid-cols-4">
           {[
-            { value: '47', label: 'Módulos' },
-            { value: '12', label: 'Categorias' },
+            { value: String(totalModules), label: 'Módulos' },
+            { value: String(categories.length), label: 'Categorias' },
             { value: '14%', label: 'IVA Angola integrado' },
             { value: '1', label: 'Plataforma unificada' },
           ].map((stat) => (

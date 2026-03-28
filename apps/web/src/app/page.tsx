@@ -76,15 +76,24 @@ const steps = [
 ]
 
 const modules = [
-  'Reservas', 'Quartos', 'Hóspedes', 'Tarifas', 'Check-in/out', 'Housekeeping',
-  'POS Restaurante', 'POS Bar', 'POS Loja', 'Faturação AGT', 'IVA Automático',
-  'Stock', 'Compras', 'Fornecedores', 'Inventário', 'Quebras',
-  'RH', 'Assiduidade GPS', 'Salários', 'Férias', 'Contratos',
-  'Manutenção', 'Smart Locks', 'Spa', 'Eventos', 'Atividades',
-  'CRM', 'Imóveis', 'Agricultura', 'Produção', 'Saúde',
-  'Educação', 'Consultoria', 'Telecom', 'Segurança', 'Frotas',
-  'Relatórios', 'KPIs', 'Auditoria', 'Notificações', 'API',
-  'Multi-propriedade', 'Permissões', '2FA', 'Integrações', 'Backups', 'Suporte PT',
+  // PMS
+  'Reservas Online', 'Check-in / Check-out', 'Quartos & Housekeeping', 'Tarifas Dinâmicas', 'Canal Manager', 'Hóspedes & Histórico',
+  // POS
+  'POS Restaurante', 'POS Bar', 'POS Loja / Spa', 'Faturação AGT', 'IVA 14% Automático', 'Mesas & Comandas',
+  // Stock
+  'Stock & Inventário', 'Compras & Fornecedores', 'Movimentos de Stock', 'Alertas de Rutura',
+  // RH
+  'Gestão de Colaboradores', 'Assiduidade com GPS', 'Processamento Salarial', 'Turnos & Escalas',
+  // Operações
+  'Manutenção & Avarias', 'Ordens de Serviço', 'Inspeções & Certificações', 'Smart Locks TTLock',
+  // Spa & Lazer
+  'Serviços Spa', 'Agendamentos Spa', 'Atividades & Excursões', 'Eventos & Banquetes',
+  // Financeiro
+  'Contabilidade', 'Contas a Receber / Pagar', 'Relatórios Financeiros', 'Auditoria',
+  // Site & Reservas
+  'Website do Hotel', 'Motor de Reservas', 'Galeria & Avaliações', 'WhatsApp Integrado',
+  // Plataforma
+  'Dashboard Executivo', 'KPIs em Tempo Real', 'Multi-propriedade', 'API & Integrações', 'Suporte em Português',
 ]
 
 const plans = [
