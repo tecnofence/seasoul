@@ -23,6 +23,7 @@ import StaffNotificationsScreen from '../screens/staff/NotificationsScreen';
 import CheckInScreen from '../screens/staff/CheckInScreen';
 import TicketsScreen from '../screens/staff/TicketsScreen';
 import TrainingModeScreen from '../screens/staff/TrainingModeScreen';
+import TasksScreen from '../screens/staff/TasksScreen';
 
 // ─── Tipos de navegação ───────────────────────────────────────────────────────
 
@@ -47,11 +48,12 @@ export type StaffTabParamList = {
   PerfilEquipa: undefined;
 };
 
-// Stack interno para o Painel (permite navegar para CheckIn / Alertas a partir do dashboard)
+// Stack interno para o Painel (permite navegar para CheckIn / Alertas / Tarefas a partir do dashboard)
 export type PainelStackParamList = {
   PainelHome: undefined;
   CheckIn: undefined;
   Alertas: undefined;
+  Tarefas: undefined;
 };
 
 const Stack       = createStackNavigator<RootStackParamList>();
@@ -116,6 +118,12 @@ function PainelNavigator({ userInfo }: { userInfo: UserInfo }) {
         component={StaffNotificationsScreen}
         options={{ headerTitle: 'Alertas e Notificações' }}
       />
+      <PainelStack.Screen
+        name="Tarefas"
+        options={{ headerTitle: 'Tarefas do Dia' }}
+      >
+        {() => <TasksScreen role={userInfo.role} />}
+      </PainelStack.Screen>
     </PainelStack.Navigator>
   );
 }

@@ -1,6 +1,19 @@
 import { createHash } from 'crypto'
 import { FastifyInstance } from 'fastify'
+import { Client as MinioClient } from 'minio'
 import { generateSAFT } from '../../utils/saft'
+import { signInvoice } from '../../utils/agt-sign'
+import { submitInvoiceToAgt } from '../../utils/agt-submit'
+import { generateInvoiceHtml } from '../../utils/invoice-pdf'
+
+// Cliente MinIO — inicializado uma vez por módulo
+const minio = new MinioClient({
+  endPoint: process.env.MINIO_ENDPOINT ?? 'localhost',
+  port: parseInt(process.env.MINIO_PORT ?? '9000'),
+  useSSL: process.env.MINIO_USE_SSL === 'true',
+  accessKey: process.env.MINIO_ACCESS_KEY ?? '',
+  secretKey: process.env.MINIO_SECRET_KEY ?? '',
+})
 
 // ── FATURAÇÃO UNIVERSAL ENGERIS ONE ──────────────
 // Suporta: FT, FR, NC, ND, ORC, PF, RC, GT, AM, CS
@@ -92,6 +105,96 @@ export default async function invoicingRoutes(app: FastifyInstance) {
 
     if (!invoice) return reply.status(404).send({ error: 'Documento não encontrado' })
     return reply.send({ data: invoice })
+  })
+
+  // ── Gerar PDF (HTML) de um documento fiscal ────
+  // GET /v1/invoicing/:id/pdf — devolve HTML para impressão; guarda em MinIO
+  app.get<{ Params: { id: string } }>('/:id/pdf', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { tenantId?: string }
+    const where: Record<string, unknown> = { id: request.params.id }
+    if (user.tenantId) where.tenantId = user.tenantId
+
+    const invoice = await app.prisma.invoice.findFirst({
+      where,
+      include: { items: true, series: true },
+    })
+
+    if (!invoice) return reply.status(404).send({ error: 'Documento não encontrado' })
+
+    // Obter dados do tenant para emitente
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { id: invoice.tenantId },
+      select: { name: true, nif: true },
+    })
+
+    const html = generateInvoiceHtml({
+      invoiceNumber: invoice.fullNumber,
+      invoiceType: invoice.documentType,
+      issueDate: invoice.createdAt,
+      dueDate: invoice.dueDate ?? undefined,
+      companyName: tenant?.name ?? 'Sea and Soul Resorts',
+      companyNif: tenant?.nif ?? '000000000',
+      companyAddress: 'Luanda, Angola',
+      clientName: invoice.clientName,
+      clientNif: invoice.clientNif ?? undefined,
+      clientAddress: invoice.clientAddress ?? undefined,
+      items: invoice.items.map((item) => ({
+        description: item.description,
+        quantity: Number(item.quantity),
+        unitPrice: item.unitPrice,
+        taxRate: Number(item.taxRate),
+        discount: Number(item.discount),
+      })),
+      subtotal: Number(invoice.subtotal),
+      totalTax: Number(invoice.taxAmount),
+      totalDiscount: 0,
+      grandTotal: Number(invoice.totalAmount),
+      currency: invoice.currency,
+      qrCode: invoice.agtQrCode ?? undefined,
+      agtHash: invoice.agtHash ?? undefined,
+      digitalSignature: invoice.agtSignature ?? undefined,
+      hashChain: invoice.agtHash ?? undefined,
+      paymentMethod: invoice.paymentMethod ?? undefined,
+      relatedInvoice: invoice.relatedInvoiceId ?? undefined,
+      notes: invoice.notes ?? undefined,
+    })
+
+    // Guardar HTML no MinIO (bucket faturas)
+    try {
+      const year = invoice.createdAt.getFullYear()
+      const htmlBuffer = Buffer.from(html, 'utf8')
+      const objectName = `faturas/${year}/${invoice.id}.html`
+      const bucket = process.env.MINIO_BUCKET_FATURAS ?? 'faturas'
+
+      // Garantir que o bucket existe
+      const bucketExists = await minio.bucketExists(bucket)
+      if (!bucketExists) {
+        await minio.makeBucket(bucket, 'us-east-1')
+      }
+
+      await minio.putObject(bucket, objectName, htmlBuffer, htmlBuffer.length, {
+        'Content-Type': 'text/html',
+      })
+
+      // Atualizar pdfUrl na fatura
+      const minioEndpoint = process.env.MINIO_ENDPOINT ?? 'localhost'
+      const minioPort = process.env.MINIO_PORT ?? '9000'
+      const pdfUrl = `http://${minioEndpoint}:${minioPort}/${bucket}/${objectName}`
+      await app.prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { pdfUrl },
+      })
+    } catch (err) {
+      // Falha no MinIO não impede devolução do HTML ao cliente
+      app.log.warn({ err, invoiceId: invoice.id }, 'Falha ao guardar fatura no MinIO')
+    }
+
+    reply.header('Content-Type', 'text/html; charset=utf-8')
+    reply.header(
+      'Content-Disposition',
+      `inline; filename="${invoice.fullNumber.replace(/\//g, '-')}.html"`
+    )
+    return reply.send(html)
   })
 
   // ── Emitir novo documento fiscal ───────────────
@@ -260,6 +363,63 @@ export default async function invoicingRoutes(app: FastifyInstance) {
       })
     })
 
+    // ── Assinatura digital RSA-1024/SHA-1 (AGT Portaria 34/2021) ──
+    const digitalSignature = signInvoice(
+      invoice.fullNumber,
+      invoice.createdAt,
+      Number(invoice.totalAmount),
+      invoice.agtPreviousHash ?? EMPTY_HASH
+    )
+
+    // ── Submissão à AGT (apenas para documentos fiscais reais) ──
+    let agtCode: string | undefined
+    let agtQrCode: string | undefined
+    let agtSubmitStatus = invoice.agtStatus ?? 'pending'
+
+    if (!isTraining && ['FT', 'FR', 'NC', 'ND'].includes(body.documentType)) {
+      const agtPayload = {
+        nif: process.env.AGT_NIF ?? '',
+        serie: 'A',
+        numero: invoice.number,
+        tipo: body.documentType,
+        dataEmissao: invoice.createdAt.toISOString().split('T')[0],
+        nifCliente: body.clientNif,
+        nomeCliente: body.clientName,
+        totalSemIva: Number(invoice.subtotal),
+        totalIva: Number(invoice.taxAmount),
+        totalGeral: Number(invoice.totalAmount),
+        hash: invoice.agtHash ?? '',
+        assinatura: digitalSignature,
+        linhas: processedItems.map((item) => ({
+          descricao: item.description,
+          quantidade: item.quantity,
+          precoUnitario: item.unitPrice,
+          taxaIva: item.taxRate,
+          totalLinha: item.total,
+        })),
+      }
+
+      const agtResponse = await submitInvoiceToAgt(agtPayload)
+      if (agtResponse.success) {
+        agtCode = agtResponse.codigoAgt
+        agtQrCode = agtResponse.qrCode
+        agtSubmitStatus = 'submitted'
+      }
+    }
+
+    // Persistir assinatura e código AGT na fatura
+    const invoiceUpdated = await app.prisma.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        agtSignature: digitalSignature,
+        agtCode: agtCode ?? null,
+        agtQrCode: agtQrCode ?? null,
+        agtStatus: agtSubmitStatus,
+        agtSubmittedAt: agtCode ? new Date() : null,
+      },
+      include: { items: true },
+    })
+
     // Registar na auditoria
     await app.prisma.auditLog.create({
       data: {
@@ -273,11 +433,12 @@ export default async function invoicingRoutes(app: FastifyInstance) {
           totalAmount: Number(invoice.totalAmount),
           clientName: invoice.clientName,
           isTraining,
+          agtCode: agtCode ?? null,
         },
       },
     })
 
-    return reply.status(201).send({ data: invoice })
+    return reply.status(201).send({ data: invoiceUpdated })
   })
 
   // ── Anular documento ──────────────────────────

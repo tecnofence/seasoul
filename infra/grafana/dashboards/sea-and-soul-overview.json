@@ -1,0 +1,123 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "panel", "id": "stat", "name": "Stat", "version": "" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "" },
+    { "type": "panel", "id": "barchart", "name": "Bar chart", "version": "" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "description": "Sea and Soul Resort ERP — Dashboard de Operações",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "green", "value": 80 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "title": "Ocupação Atual (%)",
+      "type": "stat",
+      "targets": [{ "datasource": { "type": "prometheus" }, "expr": "sea_soul_occupancy_rate", "legendFormat": "Ocupação", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "title": "Check-ins Hoje",
+      "type": "stat",
+      "targets": [{ "datasource": { "type": "prometheus" }, "expr": "sea_soul_checkins_today", "legendFormat": "Check-ins", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "currencyAOA" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "title": "Receita Hoje (AOA)",
+      "type": "stat",
+      "targets": [{ "datasource": { "type": "prometheus" }, "expr": "sea_soul_revenue_today", "legendFormat": "Receita", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 10 } ] }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "title": "Chamados Abertos",
+      "type": "stat",
+      "targets": [{ "datasource": { "type": "prometheus" }, "expr": "sea_soul_open_tickets", "legendFormat": "Chamados", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 15, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "id": 5,
+      "options": { "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "title": "Taxa de Ocupação — 7 dias",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus" }, "expr": "sea_soul_occupancy_rate{resort=\"cabo_ledo\"}", "legendFormat": "Cabo Ledo", "refId": "A" },
+        { "datasource": { "type": "prometheus" }, "expr": "sea_soul_occupancy_rate{resort=\"sangano\"}", "legendFormat": "Sangano", "refId": "B" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "fillOpacity": 80, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineWidth": 1 }, "unit": "currencyAOA" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "id": 6,
+      "options": { "barRadius": 0.1, "barWidth": 0.7, "fullHighlight": false, "groupWidth": 0.7, "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "orientation": "auto", "stacking": "none", "tooltip": { "mode": "multi", "sort": "none" }, "xTickLabelRotation": 0, "xTickLabelSpacing": 200 },
+      "title": "Receita por Resort — Últimos 7 dias",
+      "type": "barchart",
+      "targets": [
+        { "datasource": { "type": "prometheus" }, "expr": "increase(sea_soul_revenue_total{resort=\"cabo_ledo\"}[1d])", "legendFormat": "Cabo Ledo", "refId": "A" },
+        { "datasource": { "type": "prometheus" }, "expr": "increase(sea_soul_revenue_total{resort=\"sangano\"}[1d])", "legendFormat": "Sangano", "refId": "B" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "fillOpacity": 15, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "id": 7,
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "title": "Pedidos de Quarto, Check-ins e Receção — 24h",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus" }, "expr": "rate(sea_soul_room_service_orders_total[5m]) * 60", "legendFormat": "Pedidos/min", "refId": "A" },
+        { "datasource": { "type": "prometheus" }, "expr": "rate(sea_soul_checkins_total[5m]) * 60", "legendFormat": "Check-ins/min", "refId": "B" },
+        { "datasource": { "type": "prometheus" }, "expr": "rate(sea_soul_api_requests_total[5m]) * 60", "legendFormat": "Req API/min", "refId": "C" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["sea-and-soul", "resort", "operations"],
+  "templating": { "list": [] },
+  "time": { "from": "now-7d", "to": "now" },
+  "timepicker": {},
+  "timezone": "Africa/Luanda",
+  "title": "Sea and Soul — Operações",
+  "uid": "sea-soul-ops",
+  "version": 1
+}

@@ -154,6 +154,131 @@ export default async function locksRoutes(app: FastifyInstance) {
     })
   })
 
+  // ── POST /webhook — Receber eventos Seam API ──────────────────────────────
+  // Esta rota NÃO usa autenticação JWT — usa assinatura HMAC da Seam
+  // preHandler: [] sobrepõe o hook global de autenticação para esta rota
+  app.post('/webhook', {
+    preHandler: [],
+    config: { rawBody: true }, // precisamos do body raw para verificar a assinatura
+  }, async (request, reply) => {
+    // 1. Verificar assinatura Seam
+    const seamSecret = process.env.SEAM_WEBHOOK_SECRET
+    if (seamSecret) {
+      const signature = request.headers['seam-signature'] as string
+      const rawBody = (request as any).rawBody as string
+      if (!rawBody || !signature) {
+        return reply.code(400).send({ error: 'Assinatura em falta' })
+      }
+      const expected = crypto
+        .createHmac('sha256', seamSecret)
+        .update(rawBody)
+        .digest('hex')
+      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+        return reply.code(401).send({ error: 'Assinatura inválida' })
+      }
+    }
+
+    const event = request.body as any
+    const eventType: string = event?.event_type ?? ''
+    const deviceId: string = event?.device?.device_id ?? event?.access_code?.device_id ?? ''
+
+    app.log.info({ eventType, deviceId }, 'Seam webhook recebido')
+
+    // Encontrar o quarto associado ao device
+    const room = deviceId
+      ? await app.prisma.room.findFirst({
+          where: { seamDeviceId: deviceId },
+          include: { resort: true },
+        })
+      : null
+
+    switch (eventType) {
+      case 'device.low_battery': {
+        // Criar chamado de manutenção — bateria fraca
+        if (room) {
+          await app.prisma.maintenanceTicket.create({
+            data: {
+              resortId: room.resortId,
+              roomId: room.id,
+              location: `Quarto ${room.number}`,
+              description: `A fechadura inteligente do quarto ${room.number} tem bateria abaixo de 20%. Substituir pilhas urgentemente.`,
+              priority: 'HIGH',
+              status: 'OPEN',
+            },
+          })
+          app.log.warn({ roomId: room.id }, 'Bateria fraca na fechadura')
+        }
+        break
+      }
+
+      case 'device.disconnected': {
+        // Criar chamado urgente — fechadura offline
+        if (room) {
+          await app.prisma.maintenanceTicket.create({
+            data: {
+              resortId: room.resortId,
+              roomId: room.id,
+              location: `Quarto ${room.number}`,
+              description: `A fechadura inteligente do quarto ${room.number} está offline/desligada. Verificar gateway TTLock e ligação de rede.`,
+              priority: 'URGENT',
+              status: 'OPEN',
+            },
+          })
+          app.log.error({ roomId: room.id }, 'Fechadura offline')
+        }
+        break
+      }
+
+      case 'access_code.failed_to_set_on_device': {
+        // Notificar gestor do resort — falha ao programar PIN
+        if (room) {
+          const manager = await app.prisma.user.findFirst({
+            where: { resortId: room.resortId, role: 'RESORT_MANAGER', active: true },
+          })
+          if (manager) {
+            await app.prisma.notification.create({
+              data: {
+                userId: manager.id,
+                resortId: room.resortId,
+                type: 'MAINTENANCE_ASSIGNED',
+                channel: 'IN_APP',
+                title: 'Falha na fechadura',
+                body: `Não foi possível programar o PIN na fechadura do quarto ${room.number}. Contactar hóspede manualmente.`,
+                status: 'PENDING',
+              },
+            })
+          }
+        }
+        break
+      }
+
+      case 'lock.unlocked': {
+        // Registar no audit log
+        await app.prisma.auditLog.create({
+          data: {
+            action: 'LOCK_UNLOCKED',
+            entity: 'Room',
+            entityId: room?.id ?? deviceId,
+            userId: null,
+            after: { deviceId, eventType, timestamp: event.created_at },
+          },
+        })
+        break
+      }
+
+      case 'access_code.created':
+      case 'access_code.deleted':
+        // Confirmação de operações — apenas log
+        app.log.info({ eventType, deviceId }, 'Código de acesso confirmado pela Seam')
+        break
+
+      default:
+        app.log.debug({ eventType }, 'Evento Seam não tratado')
+    }
+
+    return reply.send({ received: true })
+  })
+
   // ── DELETE /pin/:reservationId — Revogar PIN ──
   app.delete<{ Params: { reservationId: string } }>('/pin/:reservationId', async (request, reply) => {
     if (!['SUPER_ADMIN', 'RESORT_MANAGER', 'RECEPTIONIST'].includes(request.user.role)) {

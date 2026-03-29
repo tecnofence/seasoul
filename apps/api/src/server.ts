@@ -5,6 +5,12 @@ import rateLimit from '@fastify/rate-limit'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 
+// Queues BullMQ
+import { startAgtWorker } from './queues/agt-queue.js'
+import { startNotificationsWorker } from './queues/notifications-queue.js'
+import { submitInvoiceToAgt } from './utils/agt-submit.js'
+import { sendSms, sendEmail, sendExpoPush } from './utils/notify.js'
+
 // Plugins
 import prismaPlugin from './plugins/prisma.js'
 import authPlugin from './plugins/auth.js'
@@ -222,9 +228,30 @@ await app.register(retailRoutes,       { prefix: '/v1/retail' })
 // ── ROTAS — Públicas (sem autenticação) ──────
 await app.register(publicRoutes, { prefix: '/v1' })
 
-// ── Webhooks (TODO) ──────────────────────────
-// await app.register(seamWebhookRoutes, { prefix: '/webhooks/seam' })
-// await app.register(agtWebhookRoutes,  { prefix: '/webhooks/agt' })
+// ── Iniciar workers BullMQ ────────────────────────────────────────────────
+
+// Worker AGT — processa fila de faturas offline
+startAgtWorker(async (data) => {
+  const result = await submitInvoiceToAgt(data.payload as any)
+  if (!result.success) throw new Error(result.erro ?? 'AGT error')
+  // Atualizar fatura na BD com código e QR AGT
+  await app.prisma.invoice.update({
+    where: { id: data.invoiceId },
+    data: {
+      agtStatus: 'accepted',
+      agtQrCode: result.qrCode,
+      agtSubmittedAt: new Date(),
+    },
+  })
+  return { codigoAgt: result.codigoAgt!, qrCode: result.qrCode! }
+})
+
+// Worker Notificações — processa fila de envio multi-canal
+startNotificationsWorker(async (data) => {
+  if (data.channel === 'SMS') await sendSms(data.recipient, data.body)
+  else if (data.channel === 'EMAIL') await sendEmail(data.recipient, data.title, `<p>${data.body}</p>`)
+  else if (data.channel === 'PUSH') await sendExpoPush(data.recipient, data.title, data.body, data.data)
+})
 
 // ── START ─────────────────────────────────────
 const port = Number(process.env.API_PORT) || 3001

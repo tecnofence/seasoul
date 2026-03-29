@@ -74,7 +74,10 @@ export default function LoginScreen({ navigation }: Props) {
         const { status } = await Notifications.requestPermissionsAsync();
         if (status === 'granted') {
           const tokenData = await Notifications.getExpoPushTokenAsync();
-          await api.patch('/users/device-token', { deviceToken: tokenData.data });
+          // Hóspedes usam o endpoint dedicado; staff usa o endpoint de utilizadores
+          const deviceTokenEndpoint =
+            user.role === 'GUEST' ? '/guest/device-token' : '/users/device-token';
+          await api.patch(deviceTokenEndpoint, { deviceToken: tokenData.data });
         }
       } catch {
         // Silent fail - push notifications are optional

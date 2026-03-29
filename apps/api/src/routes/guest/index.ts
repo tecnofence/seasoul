@@ -150,6 +150,29 @@ export default async function guestRoutes(app: FastifyInstance) {
     return reply.send({ data: guest, message: 'Perfil atualizado' })
   })
 
+  // ── PATCH /device-token — Registar Expo push token do hóspede ──
+  app.patch('/device-token', {
+    preHandler: [app.authenticate],
+  }, async (request, reply) => {
+    if (request.user.type !== 'guest') {
+      return reply.code(403).send({ error: 'Endpoint exclusivo para hóspedes' })
+    }
+
+    const guestId = request.user.id
+    const { deviceToken } = request.body as { deviceToken: string }
+
+    if (!deviceToken || typeof deviceToken !== 'string') {
+      return reply.code(400).send({ error: 'deviceToken obrigatório' })
+    }
+
+    await app.prisma.guest.update({
+      where: { id: guestId },
+      data: { deviceToken },
+    })
+
+    return reply.send({ message: 'Token registado' })
+  })
+
   // ── GET /reservations — Reservas do hóspede ──
   app.get('/reservations', {
     preHandler: [app.authenticate],

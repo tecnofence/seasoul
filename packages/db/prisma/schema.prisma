@@ -881,9 +881,11 @@ model Invoice {
   paidAt          DateTime?
   dueDate         DateTime?
   // AGT
-  agtHash         String?                 // hash RSA do documento
+  agtHash         String?                 // hash SHA-256 da cadeia de integridade
   agtPreviousHash String?                 // hash do documento anterior (cadeia)
+  agtSignature    String?                 // assinatura digital RSA-1024/SHA-1 (Portaria 34/2021)
   agtStatus       String?                 // pending, submitted, accepted, rejected
+  agtCode         String?                 // código de registo devolvido pela AGT
   agtQrCode       String?
   agtSubmittedAt  DateTime?
   // Imposto Cativo (Art. 21.º/6 CIVA)
