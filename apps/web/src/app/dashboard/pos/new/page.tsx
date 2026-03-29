@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatKwanza } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -21,10 +21,53 @@ interface CartItem {
 export default function NewSalePage() {
   const router = useRouter()
   const [error, setError] = useState('')
-  const [cart, setCart] = useState<CartItem[]>([])
+  const [successMsg, setSuccessMsg] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  // Carrinho persistido em localStorage
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const saved = localStorage.getItem('pos_cart')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+
   const [paymentMethod, setPaymentMethod] = useState('CASH')
   const [resortId, setResortId] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Contador de vendas offline pendentes
+  const [offlineCount, setOfflineCount] = useState(0)
+
+  // Persistir carrinho em localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem('pos_cart', JSON.stringify(cart))
+  }, [cart])
+
+  // Atualizar contador de vendas offline
+  useEffect(() => {
+    const update = () => {
+      try {
+        const q = JSON.parse(localStorage.getItem('pos_offline_queue') || '[]')
+        setOfflineCount(q.length)
+      } catch { setOfflineCount(0) }
+    }
+    update()
+    window.addEventListener('online', update)
+    window.addEventListener('offline', update)
+    return () => {
+      window.removeEventListener('online', update)
+      window.removeEventListener('offline', update)
+    }
+  }, [])
+
+  // Sincronizar fila offline quando voltar a estar online
+  useEffect(() => {
+    window.addEventListener('online', syncOfflineQueue)
+    return () => window.removeEventListener('online', syncOfflineQueue)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const { data: products } = useQuery({
     queryKey: ['products-active'],
@@ -67,8 +110,40 @@ export default function NewSalePage() {
   const taxTotal = cart.reduce((sum, i) => sum + i.unitPrice * i.qty * (i.taxRate / 100), 0)
   const total = subtotal + taxTotal
 
-  const mutation = useMutation({
-    mutationFn: () => api.post('/pos', {
+  // Sincronizar fila de vendas offline
+  async function syncOfflineQueue() {
+    try {
+      const queue: any[] = JSON.parse(localStorage.getItem('pos_offline_queue') || '[]')
+      if (queue.length === 0) return
+
+      const remaining: any[] = []
+      for (const item of queue) {
+        try {
+          await api.post('/pos/sales', item.payload)
+        } catch {
+          remaining.push(item)
+        }
+      }
+
+      localStorage.setItem('pos_offline_queue', JSON.stringify(remaining))
+      const synced = queue.length - remaining.length
+      if (synced > 0) {
+        setSuccessMsg(`${synced} venda(s) offline sincronizada(s) com sucesso.`)
+        setOfflineCount(remaining.length)
+        setTimeout(() => setSuccessMsg(''), 4000)
+      }
+    } catch {
+      // Ignorar erros de sincronização em segundo plano
+    }
+  }
+
+  async function handleCheckout() {
+    if (cart.length === 0) return
+    setError('')
+    setSuccessMsg('')
+    setLoading(true)
+
+    const payload = {
       resortId,
       paymentMethod,
       items: cart.map((i) => ({
@@ -77,16 +152,66 @@ export default function NewSalePage() {
         unitPrice: i.unitPrice,
         taxRate: i.taxRate,
       })),
-    }),
-    onSuccess: () => router.push('/dashboard/pos'),
-    onError: (err: any) => setError(err.response?.data?.error || 'Erro ao registar venda'),
-  })
+    }
+
+    // Verificar conectividade
+    if (!navigator.onLine) {
+      try {
+        const offlineQueue: any[] = JSON.parse(localStorage.getItem('pos_offline_queue') || '[]')
+        offlineQueue.push({ payload, timestamp: Date.now(), id: crypto.randomUUID() })
+        localStorage.setItem('pos_offline_queue', JSON.stringify(offlineQueue))
+        setCart([])
+        localStorage.removeItem('pos_cart')
+        setOfflineCount(offlineQueue.length)
+        setSuccessMsg(`Venda guardada offline. ${offlineQueue.length} venda(s) pendente(s) de sincronização.`)
+        setTimeout(() => setSuccessMsg(''), 5000)
+      } catch (e) {
+        setError('Erro ao guardar venda offline.')
+      }
+      setLoading(false)
+      return
+    }
+
+    try {
+      await api.post('/pos/sales', payload)
+      setCart([])
+      localStorage.removeItem('pos_cart')
+      // Tentar sincronizar fila offline se existir
+      syncOfflineQueue()
+      router.push('/dashboard/pos')
+    } catch (err: any) {
+      // API falhou — guardar offline
+      try {
+        const offlineQueue: any[] = JSON.parse(localStorage.getItem('pos_offline_queue') || '[]')
+        offlineQueue.push({ payload, timestamp: Date.now(), id: crypto.randomUUID() })
+        localStorage.setItem('pos_offline_queue', JSON.stringify(offlineQueue))
+        setCart([])
+        localStorage.removeItem('pos_cart')
+        setOfflineCount(offlineQueue.length)
+        setSuccessMsg('API indisponível — venda guardada. Será sincronizada quando a ligação for restaurada.')
+        setTimeout(() => setSuccessMsg(''), 5000)
+      } catch {
+        setError(err.response?.data?.error || 'Erro ao registar venda')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Nova Venda</h1>
 
+      {/* Indicador de vendas offline pendentes */}
+      {offlineCount > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          <span className="font-semibold">{offlineCount} venda(s) offline pendente(s)</span>
+          <span className="text-amber-600">— serão sincronizadas automaticamente</span>
+        </div>
+      )}
+
       {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded">{error}</p>}
+      {successMsg && <p className="text-sm text-green-700 bg-green-50 p-3 rounded">{successMsg}</p>}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Produtos */}
@@ -180,10 +305,10 @@ export default function NewSalePage() {
             <Button
               className="mt-4 w-full"
               size="lg"
-              disabled={cart.length === 0 || !resortId || mutation.isPending}
-              onClick={() => mutation.mutate()}
+              disabled={cart.length === 0 || !resortId || loading}
+              onClick={handleCheckout}
             >
-              {mutation.isPending ? 'A processar...' : `Finalizar Venda — ${formatKwanza(total)}`}
+              {loading ? 'A processar...' : `Finalizar Venda — ${formatKwanza(total)}`}
             </Button>
           </CardContent>
         </Card>

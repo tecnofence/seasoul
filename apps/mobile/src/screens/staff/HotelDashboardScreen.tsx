@@ -84,12 +84,13 @@ const todayActivity: ActivityItem[] = [
 interface Props {
   userName: string;
   role: string;
+  navigation?: any;
 }
 
 // ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
-export default function HotelDashboardScreen({ userName, role }: Props) {
+export default function HotelDashboardScreen({ userName, role, navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(() => {
@@ -204,12 +205,13 @@ export default function HotelDashboardScreen({ userName, role }: Props) {
         <Text style={styles.sectionTitle}>Acções Rápidas</Text>
         <View style={styles.quickActionsRow}>
           {[
-            { label: 'Novo Check-in',  icon: 'log-in-outline'    as keyof typeof Ionicons.glyphMap, color: colors.primary  },
-            { label: 'Check-out',      icon: 'log-out-outline'   as keyof typeof Ionicons.glyphMap, color: colors.orange   },
-            { label: 'Reportar',       icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, color: colors.danger   },
-            { label: 'Limpeza',        icon: 'sparkles-outline'  as keyof typeof Ionicons.glyphMap, color: colors.teal     },
+            { label: 'Novo Check-in',  icon: 'log-in-outline'    as keyof typeof Ionicons.glyphMap, color: colors.primary,   onPress: undefined                                         },
+            { label: 'Check-out',      icon: 'log-out-outline'   as keyof typeof Ionicons.glyphMap, color: colors.orange,    onPress: undefined                                         },
+            { label: 'Reportar',       icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, color: colors.danger,    onPress: undefined                                         },
+            { label: 'Limpeza',        icon: 'sparkles-outline'  as keyof typeof Ionicons.glyphMap, color: colors.teal,      onPress: undefined                                         },
+            { label: 'Tarefas',        icon: 'checkbox-outline'  as keyof typeof Ionicons.glyphMap, color: '#7C3AED',        onPress: () => navigation?.navigate('Tarefas')             },
           ].map((action) => (
-            <TouchableOpacity key={action.label} style={styles.quickAction} activeOpacity={0.75}>
+            <TouchableOpacity key={action.label} style={styles.quickAction} activeOpacity={0.75} onPress={action.onPress}>
               <View style={[styles.quickActionIcon, { backgroundColor: action.color + '18' }]}>
                 <Ionicons name={action.icon} size={22} color={action.color} />
               </View>

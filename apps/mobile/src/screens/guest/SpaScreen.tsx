@@ -8,8 +8,11 @@ import {
   StatusBar,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api, { getUserInfo } from '../../services/api';
 
 // ---------------------------------------------------------------------------
 // Constantes de cor
@@ -71,7 +74,7 @@ function formatPrice(price: number | null, freeLabel = 'Incluído'): string {
 }
 
 // ---------------------------------------------------------------------------
-// Dados mock
+// Dados mock (fallback quando API retorna vazio)
 // ---------------------------------------------------------------------------
 const SPA_TREATMENTS: Treatment[] = [
   { id: 't1', name: 'Massagem Relaxante', duration: '60 min', price: 15000, icon: 'sparkles' },
@@ -119,30 +122,15 @@ const ACTIVITIES: Activity[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Diálogo de reserva simplificado
-// ---------------------------------------------------------------------------
-function confirmBooking(name: string) {
-  Alert.alert(
-    'Confirmar Reserva',
-    `Deseja reservar "${name}"?\n\nUm membro da equipa irá confirmar a disponibilidade e entrar em contacto para agendar a data e hora.`,
-    [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Reservar',
-        onPress: () =>
-          Alert.alert(
-            'Pedido enviado!',
-            'A sua reserva foi registada. Entraremos em contacto em breve para confirmar.',
-          ),
-      },
-    ],
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Sub-componentes
 // ---------------------------------------------------------------------------
-function TreatmentCard({ treatment }: { treatment: Treatment }) {
+function TreatmentCard({
+  treatment,
+  onBook,
+}: {
+  treatment: Treatment;
+  onBook: (id: string) => void;
+}) {
   return (
     <View style={styles.treatmentCard}>
       <View style={styles.treatmentIconWrap}>
@@ -158,7 +146,7 @@ function TreatmentCard({ treatment }: { treatment: Treatment }) {
       </View>
       <TouchableOpacity
         style={styles.bookBtn}
-        onPress={() => confirmBooking(treatment.name)}
+        onPress={() => onBook(treatment.id)}
         activeOpacity={0.8}
       >
         <Text style={styles.bookBtnText}>Reservar</Text>
@@ -167,7 +155,13 @@ function TreatmentCard({ treatment }: { treatment: Treatment }) {
   );
 }
 
-function ActivityCard({ activity }: { activity: Activity }) {
+function ActivityCard({
+  activity,
+  onBook,
+}: {
+  activity: Activity;
+  onBook: (id: string) => void;
+}) {
   const isFree = activity.price === null;
   return (
     <View style={styles.activityCard}>
@@ -186,7 +180,7 @@ function ActivityCard({ activity }: { activity: Activity }) {
       </View>
       <TouchableOpacity
         style={[styles.bookBtn, isFree && styles.bookBtnFree]}
-        onPress={() => confirmBooking(activity.name)}
+        onPress={() => onBook(activity.id)}
         activeOpacity={0.8}
       >
         <Text style={[styles.bookBtnText, isFree && styles.bookBtnTextFree]}>
@@ -201,6 +195,131 @@ function ActivityCard({ activity }: { activity: Activity }) {
 // Ecrã principal
 // ---------------------------------------------------------------------------
 export default function SpaScreen() {
+  // Dados de spa via API
+  const { data: spaData, isLoading: loadingSpa } = useQuery({
+    queryKey: ['spa-services'],
+    queryFn: async () => {
+      const userInfo = await getUserInfo();
+      const resortId = userInfo?.resortId;
+      const res = await api.get(`/spa/services${resortId ? `?resortId=${resortId}` : ''}`);
+      return res.data.data ?? [];
+    },
+  });
+
+  // Dados de atividades via API
+  const { data: activitiesData, isLoading: loadingActivities } = useQuery({
+    queryKey: ['activities'],
+    queryFn: async () => {
+      const userInfo = await getUserInfo();
+      const resortId = userInfo?.resortId;
+      const res = await api.get(
+        `/activities${resortId ? `?resortId=${resortId}&available=true` : '?available=true'}`
+      );
+      return res.data.data ?? [];
+    },
+  });
+
+  // Mutação para reserva de spa
+  const bookSpaMutation = useMutation({
+    mutationFn: async ({ serviceId, notes }: { serviceId: string; notes?: string }) => {
+      const res = await api.post('/spa/bookings', { serviceId, notes });
+      return res.data;
+    },
+    onSuccess: () =>
+      Alert.alert(
+        'Reserva confirmada',
+        'A sua reserva de spa foi confirmada. Receberá uma confirmação.'
+      ),
+    onError: () =>
+      Alert.alert('Erro', 'Não foi possível confirmar a reserva. Tente novamente.'),
+  });
+
+  // Mutação para reserva de atividade
+  const bookActivityMutation = useMutation({
+    mutationFn: async ({
+      activityId,
+      participants,
+    }: {
+      activityId: string;
+      participants: number;
+    }) => {
+      const res = await api.post(`/activities/${activityId}/bookings`, { participants });
+      return res.data;
+    },
+    onSuccess: () => Alert.alert('Atividade reservada', 'A sua reserva foi confirmada!'),
+    onError: () =>
+      Alert.alert('Erro', 'Não foi possível reservar. Tente novamente.'),
+  });
+
+  // Funções de confirmação com diálogo
+  function handleBookSpa(serviceId: string) {
+    const treatment = treatments.find((t) => t.id === serviceId);
+    const name = treatment?.name ?? 'tratamento';
+    Alert.alert(
+      'Confirmar Reserva',
+      `Deseja reservar "${name}"?\n\nUm membro da equipa irá confirmar a disponibilidade e entrar em contacto para agendar a data e hora.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Reservar',
+          onPress: () => bookSpaMutation.mutate({ serviceId }),
+        },
+      ]
+    );
+  }
+
+  function handleBookActivity(activityId: string) {
+    const activity = activities.find((a) => a.id === activityId);
+    const name = activity?.name ?? 'atividade';
+    Alert.alert(
+      'Confirmar Reserva',
+      `Deseja reservar "${name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: activity?.price === null ? 'Aderir' : 'Reservar',
+          onPress: () => bookActivityMutation.mutate({ activityId, participants: 1 }),
+        },
+      ]
+    );
+  }
+
+  // Combinar dados da API com fallback para mocks
+  const treatments: Treatment[] = (
+    spaData && spaData.length > 0 ? spaData : SPA_TREATMENTS
+  ).map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    duration: s.duration != null ? `${s.duration} min` : (s.duration ?? '60 min'),
+    price: Number(s.price ?? s.pricePerSession ?? 0),
+    icon: (s.icon as keyof typeof Ionicons.glyphMap) ?? 'sparkles',
+  }));
+
+  const activities: Activity[] = (
+    activitiesData && activitiesData.length > 0 ? activitiesData : ACTIVITIES
+  ).map((a: any) => ({
+    id: a.id,
+    name: a.name,
+    duration: a.duration != null ? `${a.duration} min` : (a.duration ?? '60 min'),
+    price:
+      Number(a.price ?? a.pricePerPerson ?? 0) === 0 && (a.price ?? a.pricePerPerson) == null
+        ? null
+        : Number(a.price ?? a.pricePerPerson ?? 0),
+    icon: (a.icon as keyof typeof Ionicons.glyphMap) ?? 'bicycle',
+    color: a.color ?? COLORS.primary,
+    bgColor: a.bgColor ?? COLORS.primaryLight,
+  }));
+
+  // Estado de carregamento inicial
+  if (loadingSpa && loadingActivities) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={{ marginTop: 8, color: COLORS.textSecondary }}>A carregar serviços...</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryDark} />
@@ -228,8 +347,8 @@ export default function SpaScreen() {
         </View>
 
         <View style={styles.cardList}>
-          {SPA_TREATMENTS.map((t) => (
-            <TreatmentCard key={t.id} treatment={t} />
+          {treatments.map((t) => (
+            <TreatmentCard key={t.id} treatment={t} onBook={handleBookSpa} />
           ))}
         </View>
 
@@ -248,8 +367,8 @@ export default function SpaScreen() {
         </View>
 
         <View style={styles.cardList}>
-          {ACTIVITIES.map((a) => (
-            <ActivityCard key={a.id} activity={a} />
+          {activities.map((a) => (
+            <ActivityCard key={a.id} activity={a} onBook={handleBookActivity} />
           ))}
         </View>
 

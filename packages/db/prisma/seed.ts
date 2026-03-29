@@ -641,6 +641,33 @@ async function main() {
   // Série TREINO
   await prisma.invoiceSeries.create({ data: { tenantId: seasoulTenant.id, documentType: 'FT', series: 'TREINO', prefix: 'FT-TREINO', lastNumber: 0, isTraining: true } })
 
+  // ── SÉRIES DE FATURAÇÃO AGT ───────────────────────────────────────────────
+  console.log('Criar séries de faturação por resort...')
+
+  const invoiceSeriesData = [
+    // Cabo Ledo — série principal
+    { tenantId: seasoulTenant.id, resortId: caboLedo.id, documentType: 'FT'  as const, series: 'A', prefix: 'FT A',       lastNumber: 0 },
+    { tenantId: seasoulTenant.id, resortId: caboLedo.id, documentType: 'FR'  as const, series: 'A', prefix: 'FR A',       lastNumber: 0 },
+    { tenantId: seasoulTenant.id, resortId: caboLedo.id, documentType: 'NC'  as const, series: 'A', prefix: 'NC A',       lastNumber: 0 },
+    { tenantId: seasoulTenant.id, resortId: caboLedo.id, documentType: 'ORC' as const, series: 'A', prefix: 'ORC A',      lastNumber: 0 },
+    { tenantId: seasoulTenant.id, resortId: caboLedo.id, documentType: 'FT'  as const, series: 'T', prefix: 'FT-TREINO T',lastNumber: 0, isTraining: true },
+    // Sangano — série principal
+    { tenantId: seasoulTenant.id, resortId: sangano.id,  documentType: 'FT'  as const, series: 'B', prefix: 'FT B',       lastNumber: 0 },
+    { tenantId: seasoulTenant.id, resortId: sangano.id,  documentType: 'FR'  as const, series: 'B', prefix: 'FR B',       lastNumber: 0 },
+    { tenantId: seasoulTenant.id, resortId: sangano.id,  documentType: 'NC'  as const, series: 'B', prefix: 'NC B',       lastNumber: 0 },
+    { tenantId: seasoulTenant.id, resortId: sangano.id,  documentType: 'ORC' as const, series: 'B', prefix: 'ORC B',      lastNumber: 0 },
+    { tenantId: seasoulTenant.id, resortId: sangano.id,  documentType: 'FT'  as const, series: 'U', prefix: 'FT-TREINO U',lastNumber: 0, isTraining: true },
+  ]
+
+  for (const s of invoiceSeriesData) {
+    await prisma.invoiceSeries.upsert({
+      where: { tenantId_documentType_series: { tenantId: s.tenantId, documentType: s.documentType, series: s.series } },
+      update: {},
+      create: s,
+    })
+  }
+  console.log(`✓ ${invoiceSeriesData.length} séries de faturação por resort criadas`)
+
   // Fatura alojamento — Roberto Almeida (4 noites)
   const inv1 = await prisma.invoice.create({ data: { tenantId: seasoulTenant.id, seriesId: ftSeries.id, documentType: 'FT', number: 1, fullNumber: 'FT A/00001', clientName: 'Roberto Almeida', subtotal: new Decimal('100000'), taxAmount: new Decimal('14000'), totalAmount: new Decimal('114000'), currency: 'AOA', paymentMethod: 'CARD' } })
   await prisma.invoiceItem.create({ data: { invoiceId: inv1.id, description: 'Alojamento — Quarto 101 (4 noites × 25.000 KZ)', quantity: new Decimal('4'), unitPrice: new Decimal('25000'), taxRate: new Decimal('14'), discount: new Decimal('0'), total: new Decimal('100000') } })
@@ -695,7 +722,7 @@ async function main() {
   console.log(`   Eventos:        2 eventos`)
   console.log(`   Retalho:        2 lojas, 4 vendas`)
   console.log(`   Contabilidade:  8 lançamentos`)
-  console.log(`   Faturação:      4 séries, 4 faturas + 1 NC`)
+  console.log(`   Faturação:      4 séries globais + 10 séries por resort, 4 faturas + 1 NC`)
   console.log('═══════════════════════════════════════')
   console.log('')
   console.log('Credenciais:')

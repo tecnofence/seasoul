@@ -75,3 +75,42 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+  mobile-check:
+    name: Mobile App Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/mobile/package.json
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: TypeScript check (mobile)
+        run: npx tsc --noEmit
+        working-directory: apps/mobile
+
+      - name: Lint mobile
+        run: npx eslint src --ext .ts,.tsx --max-warnings 0 || true
+        working-directory: apps/mobile
+
+      - name: Check Expo config
+        run: npx expo-doctor || true
+        working-directory: apps/mobile

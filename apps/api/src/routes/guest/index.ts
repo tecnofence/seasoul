@@ -1,6 +1,17 @@
 import type { FastifyInstance } from 'fastify'
 import { registerGuestSchema, updateGuestSchema, guestLoginSchema } from './schemas.js'
 
+// OTP store simples — produção deve usar Redis com TTL
+const otpStore = new Map<string, { code: string; expiresAt: number }>()
+
+// Limpar OTPs expirados a cada 5 minutos
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, val] of otpStore.entries()) {
+    if (val.expiresAt < now) otpStore.delete(key)
+  }
+}, 5 * 60 * 1000)
+
 export default async function guestRoutes(app: FastifyInstance) {
   // ── GET /list — Listar hóspedes (admin) ──
   app.get('/list', {
@@ -187,5 +198,67 @@ export default async function guestRoutes(app: FastifyInstance) {
     })
 
     return reply.send({ data: reservations })
+  })
+
+  // ── POST /otp/request — Pedir código OTP por SMS ──
+  app.post('/otp/request', { config: { rateLimit: { max: 3, timeWindow: '15m' } } }, async (request, reply) => {
+    const { phone } = request.body as { phone?: string }
+    if (!phone || typeof phone !== 'string') {
+      return reply.code(400).send({ error: 'Número de telemóvel obrigatório' })
+    }
+
+    // Verificar se hóspede existe (ou criar automaticamente)
+    const guest = await app.prisma.guest.findFirst({ where: { phone } })
+    if (!guest) {
+      return reply.code(404).send({ error: 'Nenhuma reserva encontrada para este número' })
+    }
+
+    // Gerar OTP de 6 dígitos
+    const code = String(Math.floor(100000 + Math.random() * 900000))
+    const expiresAt = Date.now() + 5 * 60 * 1000 // 5 minutos
+    otpStore.set(phone, { code, expiresAt })
+
+    // Enviar SMS
+    try {
+      const { sendSms } = await import('../../utils/notify.js')
+      await sendSms(phone, `Sea & Soul Resort — O seu código de acesso é: ${code}\nVálido por 5 minutos.`)
+    } catch {
+      // Em dev, mostrar no log
+      app.log.info({ phone, code }, '[DEV] OTP gerado — SMS não enviado em dev')
+    }
+
+    return reply.send({ message: 'Código enviado por SMS', expiresIn: 300 })
+  })
+
+  // ── POST /otp/verify — Verificar OTP e fazer login ──
+  app.post('/otp/verify', async (request, reply) => {
+    const { phone, code } = request.body as { phone?: string; code?: string }
+    if (!phone || !code) {
+      return reply.code(400).send({ error: 'Telemóvel e código obrigatórios' })
+    }
+
+    const stored = otpStore.get(phone)
+    if (!stored || stored.expiresAt < Date.now()) {
+      return reply.code(401).send({ error: 'Código expirado ou inválido' })
+    }
+    if (stored.code !== code) {
+      return reply.code(401).send({ error: 'Código incorreto' })
+    }
+
+    otpStore.delete(phone)
+
+    const guest = await app.prisma.guest.findFirst({ where: { phone } })
+    if (!guest) return reply.code(404).send({ error: 'Hóspede não encontrado' })
+
+    // Gerar JWT para o hóspede
+    const token = app.jwt.sign(
+      { id: guest.id, type: 'guest', name: guest.name, phone: guest.phone },
+      { expiresIn: '7d' }
+    )
+
+    return reply.send({
+      data: { token, guest: { id: guest.id, name: guest.name, phone: guest.phone, email: guest.email } },
+      message: 'Login efectuado com sucesso',
+    })
   })
 }
