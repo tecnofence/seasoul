@@ -1,3 +1,8 @@
+/**
+ * ENGERIS ONE — API Server
+ * Copyright (c) 2025 ENGERIS — Engenharia e Sistemas, Lda. Todos os direitos reservados.
+ * Software proprietário. Consultar ficheiro LICENSE na raiz do repositório.
+ */
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'

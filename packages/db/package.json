@@ -1,6 +1,9 @@
 {
   "name": "@seasoul/db",
   "version": "1.0.0",
+  "private": true,
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "author": "ENGERIS — Engenharia e Sistemas, Lda.",
   "scripts": {
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",

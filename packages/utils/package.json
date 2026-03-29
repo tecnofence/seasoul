@@ -1,6 +1,9 @@
 {
   "name": "@seasoul/utils",
   "version": "1.0.0",
+  "private": true,
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "author": "ENGERIS — Engenharia e Sistemas, Lda.",
   "main": "./src/index.ts",
   "scripts": {
     "test": "vitest run",

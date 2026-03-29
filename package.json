@@ -2,6 +2,8 @@
   "name": "engeris-one",
   "version": "2.0.0",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "ENGERIS — Engenharia e Sistemas, Lda. <geral@engeris.co.ao>",
   "description": "ENGERIS ONE — Plataforma ERP Modular Multi-Indústria | ENGERIS",
   "scripts": {
     "dev": "turbo run dev",

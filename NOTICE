@@ -1,0 +1,24 @@
+ENGERIS ONE
+Copyright (c) 2025 ENGERIS — Engenharia e Sistemas, Lda.
+
+Este produto inclui software de terceiros sob licenças de código aberto.
+Para informação completa sobre as dependências e respectivas licenças, consultar:
+  node_modules/.pnpm — licenças individuais de cada dependência
+
+Dependências principais e respectivas licenças:
+  Next.js        — MIT License (Vercel, Inc.)
+  Fastify        — MIT License (Fastify Team)
+  React          — MIT License (Meta Platforms, Inc.)
+  React Native   — MIT License (Meta Platforms, Inc.)
+  Prisma         — Apache 2.0 (Prisma Data, Inc.)
+  PostgreSQL     — PostgreSQL License
+  Redis          — RSALv2 / SSPL (Redis Ltd.)
+  BullMQ         — MIT License (Taskforce.sh Inc.)
+  jose           — MIT License (Filip Skokan)
+  Tailwind CSS   — MIT License (Tailwind Labs, Inc.)
+  Expo           — MIT License (Expo, Inc.)
+  Zod            — MIT License (Colin McDonnell)
+  Axios          — MIT License (Matt Zabriskie)
+
+O uso deste produto está sujeito aos termos da Licença Proprietária ENGERIS
+constante no ficheiro LICENSE.

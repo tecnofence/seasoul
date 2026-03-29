@@ -1,6 +1,9 @@
 {
   "name": "@seasoul/web",
   "version": "1.0.0",
+  "private": true,
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "author": "ENGERIS — Engenharia e Sistemas, Lda.",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
