@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { sendResendEmail } from './resend.js'
 
 // ── SMS via Africa's Talking ──────────────────────────────────────────────────
 
@@ -31,32 +32,28 @@ export async function sendSms(to: string, message: string): Promise<void> {
   )
 }
 
-// ── Email via Resend ──────────────────────────────────────────────────────────
+// ── Email via Resend (por tenant) ─────────────────────────────────────────────
+// Se o tenant tiver emailFrom configurado, usa o subdomínio do tenant.
+// Caso contrário, usa o domínio global da plataforma (engerisone.com).
+
+const GLOBAL_FROM      = process.env.EMAIL_FROM      ?? 'noreply@engerisone.com'
+const GLOBAL_FROM_NAME = process.env.EMAIL_FROM_NAME ?? 'ENGERIS ONE'
 
 export async function sendEmail(
   to: string,
   subject: string,
-  html: string
+  html: string,
+  tenant?: { emailFrom?: string | null; emailFromName?: string | null }
 ): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY
-  const fromName = process.env.EMAIL_FROM_NAME ?? 'ENGERIS ONE'
-  const fromAddr = process.env.EMAIL_FROM ?? 'noreply@engeris.ao'
+  const fromAddr = tenant?.emailFrom ?? GLOBAL_FROM
+  const fromName = tenant?.emailFromName ?? GLOBAL_FROM_NAME
 
-  if (!apiKey || apiKey === 'CHANGE_ME_RESEND_API_KEY') {
-    console.warn('[EMAIL] Resend não configurado — email ignorado')
-    return
-  }
-
-  await axios.post(
-    'https://api.resend.com/emails',
-    { from: `${fromName} <${fromAddr}>`, to, subject, html },
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  )
+  await sendResendEmail({
+    from:    `${fromName} <${fromAddr}>`,
+    to,
+    subject,
+    html,
+  })
 }
 
 // ── Push via Expo ─────────────────────────────────────────────────────────────

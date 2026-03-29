@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import crypto from 'crypto'
+import { createTenantEmailDomain, checkDomainStatus, deleteTenantEmailDomain } from '../../utils/resend.js'
 
 // ── GESTÃO DE TENANTS & MÓDULOS ──────────────────
 // CRUD de tenants, ativação de módulos, gestão de filiais
@@ -146,6 +147,22 @@ export default async function tenantsRoutes(app: FastifyInstance) {
     }
     const body = parsed.data
 
+    // Criar domínio de email automático no Resend
+    let emailFrom: string | undefined
+    let emailFromName: string | undefined
+    let resendDomainId: string | undefined
+    let emailDomainStatus = 'pending'
+
+    try {
+      const emailDomain = await createTenantEmailDomain(body.slug)
+      emailFrom        = emailDomain.emailFrom
+      resendDomainId   = emailDomain.domainId
+      emailDomainStatus = emailDomain.records.length === 0 ? 'verified' : 'pending' // sandbox sem records = verificado
+      emailFromName    = body.name
+    } catch (err) {
+      app.log.warn({ err, slug: body.slug }, 'Falha ao criar domínio Resend — tenant criado sem email configurado')
+    }
+
     const tenant = await app.prisma.tenant.create({
       data: {
         name: body.name,
@@ -154,6 +171,10 @@ export default async function tenantsRoutes(app: FastifyInstance) {
         plan: body.plan as any,
         maxUsers: body.maxUsers,
         maxBranches: body.maxBranches,
+        emailFrom,
+        emailFromName,
+        resendDomainId,
+        emailDomainStatus,
         modules: {
           create: [
             { moduleId: 'core' }, // Core é sempre incluído
@@ -172,7 +193,7 @@ export default async function tenantsRoutes(app: FastifyInstance) {
         action: 'CREATE',
         entity: 'Tenant',
         entityId: tenant.id,
-        after: { name: tenant.name, plan: tenant.plan },
+        after: { name: tenant.name, plan: tenant.plan, emailFrom },
       },
     })
 
@@ -198,6 +219,37 @@ export default async function tenantsRoutes(app: FastifyInstance) {
     })
 
     return reply.send({ data: tenant })
+  })
+
+  // Verificar estado do domínio de email de um tenant
+  app.post<{ Params: { id: string } }>('/:id/email/verify', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { role: string }
+    if (user.role !== 'SUPER_ADMIN') {
+      return reply.status(403).send({ error: 'Sem permissão' })
+    }
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { id: request.params.id },
+      select: { resendDomainId: true, emailFrom: true, emailDomainStatus: true },
+    })
+
+    if (!tenant) return reply.status(404).send({ error: 'Tenant não encontrado' })
+    if (!tenant.resendDomainId) return reply.status(400).send({ error: 'Tenant sem domínio configurado' })
+
+    const status = await checkDomainStatus(tenant.resendDomainId)
+
+    await app.prisma.tenant.update({
+      where: { id: request.params.id },
+      data: { emailDomainStatus: status },
+    })
+
+    return reply.send({
+      data: {
+        emailFrom: tenant.emailFrom,
+        status,
+        verified: status === 'verified',
+      },
+    })
   })
 
   // Ativar módulo num tenant
