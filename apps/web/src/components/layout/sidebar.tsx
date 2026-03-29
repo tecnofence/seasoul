@@ -156,16 +156,31 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     onClose?.()
   }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fechar sidebar com tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        onClose?.()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open, onClose])
+
   return (
     <>
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
       <aside
+        role="dialog"
+        aria-modal={open ? 'true' : undefined}
+        aria-label="Menu de navegação"
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-white transition-transform duration-200 lg:static lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
@@ -175,6 +190,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <h1 className="text-xl font-bold text-primary">ENGERIS ONE</h1>
           <button
             onClick={onClose}
+            aria-label="Fechar menu de navegação"
             className="rounded-md p-1 text-gray-400 hover:text-gray-600 lg:hidden"
           >
             <X className="h-5 w-5" />
@@ -187,7 +203,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
         )}
 
-        <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-6">
+        <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-6" aria-label="Navegação principal">
           {categories.map((category) => {
             const items = visibleItems.filter((item) => item.category === category.id)
             if (items.length === 0) return null
@@ -203,6 +219,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={isActive ? 'page' : undefined}
                       className={cn(
                         'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
                         isActive
@@ -210,7 +227,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
                       )}
                     >
-                      <item.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : 'text-gray-400')} />
+                      <item.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : 'text-gray-400')} aria-hidden="true" />
                       {item.label}
                     </Link>
                   )
@@ -225,7 +242,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             onClick={logout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 hover:text-red-600"
           >
-            <LogOut className="h-4 w-4 shrink-0" />
+            <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
             Terminar Sessão
           </button>
         </div>

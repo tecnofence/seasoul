@@ -4,13 +4,16 @@ import { cn } from '@/lib/utils'
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline'
   size?: 'sm' | 'md' | 'lg' | 'icon'
+  loading?: boolean
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', ...props }, ref) => {
+  ({ className, variant = 'primary', size = 'md', loading, children, ...props }, ref) => {
     return (
       <button
         ref={ref}
+        disabled={props.disabled || loading}
+        aria-busy={loading ? true : undefined}
         className={cn(
           'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:pointer-events-none disabled:opacity-50',
           {
@@ -21,15 +24,23 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             'border border-gray-200 bg-white hover:bg-gray-50 text-gray-700': variant === 'outline',
           },
           {
-            'h-8 px-3 text-sm': size === 'sm',
+            'h-9 min-w-[36px] px-3 text-sm': size === 'sm',
             'h-10 px-4 text-sm': size === 'md',
             'h-12 px-6 text-base': size === 'lg',
-            'h-9 w-9 p-0': size === 'icon',
+            'h-10 w-10 p-0': size === 'icon',
           },
           className,
         )}
         {...props}
-      />
+      >
+        {loading && (
+          <span
+            className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+            aria-hidden="true"
+          />
+        )}
+        {children}
+      </button>
     )
   },
 )

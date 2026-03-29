@@ -8,9 +8,10 @@ import { LanguageSwitcher } from '@/components/language-switcher'
 
 interface HeaderProps {
   onMenuClick?: () => void
+  sidebarOpen?: boolean
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick, sidebarOpen }: HeaderProps) {
   const [user, setUser] = useState<AuthUser | null>(null)
 
   useEffect(() => {
@@ -22,9 +23,11 @@ export function Header({ onMenuClick }: HeaderProps) {
       <button
         onClick={onMenuClick}
         aria-label="Abrir menu"
+        aria-expanded={sidebarOpen}
+        aria-controls="sidebar-nav"
         className="rounded-md p-2 text-gray-500 hover:bg-gray-100 lg:hidden"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
 
       {/* Espaçador desktop */}
@@ -35,7 +38,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         <NotificationBell />
         <div className="flex items-center gap-2 text-sm">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <User className="h-4 w-4" />
+            <User className="h-4 w-4" aria-hidden="true" />
           </div>
           <span className="hidden font-medium text-gray-700 sm:inline">{user?.name ?? '...'}</span>
         </div>

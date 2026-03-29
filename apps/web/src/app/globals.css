@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: system-ui, -apple-system, sans-serif;
+@layer base {
+  /* Focus visible global — teclado e leitores de ecrã */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+
+  /* Remove outline para utilizadores de rato (mantém para teclado) */
+  :focus:not(:focus-visible) {
+    @apply outline-none;
+  }
+
+  /* Scroll suave */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Fonte base */
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    @apply overflow-x-hidden;
+  }
+
+  /* Tabelas — melhor legibilidade */
+  th {
+    @apply text-left;
+  }
+}
+
+@layer components {
+  /* Classe utilitária para elementos visíveis apenas a leitores de ecrã */
+  .sr-interactive {
+    @apply sr-only focus:not-sr-only focus:relative focus:block;
+  }
 }
