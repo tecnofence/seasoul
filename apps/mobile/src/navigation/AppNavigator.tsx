@@ -14,6 +14,8 @@ import RoomServiceScreen from '../screens/guest/RoomServiceScreen';
 import ActivitiesScreen from '../screens/guest/ActivitiesScreen';
 import ChatScreen from '../screens/guest/ChatScreen';
 import GuestProfileScreen from '../screens/guest/GuestProfileScreen';
+import SpaScreen from '../screens/guest/SpaScreen';
+import GuestNotificationsScreen from '../screens/guest/NotificationsScreen';
 
 // Staff screens
 import HotelDashboardScreen from '../screens/staff/HotelDashboardScreen';
@@ -40,6 +42,12 @@ export type GuestTabParamList = {
   Perfil: undefined;
 };
 
+export type GuestStackParamList = {
+  GuestTabs: undefined;
+  Spa: undefined;
+  Notificacoes: undefined;
+};
+
 export type StaffTabParamList = {
   Painel: undefined;
   Presenca: undefined;
@@ -58,6 +66,7 @@ export type PainelStackParamList = {
 
 const Stack       = createStackNavigator<RootStackParamList>();
 const GuestTab    = createBottomTabNavigator<GuestTabParamList>();
+const GuestStack  = createStackNavigator<GuestStackParamList>();
 const StaffTab    = createBottomTabNavigator<StaffTabParamList>();
 const PainelStack = createStackNavigator<PainelStackParamList>();
 
@@ -128,9 +137,37 @@ function PainelNavigator({ userInfo }: { userInfo: UserInfo }) {
   );
 }
 
+// ─── Stack Navigator — Hóspede (inclui tabs + ecrãs modais) ─────────────────
+
+function GuestNavigator({ onLogout }: { onLogout: () => void }) {
+  return (
+    <GuestStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#0A7EA4', elevation: 0, shadowOpacity: 0 },
+        headerTitleStyle: { fontWeight: '700', fontSize: 18, color: '#FFFFFF' },
+        headerTintColor: '#FFFFFF',
+      }}
+    >
+      <GuestStack.Screen name="GuestTabs" options={{ headerShown: false }}>
+        {() => <GuestTabsInner onLogout={onLogout} />}
+      </GuestStack.Screen>
+      <GuestStack.Screen
+        name="Spa"
+        component={SpaScreen}
+        options={{ headerTitle: 'Spa & Bem-estar' }}
+      />
+      <GuestStack.Screen
+        name="Notificacoes"
+        component={GuestNotificationsScreen}
+        options={{ headerTitle: 'Notificações' }}
+      />
+    </GuestStack.Navigator>
+  );
+}
+
 // ─── Tab Navigator — Hóspede ──────────────────────────────────────────────────
 
-function GuestTabs({ onLogout }: { onLogout: () => void }) {
+function GuestTabsInner({ onLogout }: { onLogout: () => void }) {
   return (
     <GuestTab.Navigator
       screenOptions={{
@@ -354,7 +391,7 @@ export default function AppNavigator() {
       {isAuthenticated ? (
         isGuest ? (
           <Stack.Screen name="Main">
-            {() => <GuestTabs onLogout={handleLogout} />}
+            {() => <GuestNavigator onLogout={handleLogout} />}
           </Stack.Screen>
         ) : (
           <Stack.Screen name="Main">

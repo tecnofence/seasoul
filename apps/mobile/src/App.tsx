@@ -7,9 +7,9 @@ import { useRef } from 'react';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './navigation/AppNavigator';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useNotifications } from './hooks/useNotifications';
-import { parseDeepLink } from './utils/deep-link';
-import { DEEP_LINK_SCHEME } from './utils/deep-link';
+import { parseDeepLink, DEEP_LINK_SCHEME } from './utils/deep-link';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,8 +77,10 @@ function AppWithNotifications() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppWithNotifications />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AppWithNotifications />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
