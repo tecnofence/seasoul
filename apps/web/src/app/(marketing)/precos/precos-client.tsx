@@ -21,13 +21,13 @@ interface FeatureCategory {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-// Preços em Kwanzas (AOA) — câmbio 1 USD = 125 Kz
+// Preços em Kwanzas (AOA) — câmbio 1 USD = 1.300 Kz
 const plans = [
   {
     id: 'starter',
     name: 'Starter',
-    monthly: 18_625,
-    annual: 14_875,
+    monthly: 193_700,
+    annual: 154_700,
     desc: 'Pensões e pequenos hotéis',
     highlight: false,
     badge: null,
@@ -44,8 +44,8 @@ const plans = [
   {
     id: 'resort',
     name: 'Resort',
-    monthly: 49_875,
-    annual: 39_875,
+    monthly: 518_700,
+    annual: 414_700,
     desc: 'Hotéis e resorts',
     highlight: true,
     badge: 'Mais Popular',
@@ -63,8 +63,8 @@ const plans = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    monthly: 124_875,
-    annual: 99_875,
+    monthly: 1_298_700,
+    annual: 1_038_700,
     desc: 'Grupos hoteleiros',
     highlight: false,
     badge: null,
@@ -292,7 +292,7 @@ export default function PrecosClient() {
           </div>
           {annual && (
             <p className="mt-3 text-sm text-blue-300">
-              Poupa até 300.000 Kz/ano com faturação anual.
+              Poupa até 3.120.000 Kz/ano com faturação anual.
             </p>
           )}
         </div>

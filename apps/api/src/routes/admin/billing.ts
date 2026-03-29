@@ -1,12 +1,12 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-// Preços em AOA — câmbio 1 USD = 125 Kz (Starter=$149, Resort=$399, Enterprise=$999)
+// Preços em AOA — câmbio 1 USD = 1.300 Kz (Starter=$149, Resort=$399, Enterprise=$999)
 const PLAN_PRICES: Record<string, number> = {
-  STARTER:      18_625,
-  PROFESSIONAL: 49_875,
-  ENTERPRISE:   124_875,
-  CUSTOM:       250_000,
+  STARTER:      193_700,
+  PROFESSIONAL: 518_700,
+  ENTERPRISE:   1_298_700,
+  CUSTOM:       2_600_000,
 }
 
 const subscriptionsQuerySchema = z.object({
@@ -34,24 +34,24 @@ function buildMockRevenueGrowth(): { month: string; revenue: number }[] {
 }
 
 const MOCK_OVERVIEW = {
-  mrr: 843_375,
-  arr: 10_120_500,
+  mrr: 8_768_100,
+  arr: 105_217_200,
   activeSubscriptions: 12,
   planBreakdown: [
-    { plan: 'STARTER',      count: 4, revenue:  74_500 },
-    { plan: 'PROFESSIONAL', count: 5, revenue: 249_375 },
-    { plan: 'ENTERPRISE',   count: 2, revenue: 249_750 },
-    { plan: 'CUSTOM',       count: 1, revenue: 250_000 },
+    { plan: 'STARTER',      count: 4, revenue:   774_800 },
+    { plan: 'PROFESSIONAL', count: 5, revenue: 2_593_500 },
+    { plan: 'ENTERPRISE',   count: 2, revenue: 2_597_400 },
+    { plan: 'CUSTOM',       count: 1, revenue: 2_600_000 },
   ],
   revenueGrowth: buildMockRevenueGrowth(),
 }
 
 const MOCK_SUBSCRIPTIONS = [
-  { id: '1', tenantName: 'Engeris Construções', plan: 'ENTERPRISE',   status: 'active',    monthlyValue: 124_875, createdAt: '2024-01-15T00:00:00.000Z', expiresAt: '2026-01-15T00:00:00.000Z' },
-  { id: '2', tenantName: 'Hotel Marítimo',       plan: 'PROFESSIONAL', status: 'active',    monthlyValue:  49_875, createdAt: '2024-03-01T00:00:00.000Z', expiresAt: '2026-03-01T00:00:00.000Z' },
-  { id: '3', tenantName: 'Clínica Vida',          plan: 'STARTER',      status: 'suspended', monthlyValue:  18_625, createdAt: '2024-05-20T00:00:00.000Z', expiresAt: null },
-  { id: '4', tenantName: 'Construtora Atlas',     plan: 'PROFESSIONAL', status: 'active',    monthlyValue:  49_875, createdAt: '2024-06-10T00:00:00.000Z', expiresAt: '2026-06-10T00:00:00.000Z' },
-  { id: '5', tenantName: 'Resort Baia Azul',      plan: 'CUSTOM',       status: 'active',    monthlyValue: 250_000, createdAt: '2024-07-01T00:00:00.000Z', expiresAt: '2026-07-01T00:00:00.000Z' },
+  { id: '1', tenantName: 'Engeris Construções', plan: 'ENTERPRISE',   status: 'active',    monthlyValue: 1_298_700, createdAt: '2024-01-15T00:00:00.000Z', expiresAt: '2026-01-15T00:00:00.000Z' },
+  { id: '2', tenantName: 'Hotel Marítimo',       plan: 'PROFESSIONAL', status: 'active',    monthlyValue:   518_700, createdAt: '2024-03-01T00:00:00.000Z', expiresAt: '2026-03-01T00:00:00.000Z' },
+  { id: '3', tenantName: 'Clínica Vida',          plan: 'STARTER',      status: 'suspended', monthlyValue:   193_700, createdAt: '2024-05-20T00:00:00.000Z', expiresAt: null },
+  { id: '4', tenantName: 'Construtora Atlas',     plan: 'PROFESSIONAL', status: 'active',    monthlyValue:   518_700, createdAt: '2024-06-10T00:00:00.000Z', expiresAt: '2026-06-10T00:00:00.000Z' },
+  { id: '5', tenantName: 'Resort Baia Azul',      plan: 'CUSTOM',       status: 'active',    monthlyValue: 2_600_000, createdAt: '2024-07-01T00:00:00.000Z', expiresAt: '2026-07-01T00:00:00.000Z' },
 ]
 
 export default async function adminBillingRoutes(app: FastifyInstance) {
