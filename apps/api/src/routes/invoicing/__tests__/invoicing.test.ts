@@ -2,6 +2,17 @@ import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vites
 import Fastify, { FastifyInstance } from 'fastify'
 import invoicingRoutes from '../index.js'
 
+// Mock agt-sign: evita i/o de chaves RSA e dynamic import de 'jose' (falha em Vitest/Vite)
+// IMPORTANTE: não usar vi.fn() dentro do factory — vi ainda não está inicializado
+vi.mock('../../../utils/agt-sign.js', () => ({
+  signInvoice:         () => 'mock-rsa-sha1-signature',
+  getSignatureDisplay: () => 'm-o-c-k',
+  signDocumentJWS:     async () => 'eyJhbGciOiJSUzI1NiJ9.mockdoc.DEV_SIG',
+  signSoftwareJWS:     async () => 'eyJhbGciOiJSUzI1NiJ9.mocksw.DEV_SIG',
+  generateEfaturaKeyPair: async () => ({ privateKey: '', publicKey: '' }),
+}))
+
+
 // ── Mock Prisma ──────────────────────────────────
 const mockPrisma: any = {
   invoice: {
@@ -233,9 +244,12 @@ describe('Invoicing API — /v1/invoicing', () => {
         subtotal: 100000,
         taxAmount: 14000,
         totalAmount: 114000,
+        agtPreviousHash: null,
+        createdAt: new Date('2026-01-15T10:00:00Z'),
         items: [{ description: 'Estadia Suite', quantity: 2, unitPrice: 50000 }],
       }
       mockPrisma.invoice.create.mockResolvedValue(createdInvoice)
+      mockPrisma.invoice.update.mockResolvedValue(createdInvoice)
       mockPrisma.auditLog.create.mockResolvedValue({})
 
       const res = await app.inject({
@@ -270,9 +284,12 @@ describe('Invoicing API — /v1/invoicing', () => {
         isTraining: true,
         clientName: 'ENGERIS SA',
         totalAmount: 114000,
+        agtPreviousHash: null,
+        createdAt: new Date('2026-01-15T10:00:00Z'),
         items: [],
       }
       mockPrisma.invoice.create.mockResolvedValue(createdInvoice)
+      mockPrisma.invoice.update.mockResolvedValue(createdInvoice)
       mockPrisma.auditLog.create.mockResolvedValue({})
 
       const res = await app.inject({

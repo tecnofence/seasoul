@@ -182,7 +182,11 @@ describe('Locks API — /v1/locks', () => {
   // ── DELETE /pin/:reservationId — Revoke PIN ──
 
   it('DELETE /pin/:reservationId — should revoke PIN (200)', async () => {
-    mockPrisma.reservation.findUnique.mockResolvedValue({ id: 'cm1234567890abcdefghijklm' })
+    mockPrisma.reservation.findUnique.mockResolvedValue({
+      id: 'cm1234567890abcdefghijklm',
+      seamAccessCodeId: null,
+      room: { seamDeviceId: null },
+    })
     mockPrisma.reservation.update.mockResolvedValue({ id: 'cm1234567890abcdefghijklm', accessPinEncrypted: null })
 
     const res = await app.inject({
@@ -194,7 +198,7 @@ describe('Locks API — /v1/locks', () => {
     expect(res.json()).toHaveProperty('message')
     expect(mockPrisma.reservation.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { accessPinEncrypted: null, pinValidFrom: null, pinValidUntil: null },
+        data: { accessPinEncrypted: null, pinValidFrom: null, pinValidUntil: null, seamAccessCodeId: null },
       }),
     )
   })
