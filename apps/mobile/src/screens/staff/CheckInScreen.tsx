@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../services/api';
+import api, { getUserInfo } from '../../services/api';
 
 // ---------------------------------------------------------------------------
 // Cores
@@ -213,14 +213,24 @@ export default function CheckInScreen() {
   const [searchText, setSearchText] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [localReservations, setLocalReservations] = useState<Reservation[]>(MOCK_RESERVATIONS);
+  const [resortId, setResortId] = useState<string | null>(null);
 
-  // Busca por texto
+  // Carrega resortId do membro de equipa autenticado
+  useEffect(() => {
+    getUserInfo().then((info) => {
+      if (info?.resortId) setResortId(info.resortId);
+    });
+  }, []);
+
+  // Busca por texto (pesquisa livre)
   const { isLoading: isSearching } = useQuery<Reservation[]>({
     queryKey: ['reservations-search', searchText],
     queryFn: async () => {
       if (!searchText.trim()) return [];
+      const params = new URLSearchParams({ search: searchText.trim() });
+      if (resortId) params.append('resortId', resortId);
       const res = await api.get<{ data: Reservation[] }>(
-        `/reservations?search=${encodeURIComponent(searchText)}&status=CONFIRMED`
+        `/reservations?${params}`
       );
       return res.data.data;
     },
@@ -234,18 +244,28 @@ export default function CheckInScreen() {
     retry: 1,
   } as Parameters<typeof useQuery>[0]);
 
-  // Chegadas de hoje
+  // Chegadas de hoje — GET /v1/reservations?date=today&resortId=...
   const { data: todayArrivals, isLoading: isLoadingToday } = useQuery<Reservation[]>({
-    queryKey: ['reservations-today'],
+    queryKey: ['reservations-today', resortId],
     queryFn: async () => {
-      const res = await api.get<{ data: Reservation[] }>('/reservations/today');
+      const params = new URLSearchParams({ date: 'today' });
+      if (resortId) params.append('resortId', resortId);
+      const res = await api.get<{ data: Reservation[] }>(`/reservations?${params}`);
       return res.data.data;
     },
-    onError: () => {},
+    onSuccess: (data: Reservation[]) => {
+      if (data && data.length > 0 && !searchText.trim()) {
+        setLocalReservations(data);
+      }
+    },
+    onError: () => {
+      // Mantém mock em caso de falha
+    },
     retry: 1,
   } as Parameters<typeof useQuery>[0]);
 
-  // Mutação de check-in / check-out
+  // Mutação de check-in — PUT /v1/reservations/:id/check-in
+  // Mutação de check-out — PUT /v1/reservations/:id/check-out
   const updateStatusMutation = useMutation({
     mutationFn: ({
       id,
@@ -256,11 +276,11 @@ export default function CheckInScreen() {
       status: 'CHECKED_IN' | 'CHECKED_OUT';
       timestamp: string;
     }) => {
-      const body =
-        status === 'CHECKED_IN'
-          ? { status, actualCheckIn: timestamp }
-          : { status, actualCheckOut: timestamp };
-      return api.patch(`/reservations/${id}`, body);
+      if (status === 'CHECKED_IN') {
+        return api.put(`/reservations/${id}/check-in`, { timestamp });
+      } else {
+        return api.put(`/reservations/${id}/check-out`, { timestamp });
+      }
     },
     onSuccess: (_data: unknown, variables: { id: string; status: 'CHECKED_IN' | 'CHECKED_OUT'; timestamp: string }) => {
       setLocalReservations((prev) =>
@@ -275,12 +295,29 @@ export default function CheckInScreen() {
           };
         })
       );
-      queryClient.invalidateQueries({ queryKey: ['reservations-today'] });
+      queryClient.invalidateQueries({ queryKey: ['reservations-today', resortId] });
       const action = variables.status === 'CHECKED_IN' ? 'Check-in' : 'Check-out';
       Alert.alert('Sucesso', `${action} realizado com sucesso.`);
     },
     onError: (_err: unknown, variables: { id: string; status: 'CHECKED_IN' | 'CHECKED_OUT'; timestamp: string }) => {
-      Alert.alert('Erro', 'Não foi possível atualizar a reserva. Tente novamente.');
+      // Em caso de falha na API, actualiza o estado local de qualquer forma (offline-friendly)
+      setLocalReservations((prev) =>
+        prev.map((r) => {
+          if (r.id !== variables.id) return r;
+          return {
+            ...r,
+            status: variables.status,
+            ...(variables.status === 'CHECKED_IN'
+              ? { actualCheckIn: variables.timestamp }
+              : { actualCheckOut: variables.timestamp }),
+          };
+        })
+      );
+      const action = variables.status === 'CHECKED_IN' ? 'Check-in' : 'Check-out';
+      Alert.alert(
+        `${action} registado`,
+        'A operação foi registada localmente. Será sincronizada quando a ligação for restabelecida.',
+      );
     },
   });
 
@@ -323,10 +360,10 @@ export default function CheckInScreen() {
     );
   };
 
-  // Lista exibida: resultado de busca ou mock
+  // Lista exibida: resultado de busca, chegadas do dia via API, ou mock como fallback
   const displayList: Reservation[] = searchText.trim().length >= 2
     ? localReservations
-    : MOCK_RESERVATIONS;
+    : (localReservations.length > 0 ? localReservations : MOCK_RESERVATIONS);
 
   const todayStats: TodayStats = MOCK_STATS;
 

@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify'
 import crypto from 'node:crypto'
 import { generatePinSchema, listLocksQuery } from './schemas.js'
+import { createLockPin, deleteLockPin } from '../../utils/seam.js'
+import { sendSms, sendExpoPush } from '../../utils/notify.js'
 
 // Gerar PIN numérico seguro
 function generateSecurePin(length = 6): string {
@@ -67,7 +69,7 @@ export default async function locksRoutes(app: FastifyInstance) {
 
     const reservation = await app.prisma.reservation.findUnique({
       where: { id: reservationId },
-      include: { room: true },
+      include: { room: true, guest: true },
     })
 
     if (!reservation) {
@@ -90,13 +92,54 @@ export default async function locksRoutes(app: FastifyInstance) {
     const pinValidFrom = validFrom ? new Date(validFrom) : reservation.checkIn
     const pinValidUntil = validUntil ? new Date(validUntil) : reservation.checkOut
 
+    // Enviar PIN para a fechadura via Seam API
+    let seamAccessCodeId: string | null = null
+    try {
+      seamAccessCodeId = await createLockPin(
+        reservation.room.seamDeviceId,
+        pin,
+        pinValidFrom,
+        pinValidUntil,
+        `Reserva ${reservationId} — ${reservation.guestName}`
+      )
+    } catch (err) {
+      app.log.warn({ err }, 'Erro ao criar PIN na Seam API — PIN guardado localmente apenas')
+    }
+
     await app.prisma.reservation.update({
       where: { id: reservationId },
-      data: { accessPinEncrypted, pinValidFrom, pinValidUntil },
+      data: {
+        accessPinEncrypted,
+        pinValidFrom,
+        pinValidUntil,
+        seamAccessCodeId,
+      },
     })
 
-    // TODO: Enviar PIN via Seam API para a fechadura TTLock
-    // TODO: Enviar SMS/Push ao hóspede com o PIN
+    // Notificar hóspede via SMS
+    const checkInFormatted = pinValidFrom.toLocaleDateString('pt-AO')
+    const checkOutFormatted = pinValidUntil.toLocaleDateString('pt-AO')
+    const smsMessage = `Sea & Soul Resort — Quarto ${reservation.room.number}\nPIN de acesso: ${pin}\nVálido: ${checkInFormatted} a ${checkOutFormatted}\nBoa estadia!`
+
+    try {
+      await sendSms(reservation.guestPhone, smsMessage)
+    } catch (err) {
+      app.log.warn({ err }, 'Erro ao enviar SMS com PIN ao hóspede')
+    }
+
+    // Notificar via Push se o hóspede tiver a app
+    if (reservation.guest?.deviceToken) {
+      try {
+        await sendExpoPush(
+          reservation.guest.deviceToken,
+          'PIN do seu quarto',
+          `Quarto ${reservation.room.number} — PIN: ${pin}. Válido até ao check-out.`,
+          { type: 'LOCK_PIN', pin, roomNumber: reservation.room.number }
+        )
+      } catch (err) {
+        app.log.warn({ err }, 'Erro ao enviar push notification com PIN')
+      }
+    }
 
     return reply.send({
       data: {
@@ -105,6 +148,7 @@ export default async function locksRoutes(app: FastifyInstance) {
         pin, // Só mostrado uma vez — depois fica encriptado na BD
         validFrom: pinValidFrom,
         validUntil: pinValidUntil,
+        seamSynced: seamAccessCodeId !== null,
       },
       message: `PIN gerado para quarto ${reservation.room.number}`,
     })
@@ -118,18 +162,31 @@ export default async function locksRoutes(app: FastifyInstance) {
 
     const reservation = await app.prisma.reservation.findUnique({
       where: { id: request.params.reservationId },
+      include: { room: true },
     })
 
     if (!reservation) {
       return reply.code(404).send({ error: 'Reserva não encontrada' })
     }
 
+    // Revogar PIN na fechadura via Seam API
+    if (reservation.room.seamDeviceId && reservation.seamAccessCodeId) {
+      try {
+        await deleteLockPin(reservation.room.seamDeviceId, reservation.seamAccessCodeId)
+      } catch (err) {
+        app.log.warn({ err }, 'Erro ao revogar PIN na Seam API')
+      }
+    }
+
     await app.prisma.reservation.update({
       where: { id: request.params.reservationId },
-      data: { accessPinEncrypted: null, pinValidFrom: null, pinValidUntil: null },
+      data: {
+        accessPinEncrypted: null,
+        pinValidFrom: null,
+        pinValidUntil: null,
+        seamAccessCodeId: null,
+      },
     })
-
-    // TODO: Revogar PIN na fechadura via Seam API
 
     return reply.send({ message: 'PIN revogado com sucesso' })
   })

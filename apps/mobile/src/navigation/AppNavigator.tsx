@@ -11,9 +11,9 @@ import LoginScreen from '../screens/LoginScreen';
 // Guest screens
 import MyStayScreen from '../screens/guest/MyStayScreen';
 import RoomServiceScreen from '../screens/guest/RoomServiceScreen';
-import SpaScreen from '../screens/guest/SpaScreen';
+import ActivitiesScreen from '../screens/guest/ActivitiesScreen';
+import ChatScreen from '../screens/guest/ChatScreen';
 import GuestProfileScreen from '../screens/guest/GuestProfileScreen';
-import GuestNotificationsScreen from '../screens/guest/NotificationsScreen';
 
 // Staff screens
 import HotelDashboardScreen from '../screens/staff/HotelDashboardScreen';
@@ -22,7 +22,7 @@ import StaffProfileScreen from '../screens/staff/StaffProfileScreen';
 import StaffNotificationsScreen from '../screens/staff/NotificationsScreen';
 import CheckInScreen from '../screens/staff/CheckInScreen';
 import TicketsScreen from '../screens/staff/TicketsScreen';
-import TasksScreen from '../screens/staff/TasksScreen';
+import TrainingModeScreen from '../screens/staff/TrainingModeScreen';
 
 // ─── Tipos de navegação ───────────────────────────────────────────────────────
 
@@ -34,8 +34,8 @@ export type RootStackParamList = {
 export type GuestTabParamList = {
   Estadia: undefined;
   Servicos: undefined;
-  Spa: undefined;
-  Notificacoes: undefined;
+  Atividades: undefined;
+  Chat: undefined;
   Perfil: undefined;
 };
 
@@ -43,7 +43,7 @@ export type StaffTabParamList = {
   Painel: undefined;
   Presenca: undefined;
   Chamados: undefined;
-  Tarefas: undefined;
+  Formacao: undefined;
   PerfilEquipa: undefined;
 };
 
@@ -165,21 +165,21 @@ function GuestTabs({ onLogout }: { onLogout: () => void }) {
         }}
       />
       <GuestTab.Screen
-        name="Spa"
-        component={SpaScreen}
+        name="Atividades"
+        component={ActivitiesScreen}
         options={{
-          title:       'Spa',
-          headerTitle: 'Spa & Atividades',
-          tabBarIcon: ({ color, size }) => <Ionicons name="leaf-outline" size={size} color={color} />,
+          title:       'Atividades',
+          headerTitle: 'Atividades',
+          tabBarIcon: ({ color, size }) => <Ionicons name="bicycle-outline" size={size} color={color} />,
         }}
       />
       <GuestTab.Screen
-        name="Notificacoes"
-        component={GuestNotificationsScreen}
+        name="Chat"
+        component={ChatScreen}
         options={{
-          title:       'Notificações',
-          headerTitle: 'Notificações',
-          tabBarIcon: ({ color, size }) => <Ionicons name="notifications-outline" size={size} color={color} />,
+          title:       'Chat',
+          headerTitle: 'Chat com a Receção',
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />,
         }}
       />
       <GuestTab.Screen
@@ -201,7 +201,7 @@ function GuestTabs({ onLogout }: { onLogout: () => void }) {
 //   1. Painel    → PainelNavigator (stack: Dashboard → CheckIn, Dashboard → Alertas)
 //   2. Presença  → AttendanceScreen
 //   3. Chamados  → TicketsScreen
-//   4. Tarefas   → TasksScreen
+//   4. Formação  → TrainingModeScreen
 //   5. Perfil    → StaffProfileScreen
 
 function StaffTabs({ userInfo, onLogout }: { userInfo: UserInfo; onLogout: () => void }) {
@@ -262,14 +262,14 @@ function StaffTabs({ userInfo, onLogout }: { userInfo: UserInfo; onLogout: () =>
         }}
       />
 
-      {/* 4. Tarefas — checklist diária de toda a equipa */}
+      {/* 4. Formação — modo de treino sem impacto em dados reais */}
       <StaffTab.Screen
-        name="Tarefas"
-        component={TasksScreen}
+        name="Formacao"
+        component={TrainingModeScreen}
         options={{
-          title:       'Tarefas',
-          headerTitle: 'Tarefas do Dia',
-          tabBarIcon: ({ color, size }) => <Ionicons name="checkmark-done-outline" size={size} color={color} />,
+          title:       'Formação',
+          headerTitle: 'Modo Formação',
+          tabBarIcon: ({ color, size }) => <Ionicons name="school-outline" size={size} color={color} />,
         }}
       />
 

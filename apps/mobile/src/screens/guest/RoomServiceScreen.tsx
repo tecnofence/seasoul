@@ -8,8 +8,11 @@ import {
   StatusBar,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api, { getUserInfo } from '../../services/api';
 
 // ---------------------------------------------------------------------------
 // Constantes de cor
@@ -40,6 +43,15 @@ interface MenuItem {
   price: number | null; // null = Gratuito
   category: Category;
   icon: keyof typeof Ionicons.glyphMap;
+}
+
+// Tipo do produto retornado pela API (/v1/products)
+interface ApiProduct {
+  id: string;
+  name: string;
+  price: number | null;
+  category: string;
+  active: boolean;
 }
 
 interface CartItem {
@@ -96,13 +108,82 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Utilitário: mapeia categoria da API para Category local
+// ---------------------------------------------------------------------------
+function mapApiCategory(apiCat: string): Category {
+  const lower = apiCat.toLowerCase();
+  if (lower.includes('food') || lower.includes('meal') || lower.includes('refei')) return 'Refeições';
+  if (lower.includes('drink') || lower.includes('bev') || lower.includes('bebid')) return 'Bebidas';
+  if (lower.includes('snack')) return 'Snacks';
+  return 'Outros';
+}
+
+function mapApiProduct(p: ApiProduct): MenuItem {
+  return {
+    id: p.id,
+    name: p.name,
+    price: p.price ?? null,
+    category: mapApiCategory(p.category),
+    icon: 'restaurant',
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Ecrã principal
 // ---------------------------------------------------------------------------
 export default function RoomServiceScreen() {
   const [activeCategory, setActiveCategory] = useState<Category>('Refeições');
   const [cart, setCart] = useState<Record<string, CartItem>>({});
+  const [reservationId, setReservationId] = useState<string | null>(null);
+  const [roomNumber, setRoomNumber] = useState<string>('201');
 
-  const filteredItems = MENU_ITEMS.filter((m) => m.category === activeCategory);
+  // Carrega info do utilizador para obter reservationId e quarto
+  React.useEffect(() => {
+    getUserInfo().then((info) => {
+      if (info?.id) setReservationId(info.id);
+    });
+  }, []);
+
+  // Busca produtos via API; usa mock como fallback
+  const { data: apiProducts, isLoading: isLoadingProducts } = useQuery<MenuItem[]>({
+    queryKey: ['products-room-service'],
+    queryFn: async () => {
+      const res = await api.get<{ data: ApiProduct[] }>('/products?category=FOOD&active=true');
+      return res.data.data.map(mapApiProduct);
+    },
+    retry: 1,
+    onError: () => {}, // mantém mock
+  } as Parameters<typeof useQuery>[0]);
+
+  // Mutação para submeter encomenda
+  const orderMutation = useMutation({
+    mutationFn: async (items: CartItem[]) => {
+      const lines = items.map((c) => ({
+        productId: c.item.id,
+        quantity: c.quantity,
+        unitPrice: c.item.price ?? 0,
+      }));
+      const res = await api.post('/pos/sales', {
+        lines,
+        roomCharge: true,
+        reservationId,
+        type: 'ROOM_SERVICE',
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      setCart({});
+      Alert.alert('Pedido enviado!', 'O seu pedido foi registado e está a ser preparado.');
+    },
+    onError: () => {
+      Alert.alert('Erro', 'Não foi possível enviar o pedido. Tente novamente.');
+    },
+  });
+
+  // Usa dados da API se disponíveis, caso contrário usa mock
+  const menuItems: MenuItem[] = (apiProducts && apiProducts.length > 0) ? apiProducts : MENU_ITEMS;
+
+  const filteredItems = menuItems.filter((m) => m.category === activeCategory);
 
   const cartCount = Object.values(cart).reduce((sum, c) => sum + c.quantity, 0);
   const cartTotal = Object.values(cart).reduce(
@@ -140,14 +221,14 @@ export default function RoomServiceScreen() {
     }
     Alert.alert(
       'Confirmar Encomenda',
-      `Total: ${priceDisplay(cartTotal)}\n\nO seu pedido será entregue no Quarto 201.`,
+      `Total: ${priceDisplay(cartTotal)}\n\nO seu pedido será entregue no Quarto ${roomNumber}.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Confirmar',
           onPress: () => {
-            setCart({});
-            Alert.alert('Pedido enviado!', 'O seu pedido foi registado e está a ser preparado.');
+            const cartItems = Object.values(cart);
+            orderMutation.mutate(cartItems);
           },
         },
       ],
@@ -161,7 +242,7 @@ export default function RoomServiceScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Serviço de Quarto</Text>
-        <Text style={styles.headerSub}>Quarto 201</Text>
+        <Text style={styles.headerSub}>Quarto {roomNumber}</Text>
       </View>
 
       {/* Category Tabs */}
@@ -185,6 +266,14 @@ export default function RoomServiceScreen() {
           ))}
         </ScrollView>
       </View>
+
+      {/* Loading de produtos */}
+      {isLoadingProducts && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="small" color={COLORS.primary} />
+          <Text style={styles.loadingText}>A carregar menu...</Text>
+        </View>
+      )}
 
       {/* Menu Items */}
       <ScrollView
@@ -439,5 +528,19 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 15,
     fontWeight: '800',
+  },
+  // ---------- Loading ----------
+  loadingOverlay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: COLORS.primaryLight,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: COLORS.primary,
+    fontWeight: '500',
   },
 });

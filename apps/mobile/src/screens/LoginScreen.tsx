@@ -13,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import * as Notifications from 'expo-notifications';
 import api, { saveToken, saveUserInfo } from '../services/api';
 
 type Language = 'PT' | 'EN';
@@ -67,6 +68,18 @@ export default function LoginScreen({ navigation }: Props) {
       const { token, user } = response.data.data;
       await saveToken(token);
       await saveUserInfo({ id: user.id, name: user.name, role: user.role, resortId: user.resortId });
+
+      // Registar token de notificações push
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status === 'granted') {
+          const tokenData = await Notifications.getExpoPushTokenAsync();
+          await api.patch('/users/device-token', { deviceToken: tokenData.data });
+        }
+      } catch {
+        // Silent fail - push notifications are optional
+      }
+
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch {
       Alert.alert(t.errorTitle, t.errorMessage);

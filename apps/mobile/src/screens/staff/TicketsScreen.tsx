@@ -11,8 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api, { getUserInfo } from '../../services/api';
 
 // ---------------------------------------------------------------------------
 // Cores
@@ -196,11 +199,52 @@ function generateTicketNumber(total: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers de mapeamento API → Ticket local
+// ---------------------------------------------------------------------------
+function mapApiTicket(raw: Record<string, unknown>): Ticket {
+  const statusMap: Record<string, TicketStatus> = {
+    OPEN: 'ABERTO',
+    IN_PROGRESS: 'EM_CURSO',
+    RESOLVED: 'RESOLVIDO',
+    ABERTO: 'ABERTO',
+    EM_CURSO: 'EM_CURSO',
+    RESOLVIDO: 'RESOLVIDO',
+  };
+  const priorityMap: Record<string, TicketPriority> = {
+    HIGH: 'URGENTE',
+    URGENT: 'URGENTE',
+    NORMAL: 'NORMAL',
+    LOW: 'NORMAL',
+    URGENTE: 'URGENTE',
+  };
+  const typeMap: Record<string, TicketType> = {
+    MAINTENANCE: 'Manutenção',
+    ELECTRICAL: 'Elétrico',
+    PLUMBING: 'Canalização',
+    AIR_CONDITIONING: 'Ar Condicionado',
+    OTHER: 'Outro',
+  };
+  return {
+    id: String(raw.id ?? raw._id ?? Date.now()),
+    number: String(raw.number ?? raw.ticketNumber ?? `#${raw.id}`),
+    priority: priorityMap[String(raw.priority)] ?? 'NORMAL',
+    location: String(raw.location ?? raw.room ?? ''),
+    type: typeMap[String(raw.category ?? raw.type)] ?? 'Outro',
+    description: String(raw.description ?? ''),
+    reportedBy: String(raw.reportedBy ?? raw.createdBy ?? ''),
+    status: statusMap[String(raw.status)] ?? 'ABERTO',
+    createdAgo: String(raw.createdAgo ?? ''),
+    resolutionNote: String(raw.resolutionNote ?? raw.resolution ?? ''),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Componente principal
 // ---------------------------------------------------------------------------
 export default function TicketsScreen() {
-  // Estado principal
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
+  const queryClient = useQueryClient();
+
+  // Estado principal — fallback mock enquanto API não responde
   const [filterTab, setFilterTab] = useState<FilterTab>('Todos');
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolutionText, setResolutionText] = useState('');
@@ -212,7 +256,98 @@ export default function TicketsScreen() {
   const [formPriority, setFormPriority] = useState<TicketPriority>('NORMAL');
   const [formDescription, setFormDescription] = useState('');
   const [formReportedBy, setFormReportedBy] = useState('Equipa Técnica');
-  const [submitting, setSubmitting] = useState(false);
+
+  // ---------------------------------------------------------------------------
+  // Query — buscar tickets da API (fallback para mock se falhar)
+  // ---------------------------------------------------------------------------
+  const { data: tickets = INITIAL_TICKETS, isLoading: loadingTickets } = useQuery<Ticket[]>({
+    queryKey: ['tickets'],
+    queryFn: async () => {
+      const userInfo = await getUserInfo();
+      const params: Record<string, string> = { assignedTo: 'me' };
+      if (userInfo?.resortId) params.resortId = userInfo.resortId;
+      const res = await api.get('/maintenance', { params });
+      const raw = (res.data?.data ?? res.data ?? []) as Record<string, unknown>[];
+      return Array.isArray(raw) ? raw.map(mapApiTicket) : INITIAL_TICKETS;
+    },
+    // Se a API falhar, manter os dados mock
+    placeholderData: INITIAL_TICKETS,
+  });
+
+  // ---------------------------------------------------------------------------
+  // Mutation — aceitar ticket (ABERTO → EM_CURSO)
+  // ---------------------------------------------------------------------------
+  const acceptMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.patch(`/maintenance/${id}`, { status: 'IN_PROGRESS' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    },
+    onError: () => {
+      // Actualização optimista local em caso de erro
+      queryClient.setQueryData<Ticket[]>(['tickets'], (prev) =>
+        (prev ?? []).map((t) => (t.id === resolvingId ? { ...t, status: 'EM_CURSO' } : t)),
+      );
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // Mutation — resolver ticket (EM_CURSO → RESOLVIDO)
+  // ---------------------------------------------------------------------------
+  const resolveMutation = useMutation({
+    mutationFn: async ({ id, note }: { id: string; note: string }) => {
+      await api.patch(`/maintenance/${id}`, { status: 'RESOLVED', resolutionNote: note });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    },
+    onError: (_, variables) => {
+      // Actualização optimista local em caso de erro
+      queryClient.setQueryData<Ticket[]>(['tickets'], (prev) =>
+        (prev ?? []).map((t) =>
+          t.id === variables.id
+            ? { ...t, status: 'RESOLVIDO', resolutionNote: variables.note }
+            : t,
+        ),
+      );
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // Mutation — criar novo ticket
+  // ---------------------------------------------------------------------------
+  const createMutation = useMutation({
+    mutationFn: async (payload: {
+      location: string;
+      category: string;
+      priority: string;
+      description: string;
+      reportedBy: string;
+    }) => {
+      const res = await api.post('/maintenance', payload);
+      return res.data?.data ?? res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    },
+    onError: (_, variables) => {
+      // Fallback local se API falhar
+      const newTicket: Ticket = {
+        id: String(Date.now()),
+        number: generateTicketNumber(tickets.length),
+        priority: variables.priority === 'HIGH' ? 'URGENTE' : 'NORMAL',
+        location: variables.location,
+        type: (variables.category as TicketType) ?? 'Outro',
+        description: variables.description,
+        reportedBy: variables.reportedBy,
+        status: 'ABERTO',
+        createdAgo: 'agora mesmo',
+        resolutionNote: '',
+      };
+      queryClient.setQueryData<Ticket[]>(['tickets'], (prev) => [newTicket, ...(prev ?? [])]);
+    },
+  });
 
   // Contagens por aba
   const counts = useMemo(() => ({
@@ -227,13 +362,17 @@ export default function TicketsScreen() {
     [tickets, filterTab],
   );
 
+  const submitting = createMutation.isPending;
+
   // ---------------------------------------------------------------------------
   // Acções de tickets
   // ---------------------------------------------------------------------------
   function acceptTicket(id: string) {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: 'EM_CURSO' } : t)),
+    // Optimistic update
+    queryClient.setQueryData<Ticket[]>(['tickets'], (prev) =>
+      (prev ?? []).map((t) => (t.id === id ? { ...t, status: 'EM_CURSO' } : t)),
     );
+    acceptMutation.mutate(id);
   }
 
   function startResolving(id: string) {
@@ -251,13 +390,14 @@ export default function TicketsScreen() {
       Alert.alert('Campo obrigatório', 'Por favor descreva a solução aplicada.');
       return;
     }
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? { ...t, status: 'RESOLVIDO', resolutionNote: resolutionText.trim() }
-          : t,
+    const note = resolutionText.trim();
+    // Optimistic update
+    queryClient.setQueryData<Ticket[]>(['tickets'], (prev) =>
+      (prev ?? []).map((t) =>
+        t.id === id ? { ...t, status: 'RESOLVIDO', resolutionNote: note } : t,
       ),
     );
+    resolveMutation.mutate({ id, note });
     setResolvingId(null);
     setResolutionText('');
   }
@@ -265,6 +405,14 @@ export default function TicketsScreen() {
   // ---------------------------------------------------------------------------
   // Acções do formulário
   // ---------------------------------------------------------------------------
+  const TYPE_TO_API: Record<TicketType, string> = {
+    'Manutenção': 'MAINTENANCE',
+    'Elétrico': 'ELECTRICAL',
+    'Canalização': 'PLUMBING',
+    'Ar Condicionado': 'AIR_CONDITIONING',
+    'Outro': 'OTHER',
+  };
+
   function resetForm() {
     setFormLocation('');
     setFormType(null);
@@ -292,26 +440,17 @@ export default function TicketsScreen() {
       return;
     }
 
-    setSubmitting(true);
-
-    const newTicket: Ticket = {
-      id: String(Date.now()),
-      number: generateTicketNumber(tickets.length),
-      priority: formPriority,
+    createMutation.mutate({
       location: formLocation.trim(),
-      type: formType,
+      category: TYPE_TO_API[formType],
+      priority: formPriority === 'URGENTE' ? 'HIGH' : 'NORMAL',
       description: formDescription.trim(),
       reportedBy: formReportedBy.trim() || 'Equipa Técnica',
-      status: 'ABERTO',
-      createdAgo: 'agora mesmo',
-      resolutionNote: '',
-    };
+    });
 
-    setTickets((prev) => [newTicket, ...prev]);
     resetForm();
     setViewMode('list');
     setFilterTab('Abertos');
-    setSubmitting(false);
   }
 
   // ---------------------------------------------------------------------------

@@ -150,4 +150,19 @@ export default async function usersRoutes(app: FastifyInstance) {
 
     return reply.send({ message: 'Utilizador desativado' })
   })
+
+  // ── PATCH /device-token — Registar Expo push token do dispositivo móvel ──
+  app.patch('/device-token', async (request, reply) => {
+    const { deviceToken } = request.body as { deviceToken: string }
+    if (!deviceToken || typeof deviceToken !== 'string') {
+      return reply.code(400).send({ error: 'deviceToken obrigatório' })
+    }
+
+    await app.prisma.user.update({
+      where: { id: request.user.id },
+      data: { deviceToken },
+    })
+
+    return reply.send({ message: 'Token registado' })
+  })
 }

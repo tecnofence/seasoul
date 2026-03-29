@@ -201,6 +201,7 @@ model User {
   resortId     String?
   twoFaSecret  String?
   twoFaEnabled Boolean  @default(false)
+  deviceToken  String?  // Expo push token para notificações mobile
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -331,6 +332,7 @@ model Reservation {
   accessPinEncrypted String?                  // FIX: renomeado, agora encriptado AES-256
   pinValidFrom       DateTime?
   pinValidUntil      DateTime?
+  seamAccessCodeId   String?                  // ID do código de acesso na Seam API
   totalAmount        Decimal                  @db.Decimal(15, 2) // FIX: Float → Decimal
   depositPaid        Decimal                  @db.Decimal(15, 2) @default(0) // NOVO
   currency           Currency                 @default(AOA)

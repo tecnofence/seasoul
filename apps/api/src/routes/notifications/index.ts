@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { createNotificationSchema, listNotificationsQuery } from './schemas.js'
+import { sendSms, sendEmail, sendExpoPush } from '../../utils/notify.js'
 
 export default async function notificationsRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
@@ -53,7 +54,7 @@ export default async function notificationsRoutes(app: FastifyInstance) {
     return reply.send({ data, unread })
   })
 
-  // ── POST / — Criar notificação (interno) ──
+  // ── POST / — Criar e enviar notificação ──
   app.post('/', async (request, reply) => {
     if (!['SUPER_ADMIN', 'RESORT_MANAGER'].includes(request.user.role!)) {
       return reply.code(403).send({ error: 'Sem permissão' })
@@ -72,7 +73,59 @@ export default async function notificationsRoutes(app: FastifyInstance) {
       data: parsed.data as any,
     })
 
-    // TODO: Dispatch via canal (PUSH → Expo, SMS → Africa's Talking, EMAIL → Resend)
+    // Despachar via canal correto
+    const { channel, title, body, userId, guestId } = parsed.data as any
+
+    try {
+      if (channel === 'SMS') {
+        // Obter telefone do destinatário (User não tem phone, só Guest)
+        let phone: string | null = null
+        if (guestId) {
+          const guest = await app.prisma.guest.findUnique({ where: { id: guestId }, select: { phone: true } })
+          phone = guest?.phone ?? null
+        }
+        if (phone) {
+          await sendSms(phone, `${title}: ${body}`)
+        }
+      } else if (channel === 'EMAIL') {
+        // Obter email do destinatário
+        let email: string | null = null
+        if (userId) {
+          const user = await app.prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+          email = user?.email ?? null
+        } else if (guestId) {
+          const guest = await app.prisma.guest.findUnique({ where: { id: guestId }, select: { email: true } })
+          email = guest?.email ?? null
+        }
+        if (email) {
+          await sendEmail(
+            email,
+            title,
+            `<p>${body}</p><p style="color:#666;font-size:12px">Sea and Soul Resort — ENGERIS ONE</p>`
+          )
+        }
+      } else if (channel === 'PUSH') {
+        // Obter Expo push token do hóspede
+        if (guestId) {
+          const guest = await app.prisma.guest.findUnique({ where: { id: guestId }, select: { deviceToken: true } })
+          if (guest?.deviceToken) {
+            await sendExpoPush(guest.deviceToken, title, body)
+          }
+        }
+      }
+
+      // Marcar como enviada
+      await app.prisma.notification.update({
+        where: { id: notification.id },
+        data: { status: 'SENT', sentAt: new Date() },
+      })
+    } catch (err) {
+      app.log.error({ err, channel }, 'Erro ao despachar notificação')
+      await app.prisma.notification.update({
+        where: { id: notification.id },
+        data: { status: 'FAILED' },
+      })
+    }
 
     return reply.code(201).send({ data: notification, message: 'Notificação criada' })
   })

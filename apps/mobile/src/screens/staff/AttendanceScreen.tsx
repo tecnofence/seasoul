@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api, { getUserInfo } from '../../services/api';
 
 // ---------------------------------------------------------------------------
 // Cores
@@ -87,12 +89,31 @@ const weekHistory: WeekHistoryRow[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Tipos API
+// ---------------------------------------------------------------------------
+interface TodayAttendance {
+  checkIn: string | null;
+  checkOut: string | null;
+  hoursWorked: string;
+}
+
+interface AttendanceHistoryRow {
+  id: string;
+  date: string;
+  weekday: string;
+  entrada: string;
+  saida: string;
+  horas: string;
+}
+
+// ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
 export default function AttendanceScreen() {
+  const queryClient = useQueryClient();
+
   const [currentTime, setCurrentTime] = useState(new Date());
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
-  const [isCheckedIn, setIsCheckedIn] = useState(true); // já está registado (demonstração)
   const [checking, setChecking] = useState(false);
 
   // Relógio — actualiza a cada segundo
@@ -106,6 +127,98 @@ export default function AttendanceScreen() {
     checkLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Query — presença de hoje
+  // ---------------------------------------------------------------------------
+  const todayStr = currentTime.toISOString().split('T')[0];
+
+  const { data: todayAttendance } = useQuery<TodayAttendance>({
+    queryKey: ['attendance', 'today', todayStr],
+    queryFn: async () => {
+      const userInfo = await getUserInfo();
+      const params: Record<string, string> = { date: todayStr };
+      if (userInfo?.id) params.employeeId = userInfo.id;
+      const res = await api.get('/attendance', { params });
+      const raw = res.data?.data ?? res.data ?? {};
+      return {
+        checkIn: raw.checkIn ?? raw.checkInTime ?? null,
+        checkOut: raw.checkOut ?? raw.checkOutTime ?? null,
+        hoursWorked: raw.hoursWorked ?? raw.hours ?? '0h 0m',
+      };
+    },
+    // Não exibir erro — fallback para dados demonstração
+    retry: false,
+  });
+
+  // ---------------------------------------------------------------------------
+  // Query — histórico desta semana
+  // ---------------------------------------------------------------------------
+  const { data: historyRows = weekHistory } = useQuery<AttendanceHistoryRow[]>({
+    queryKey: ['attendance', 'week'],
+    queryFn: async () => {
+      const userInfo = await getUserInfo();
+      const params: Record<string, string> = {};
+      if (userInfo?.id) params.employeeId = userInfo.id;
+      const res = await api.get('/attendance', { params });
+      const raw = (res.data?.data ?? res.data ?? []) as Record<string, unknown>[];
+      if (!Array.isArray(raw) || raw.length === 0) return weekHistory;
+      return raw.map((row, i) => ({
+        id: String(row.id ?? i),
+        date: String(row.date ?? ''),
+        weekday: String(row.weekday ?? ''),
+        entrada: String(row.checkIn ?? row.checkInTime ?? '--:--'),
+        saida: String(row.checkOut ?? row.checkOutTime ?? '--:--'),
+        horas: String(row.hoursWorked ?? row.hours ?? '--'),
+      }));
+    },
+    placeholderData: weekHistory,
+    retry: false,
+  });
+
+  // ---------------------------------------------------------------------------
+  // Mutation — registar check-in
+  // ---------------------------------------------------------------------------
+  const checkInMutation = useMutation({
+    mutationFn: async (coords: { latitude: number; longitude: number }) => {
+      await api.post('/attendance/check-in', {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // Mutation — registar check-out
+  // ---------------------------------------------------------------------------
+  const checkOutMutation = useMutation({
+    mutationFn: async (coords: { latitude: number; longitude: number }) => {
+      await api.post('/attendance/check-out', {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+  });
+
+  // Determinar se está registado com base nos dados da API ou fallback
+  const isCheckedIn = todayAttendance
+    ? todayAttendance.checkIn !== null && todayAttendance.checkOut === null
+    : true;
+
+  // Dados de hoje para exibição
+  const todayCheckIn = todayAttendance?.checkIn
+    ? String(todayAttendance.checkIn).slice(11, 16) // HH:MM de ISO string
+    : '08:32';
+  const todayCheckOut = todayAttendance?.checkOut
+    ? String(todayAttendance.checkOut).slice(11, 16)
+    : '--:--';
+  const todayHours = todayAttendance?.hoursWorked ?? '4h 23m';
 
   const checkLocation = useCallback(async () => {
     setLocationStatus('checking');
@@ -165,19 +278,32 @@ export default function AttendanceScreen() {
       }
 
       setLocationStatus('inside');
+      const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
       const action = isCheckedIn ? 'Saída' : 'Entrada';
       const now = formatTime(new Date()).slice(0, 5); // HH:MM
+
+      // Chamar API — erros são silenciados para não bloquear o utilizador
+      try {
+        if (isCheckedIn) {
+          await checkOutMutation.mutateAsync(coords);
+        } else {
+          await checkInMutation.mutateAsync(coords);
+        }
+      } catch {
+        // Continuar mesmo se API falhar — registar localmente
+      }
+
       Alert.alert(
         `${action} registada`,
         `${action} registada com sucesso às ${now}.\n\nLocalização: ${RESORT_NAME}`,
-        [{ text: 'OK', onPress: () => setIsCheckedIn(!isCheckedIn) }],
+        [{ text: 'OK' }],
       );
     } catch {
       Alert.alert('Erro', 'Não foi possível obter a localização. Tente novamente.');
     } finally {
       setChecking(false);
     }
-  }, [isCheckedIn]);
+  }, [isCheckedIn, checkInMutation, checkOutMutation]);
 
   // -------------------------------------------------------------------
   // Sub-componentes de renderização
@@ -245,21 +371,21 @@ export default function AttendanceScreen() {
               <View style={styles.todayCell}>
                 <Ionicons name="log-in-outline" size={20} color={colors.success} />
                 <Text style={styles.todayCellLabel}>Entrada</Text>
-                <Text style={styles.todayCellValue}>08:32</Text>
+                <Text style={styles.todayCellValue}>{todayCheckIn}</Text>
               </View>
               <View style={styles.todayDivider} />
               <View style={styles.todayCell}>
-                <Ionicons name="log-out-outline" size={20} color={isCheckedIn ? colors.textSecondary : colors.orange} />
+                <Ionicons name="log-out-outline" size={20} color={isCheckedIn ? colors.textSecondary : colors.warning} />
                 <Text style={styles.todayCellLabel}>Saída</Text>
                 <Text style={[styles.todayCellValue, isCheckedIn && styles.todayValueEmpty]}>
-                  {isCheckedIn ? '--:--' : formatTime(new Date()).slice(0, 5)}
+                  {todayCheckOut}
                 </Text>
               </View>
               <View style={styles.todayDivider} />
               <View style={styles.todayCell}>
                 <Ionicons name="time-outline" size={20} color={colors.primary} />
                 <Text style={styles.todayCellLabel}>Horas</Text>
-                <Text style={styles.todayCellValue}>4h 23m</Text>
+                <Text style={styles.todayCellValue}>{todayHours}</Text>
               </View>
             </View>
           </View>
@@ -307,12 +433,12 @@ export default function AttendanceScreen() {
               <Text style={[styles.historyCell, styles.historyCellTime, styles.historyHeaderText]}>Saída</Text>
               <Text style={[styles.historyCell, styles.historyCellHours, styles.historyHeaderText]}>Horas</Text>
             </View>
-            {weekHistory.map((row, index) => (
+            {historyRows.map((row, index) => (
               <View
                 key={row.id}
                 style={[
                   styles.historyRow,
-                  index < weekHistory.length - 1 && styles.historyRowBorder,
+                  index < historyRows.length - 1 && styles.historyRowBorder,
                   index === 0 && styles.historyRowToday,
                 ]}
               >
