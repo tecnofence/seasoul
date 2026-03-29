@@ -1,10 +1,11 @@
 import { createHash } from 'crypto'
 import { FastifyInstance } from 'fastify'
 import { Client as MinioClient } from 'minio'
-import { generateSAFT } from '../../utils/saft'
-import { signInvoice } from '../../utils/agt-sign'
-import { submitInvoiceToAgt } from '../../utils/agt-submit'
-import { generateInvoiceHtml } from '../../utils/invoice-pdf'
+import { generateSAFT } from '../../utils/saft.js'
+import { signInvoice, signDocumentJWS, signSoftwareJWS, getSignatureDisplay } from '../../utils/agt-sign.js'
+import { submitInvoiceToAgt, solicitarSerieAgt, type AgtInvoicePayload } from '../../utils/agt-submit.js'
+import { generateInvoiceHtml } from '../../utils/invoice-pdf.js'
+import { enqueueAgtInvoice } from '../../queues/agt-queue.js'
 
 // Cliente MinIO — inicializado uma vez por módulo
 const minio = new MinioClient({
@@ -39,6 +40,9 @@ function computeInvoiceHash(
 }
 
 const EMPTY_HASH = '0'.repeat(64) // initial hash for first invoice in series
+
+const AGT_CERT_NUMBER = process.env.AGT_CERT_NUMBER ?? 'PENDENTE/AGT/2026'
+const AGT_NIF = process.env.AGT_NIF ?? ''
 
 export default async function invoicingRoutes(app: FastifyInstance) {
   // ── Listar documentos fiscais ─────────────────
@@ -154,6 +158,7 @@ export default async function invoicingRoutes(app: FastifyInstance) {
       agtHash: invoice.agtHash ?? undefined,
       digitalSignature: invoice.agtSignature ?? undefined,
       hashChain: invoice.agtHash ?? undefined,
+      agtCertNumber: process.env.AGT_CERT_NUMBER ?? undefined,
       paymentMethod: invoice.paymentMethod ?? undefined,
       relatedInvoice: invoice.relatedInvoiceId ?? undefined,
       notes: invoice.notes ?? undefined,
@@ -363,7 +368,7 @@ export default async function invoicingRoutes(app: FastifyInstance) {
       })
     })
 
-    // ── Assinatura digital RSA-1024/SHA-1 (AGT Portaria 34/2021) ──
+    // ── Assinatura digital RSA-1024/SHA-1 — SAF-T(AO) legado (DE 74/19) ──
     const digitalSignature = signInvoice(
       invoice.fullNumber,
       invoice.createdAt,
@@ -371,40 +376,103 @@ export default async function invoicingRoutes(app: FastifyInstance) {
       invoice.agtPreviousHash ?? EMPTY_HASH
     )
 
-    // ── Submissão à AGT (apenas para documentos fiscais reais) ──
+    // ── Assinaturas JWS RS256 — Novo regime e-factura (DE 683/25 + DP 71/25) ──
+    let jwsDocumentSig = ''
+    let jwsSoftwareSig = ''
     let agtCode: string | undefined
     let agtQrCode: string | undefined
     let agtSubmitStatus = invoice.agtStatus ?? 'pending'
 
     if (!isTraining && ['FT', 'FR', 'NC', 'ND'].includes(body.documentType)) {
-      const agtPayload = {
-        nif: process.env.AGT_NIF ?? '',
-        serie: 'A',
-        numero: invoice.number,
-        tipo: body.documentType,
-        dataEmissao: invoice.createdAt.toISOString().split('T')[0],
-        nifCliente: body.clientNif,
-        nomeCliente: body.clientName,
-        totalSemIva: Number(invoice.subtotal),
-        totalIva: Number(invoice.taxAmount),
-        totalGeral: Number(invoice.totalAmount),
-        hash: invoice.agtHash ?? '',
-        assinatura: digitalSignature,
-        linhas: processedItems.map((item) => ({
-          descricao: item.description,
-          quantidade: item.quantity,
-          precoUnitario: item.unitPrice,
-          taxaIva: item.taxRate,
-          totalLinha: item.total,
-        })),
+      const docTotals = {
+        taxPayable: Number(invoice.taxAmount),
+        netTotal: Number(invoice.subtotal),
+        grossTotal: Number(invoice.totalAmount),
       }
 
+      // jwsDocumentSignature: assinada com chave do contribuinte (emitida pela AGT)
+      jwsDocumentSig = await signDocumentJWS({
+        documentNo: invoice.fullNumber,
+        taxRegistrationNumber: AGT_NIF,
+        documentType: body.documentType,
+        documentDate: invoice.createdAt.toISOString().split('T')[0],
+        customerTaxID: body.clientNif ?? '999999999',
+        customerCountry: 'AO',
+        companyName: invoice.clientName.substring(0, 200),
+        documentTotals: docTotals,
+      })
+
+      // jwsSoftwareSignature: assinada com chave do produtor (ENGERIS)
+      jwsSoftwareSig = await signSoftwareJWS({
+        softwareCertCode: AGT_CERT_NUMBER,
+        softwareVersion: '1.0.0',
+        taxRegistrationNumber: AGT_NIF,
+        producerName: 'ENGERIS',
+      })
+
+      // Construir payload conforme estrutura DE 683/25
+      const agtPayload: AgtInvoicePayload = {
+        documentNo: invoice.fullNumber,
+        documentStatus: 'N',
+        jwsDocumentSignature: jwsDocumentSig,
+        jwsSoftwareSignature: jwsSoftwareSig,
+        documentDate: invoice.createdAt.toISOString().split('T')[0],
+        documentType: body.documentType,
+        systemEntryDate: invoice.createdAt.toISOString(),
+        customerTaxID: body.clientNif ?? '999999999',
+        customerCountry: 'AO',
+        companyName: invoice.clientName.substring(0, 200),
+        documentTotals: docTotals,
+        lines: processedItems.map((item, idx) => ({
+          lineNumber: idx + 1,
+          operationType: 'SE',
+          productCode: item.productId ?? `ITEM-${idx + 1}`,
+          productDescription: item.description,
+          quantity: item.quantity,
+          unitOfMeasure: item.unit ?? 'un',
+          unitPriceBase: item.unitPrice,
+          unitPrice: item.unitPrice * (1 - item.discount / 100),
+          creditAmount: item.total,
+          taxes: [{
+            taxType: 'IVA',
+            taxCountryRegion: 'AO',
+            taxCode: item.taxRate === 0 ? 'ISE' : item.taxRate <= 7 ? 'RED' : 'NOR',
+            taxPercentage: item.taxRate,
+            taxContribution: Math.round(item.quantity * item.unitPrice * (1 - item.discount / 100) * (item.taxRate / 100) * 100) / 100,
+          }],
+        })),
+        ...(body.relatedInvoiceId ? {
+          referenceInfo: {
+            reference: body.relatedInvoiceId,
+            reason: body.notes ?? 'Retificação',
+          },
+        } : {}),
+      }
+
+      // Submissão assíncrona: AGT devolve requestId, worker BullMQ faz polling
       const agtResponse = await submitInvoiceToAgt(agtPayload)
       if (agtResponse.success) {
         agtCode = agtResponse.codigoAgt
         agtQrCode = agtResponse.qrCode
-        agtSubmitStatus = 'submitted'
+        agtSubmitStatus = agtResponse.requestId ? 'submitted' : 'pending'
+
+        // Se a resposta é assíncrona (tem requestId mas não codigoAgt), enfileirar polling
+        if (agtResponse.requestId && !agtResponse.codigoAgt) {
+          await enqueueAgtInvoice({
+            invoiceId: invoice.id,
+            payload: agtPayload,
+            requestId: agtResponse.requestId,
+          })
+        }
       }
+    }
+
+    // ── Alerta de prazo de emissão (5 dias úteis após facto tributário) ──
+    const emissionDeadline = new Date(invoice.createdAt)
+    emissionDeadline.setDate(emissionDeadline.getDate() + 5)
+    const today = new Date()
+    if (today > emissionDeadline && !isTraining) {
+      app.log.warn({ invoiceId: invoice.id, fullNumber: invoice.fullNumber }, 'ALERTA: Fatura emitida após prazo legal de 5 dias (DE 683/25)')
     }
 
     // Persistir assinatura e código AGT na fatura
@@ -416,6 +484,9 @@ export default async function invoicingRoutes(app: FastifyInstance) {
         agtQrCode: agtQrCode ?? null,
         agtStatus: agtSubmitStatus,
         agtSubmittedAt: agtCode ? new Date() : null,
+        // JWS RS256 para novo regime e-factura
+        ...(jwsDocumentSig ? { agtJwsDocument: jwsDocumentSig } : {}),
+        ...(jwsSoftwareSig ? { agtJwsSoftware: jwsSoftwareSig } : {}),
       },
       include: { items: true },
     })
@@ -715,6 +786,96 @@ export default async function invoicingRoutes(app: FastifyInstance) {
   app.get('/types', async (_request, reply) => {
     return reply.send({
       data: Object.entries(DOC_TYPE_LABELS).map(([code, label]) => ({ code, label })),
+    })
+  })
+
+  // ── Solicitar série à AGT (DE 683/25 — obrigatório antes de emitir e-faturas) ──
+  // POST /v1/invoicing/series/request
+  app.post('/series/request', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const user = request.user as { id: string; role: string; tenantId?: string }
+
+    if (!['SUPER_ADMIN', 'RESORT_MANAGER'].includes(user.role)) {
+      return reply.status(403).send({ error: 'Sem permissão para solicitar séries à AGT' })
+    }
+
+    const body = request.body as {
+      documentType: string
+      seriesCode?: string
+      startDate?: string
+      establishmentCode?: string
+    }
+
+    if (!body.documentType) {
+      return reply.status(400).send({ error: 'documentType é obrigatório' })
+    }
+
+    const tenantId = user.tenantId
+    if (!tenantId) return reply.status(400).send({ error: 'Utilizador sem tenant' })
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { nif: true, name: true },
+    })
+
+    if (!tenant?.nif) {
+      return reply.status(400).send({ error: 'Tenant sem NIF configurado' })
+    }
+
+    const seriesCode = body.seriesCode ?? 'A'
+    const startDate = body.startDate ?? new Date().toISOString().split('T')[0]
+
+    const result = await solicitarSerieAgt({
+      taxRegistrationNumber: tenant.nif,
+      seriesCode,
+      documentType: body.documentType,
+      startDate,
+      establishmentCode: body.establishmentCode,
+    })
+
+    if (!result.success) {
+      return reply.status(502).send({ error: result.erro ?? 'Erro ao solicitar série na AGT' })
+    }
+
+    // Persistir série na BD com o ID devolvido pela AGT
+    const series = await app.prisma.invoiceSeries.upsert({
+      where: {
+        tenantId_documentType_series: {
+          tenantId,
+          documentType: body.documentType as any,
+          series: seriesCode,
+        },
+      },
+      create: {
+        tenantId,
+        documentType: body.documentType as any,
+        series: seriesCode,
+        prefix: body.documentType,
+        isTraining: false,
+        agtSerieId: result.serieId ?? null,
+      },
+      update: {
+        agtSerieId: result.serieId ?? null,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'AGT_SERIE_REQUEST',
+        entity: 'InvoiceSeries',
+        entityId: series.id,
+        after: { documentType: body.documentType, seriesCode, agtSerieId: result.serieId },
+      },
+    })
+
+    return reply.send({
+      data: {
+        seriesId: series.id,
+        seriesCode,
+        documentType: body.documentType,
+        agtSerieId: result.serieId,
+        message: 'Série registada com sucesso na AGT',
+      },
     })
   })
 }

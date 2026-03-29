@@ -6,9 +6,9 @@ import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 
 // Queues BullMQ
-import { startAgtWorker } from './queues/agt-queue.js'
+import { startAgtWorker, startAgtPollWorker } from './queues/agt-queue.js'
 import { startNotificationsWorker } from './queues/notifications-queue.js'
-import { submitInvoiceToAgt } from './utils/agt-submit.js'
+import { submitInvoiceToAgt, pollAgtStatus } from './utils/agt-submit.js'
 import { sendSms, sendEmail, sendExpoPush } from './utils/notify.js'
 
 // Plugins
@@ -230,20 +230,62 @@ await app.register(publicRoutes, { prefix: '/v1' })
 
 // ── Iniciar workers BullMQ ────────────────────────────────────────────────
 
-// Worker AGT — processa fila de faturas offline
+// Worker AGT — submissão de faturas offline/retry
 startAgtWorker(async (data) => {
-  const result = await submitInvoiceToAgt(data.payload as any)
-  if (!result.success) throw new Error(result.erro ?? 'AGT error')
-  // Atualizar fatura na BD com código e QR AGT
+  const result = await submitInvoiceToAgt(data.payload)
+  if (!result.success) throw new Error(result.erro ?? 'AGT submit error')
+
+  if (result.requestId && !result.codigoAgt) {
+    // Resposta assíncrona — fazer polling até obter resultado final
+    const polled = await pollAgtStatus(result.requestId, 10, 3_000)
+    if (!polled.success || polled.status === 'REJEITADO') {
+      throw new Error(polled.erro ?? `Fatura rejeitada pela AGT: ${polled.status}`)
+    }
+    await app.prisma.invoice.update({
+      where: { id: data.invoiceId },
+      data: {
+        agtStatus: 'accepted',
+        agtCode: polled.codigoAgt ?? null,
+        agtQrCode: polled.qrCode ?? null,
+        agtSubmittedAt: new Date(),
+      },
+    })
+    return { codigoAgt: polled.codigoAgt ?? '', qrCode: polled.qrCode ?? '' }
+  }
+
+  // Resposta síncrona (sandbox ou resposta directa)
   await app.prisma.invoice.update({
     where: { id: data.invoiceId },
     data: {
       agtStatus: 'accepted',
-      agtQrCode: result.qrCode,
+      agtCode: result.codigoAgt ?? null,
+      agtQrCode: result.qrCode ?? null,
       agtSubmittedAt: new Date(),
     },
   })
   return { codigoAgt: result.codigoAgt!, qrCode: result.qrCode! }
+})
+
+// Worker AGT Poll — polling de faturas com requestId pendente
+startAgtPollWorker(async (data) => {
+  const result = await pollAgtStatus(data.requestId, 3, 2_000)
+  if (!result.success) throw new Error(result.erro ?? 'AGT poll error')
+
+  await app.prisma.invoice.update({
+    where: { id: data.invoiceId },
+    data: {
+      agtStatus: result.status === 'ACEITE' ? 'accepted' : 'rejected',
+      agtCode: result.codigoAgt ?? null,
+      agtQrCode: result.qrCode ?? null,
+      agtSubmittedAt: result.status === 'ACEITE' ? new Date() : null,
+    },
+  })
+
+  return {
+    status: result.status ?? 'UNKNOWN',
+    codigoAgt: result.codigoAgt,
+    qrCode: result.qrCode,
+  }
 })
 
 // Worker Notificações — processa fila de envio multi-canal

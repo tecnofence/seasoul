@@ -34,6 +34,7 @@ interface InvoiceData {
   agtHash?: string
   digitalSignature?: string
   hashChain?: string
+  agtCertNumber?: string    // e.g. "001/AGT/2026" — código de certificação do software
   // Pagamento
   paymentMethod?: string
   // Nota de crédito
@@ -196,8 +197,12 @@ export function generateInvoiceHtml(data: InvoiceData): string {
     <div class="compliance">
       ${data.qrCode ? `<p><strong>QR AGT:</strong> ${data.qrCode}</p>` : ''}
       ${data.hashChain ? `<p><strong>Hash:</strong> ${data.hashChain.substring(0, 32)}...</p>` : ''}
-      ${data.digitalSignature ? `<p><strong>Assinatura:</strong> ${data.digitalSignature.substring(0, 40)}...</p>` : ''}
-      <p>Processado por computador - ENGERIS ONE v1.0</p>
+      ${data.digitalSignature ? `<p><strong>Assinatura:</strong> ${
+        data.digitalSignature.length >= 31
+          ? `${data.digitalSignature[0]}-${data.digitalSignature[10]}-${data.digitalSignature[20]}-${data.digitalSignature[30]}`
+          : data.digitalSignature.substring(0, 7)
+      }</p>` : ''}
+      ${data.agtCertNumber ? `<p>Processado por programa validado n.&ordm; ${data.agtCertNumber}/AGT</p>` : '<p>Processado por programa validado - ENGERIS ONE v1.0</p>'}
       <p>Angola - NIF ${data.companyNif} - ${new Date().getFullYear()}</p>
     </div>
     ${data.paymentMethod ? `<div style="text-align:right;font-size:10px;color:#555;"><strong>Forma de pagamento:</strong><br>${data.paymentMethod}</div>` : ''}

@@ -840,6 +840,7 @@ model InvoiceSeries {
   series       String              // "A", "B", "TREINO"
   prefix       String              // "FT", "FR", "NC", etc.
   lastNumber   Int         @default(0)
+  agtSerieId   String?             // ID da série devolvido pela AGT após /solicitarSerie
   isTraining   Boolean     @default(false)
   active       Boolean     @default(true)
   createdAt    DateTime    @default(now())
@@ -883,7 +884,10 @@ model Invoice {
   // AGT
   agtHash         String?                 // hash SHA-256 da cadeia de integridade
   agtPreviousHash String?                 // hash do documento anterior (cadeia)
-  agtSignature    String?                 // assinatura digital RSA-1024/SHA-1 (Portaria 34/2021)
+  agtSignature    String?                 // assinatura digital RSA-1024/SHA-1 — SAF-T legado (DE 74/19)
+  agtJwsDocument  String?                 // jwsDocumentSignature JWS RS256 — novo regime (DE 683/25)
+  agtJwsSoftware  String?                 // jwsSoftwareSignature JWS RS256 — identifica o software produtor
+  agtRequestId    String?                 // requestId devolvido pela AGT (processamento assíncrono)
   agtStatus       String?                 // pending, submitted, accepted, rejected
   agtCode         String?                 // código de registo devolvido pela AGT
   agtQrCode       String?
