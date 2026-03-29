@@ -21,6 +21,7 @@ import prismaPlugin from './plugins/prisma.js'
 import authPlugin from './plugins/auth.js'
 import rbacPlugin from './plugins/rbac.js'
 import tenantContextPlugin from './plugins/tenant-context.js'
+import apiKeyAuthPlugin from './plugins/api-key-auth.js'
 
 // Rotas — Sprint 1
 import authRoutes from './routes/auth/index.js'
@@ -82,6 +83,8 @@ import activitiesRoutes from './routes/activities/index.js'
 import retailRoutes from './routes/retail/index.js'
 import adminRoutes from './routes/admin/index.js'
 import publicRoutes from './routes/public/index.js'
+import apiKeysRoutes from './routes/api-keys/index.js'
+import webhooksRoutes from './routes/webhooks/index.js'
 
 const app = Fastify({
   logger: {
@@ -106,6 +109,7 @@ await app.register(jwt, {
 await app.register(authPlugin)
 await app.register(rbacPlugin)
 await app.register(tenantContextPlugin)
+await app.register(apiKeyAuthPlugin)
 
 await app.register(rateLimit, {
   max:        Number(process.env.RATE_LIMIT_MAX) || 100,
@@ -232,6 +236,10 @@ await app.register(retailRoutes,       { prefix: '/v1/retail' })
 
 // ── ROTAS — Públicas (sem autenticação) ──────
 await app.register(publicRoutes, { prefix: '/v1' })
+
+// ── ROTAS — Integrações B2B ──────────────────
+await app.register(apiKeysRoutes,  { prefix: '/v1/api-keys' })
+await app.register(webhooksRoutes, { prefix: '/v1/webhooks' })
 
 // ── Iniciar workers BullMQ ────────────────────────────────────────────────
 

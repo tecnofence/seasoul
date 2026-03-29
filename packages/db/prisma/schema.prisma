@@ -79,6 +79,8 @@ model Tenant {
   legalCases        LegalCase[]
   accountingEntries AccountingEntry[]
   alertRules        AlertRule[]
+  apiKeys           ApiKey[]
+  webhookEndpoints  WebhookEndpoint[]
 
   @@index([slug])
   @@index([active])
@@ -2105,4 +2107,61 @@ enum Currency {
   USD
   EUR
   ZAR
+}
+
+// ── API KEYS (integrações B2B) ────────────────
+model ApiKey {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String                    // nome descritivo: "Integração PMS XYZ"
+  keyHash     String    @unique         // SHA-256 do token (nunca guardar em claro)
+  keyPrefix   String                    // primeiros 8 chars para identificação: "sk_live_"
+  scopes      String[]  @default([])    // ["invoices:read", "reservations:write", etc.]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  active      Boolean   @default(true)
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([keyHash])
+}
+
+// ── WEBHOOKS (notificações de eventos para sistemas externos) ──
+model WebhookEndpoint {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  url         String                    // URL de destino HTTPS
+  secret      String                    // secret para HMAC-SHA256
+  events      String[]  @default([])    // ["invoice.created", "reservation.checkin", etc.]
+  active      Boolean   @default(true)
+  description String?
+  lastTriggeredAt DateTime?
+  failureCount    Int    @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  deliveries  WebhookDelivery[]
+
+  @@index([tenantId])
+}
+
+model WebhookDelivery {
+  id              String          @id @default(cuid())
+  endpointId      String
+  endpoint        WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event           String          // "invoice.created"
+  payload         Json
+  statusCode      Int?
+  responseBody    String?
+  attempt         Int             @default(1)
+  success         Boolean         @default(false)
+  deliveredAt     DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([endpointId])
+  @@index([createdAt])
 }

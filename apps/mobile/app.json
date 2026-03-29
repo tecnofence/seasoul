@@ -4,6 +4,7 @@
     "slug": "seaandsoul",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "seaandsoul",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
@@ -16,7 +17,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ao.engeris.seaandsoul"
+      "bundleIdentifier": "ao.engeris.seaandsoul",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Sea and Soul usa a sua localização para verificar presença no resort.",
+        "NSLocationAlwaysUsageDescription": "Sea and Soul usa a sua localização para verificar presença no resort.",
+        "NSCameraUsageDescription": "Necessário para digitalizar documentos e capturar fotos.",
+        "NSPhotoLibraryUsageDescription": "Necessário para carregar fotos de perfil e documentos."
+      },
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,13 +32,17 @@
         "backgroundColor": "#1A3E6E"
       },
       "package": "ao.engeris.seaandsoul",
+      "versionCode": 1,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "CAMERA"
-      ]
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -50,10 +62,20 @@
         }
       ]
     ],
+    "updates": {
+      "url": "https://u.expo.dev/CHANGE_ME_PROJECT_ID",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "extra": {
       "eas": {
-        "projectId": "seaandsoul-mobile"
-      }
+        "projectId": "CHANGE_ME_EAS_PROJECT_ID"
+      },
+      "apiUrl": "https://api.seasoul.ao"
     }
   }
 }
