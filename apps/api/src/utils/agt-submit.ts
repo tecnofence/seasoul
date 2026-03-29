@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { randomUUID } from 'node:crypto'
 
 // ──────────────────────────────────────────────────────────────────────────────
 // API E-FACTURA AGT — Decreto Executivo n.º 683/25 + DP n.º 71/25
@@ -112,7 +113,7 @@ export async function submitInvoiceToAgt(payload: AgtInvoicePayload): Promise<Ag
     const mockCode = `AGT${Date.now().toString(36).toUpperCase()}`
     return {
       success: true,
-      requestId: `REQ-${crypto.randomUUID?.() ?? Date.now()}`,
+      requestId: `REQ-${randomUUID()}`,
       codigoAgt: mockCode,
       qrCode: `https://efatura.agt.minfin.gov.ao/verificar/${mockCode}`,
       mensagem: '[SANDBOX] Fatura registada com sucesso',
@@ -306,6 +307,3 @@ export async function checkInvoiceStatus(codigoAgt: string): Promise<{ valid: bo
   }
 }
 
-// Re-export da função importPKCS8 do crypto nativo para uso em helpers
-import { randomUUID } from 'node:crypto'
-const crypto = { randomUUID }
