@@ -21,12 +21,13 @@ interface FeatureCategory {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
+// Preços em Kwanzas (AOA) — câmbio 1 USD = 125 Kz
 const plans = [
   {
     id: 'starter',
     name: 'Starter',
-    monthly: 149,
-    annual: 119,
+    monthly: 18_625,
+    annual: 14_875,
     desc: 'Pensões e pequenos hotéis',
     highlight: false,
     badge: null,
@@ -43,8 +44,8 @@ const plans = [
   {
     id: 'resort',
     name: 'Resort',
-    monthly: 399,
-    annual: 319,
+    monthly: 49_875,
+    annual: 39_875,
     desc: 'Hotéis e resorts',
     highlight: true,
     badge: 'Mais Popular',
@@ -62,8 +63,8 @@ const plans = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    monthly: 999,
-    annual: 799,
+    monthly: 124_875,
+    annual: 99_875,
     desc: 'Grupos hoteleiros',
     highlight: false,
     badge: null,
@@ -291,7 +292,7 @@ export default function PrecosClient() {
           </div>
           {annual && (
             <p className="mt-3 text-sm text-blue-300">
-              Poupa até $2.400/ano com faturação anual.
+              Poupa até 300.000 Kz/ano com faturação anual.
             </p>
           )}
         </div>
@@ -326,14 +327,14 @@ export default function PrecosClient() {
                   </p>
 
                   <div className="mb-2">
-                    <span className="text-4xl font-bold text-white">${price}</span>
+                    <span className="text-4xl font-bold text-white">{price.toLocaleString('pt-AO')}</span>
                     <span className={`ml-1 text-sm ${plan.highlight ? 'text-blue-200' : 'text-gray-400'}`}>
-                      /mês
+                      {' '}Kz/mês
                     </span>
                   </div>
                   {annual && (
                     <p className={`mb-5 text-xs ${plan.highlight ? 'text-blue-300' : 'text-gray-500'}`}>
-                      Faturado anualmente (${price * 12}/ano)
+                      Faturado anualmente ({(price * 12).toLocaleString('pt-AO')} Kz/ano)
                     </p>
                   )}
                   {!annual && <div className="mb-5" />}

@@ -19,11 +19,12 @@ import Link from 'next/link'
 
 // ─── Plan configuration ────────────────────────────────────────────────────────
 
+// Preços em AOA — câmbio 1 USD = 125 Kz
 const PLAN_CONFIG = [
   {
     id: 'STARTER',
     label: 'Starter',
-    price: 50000,
+    price: 18_625,
     maxUsers: 'Até 5 utilizadores',
     maxBranches: '1 filial',
     features: [
@@ -42,7 +43,7 @@ const PLAN_CONFIG = [
   {
     id: 'PROFESSIONAL',
     label: 'Professional',
-    price: 150000,
+    price: 49_875,
     maxUsers: 'Até 20 utilizadores',
     maxBranches: '3 filiais',
     features: [
@@ -61,7 +62,7 @@ const PLAN_CONFIG = [
   {
     id: 'ENTERPRISE',
     label: 'Enterprise',
-    price: 500000,
+    price: 124_875,
     maxUsers: 'Até 100 utilizadores',
     maxBranches: 'Filiais ilimitadas',
     features: [
@@ -119,13 +120,13 @@ const MOCK_ANALYTICS = {
 }
 
 const MOCK_BILLING = {
-  mrr: 4750000,
-  arr: 57000000,
+  mrr: 1_248_750,
+  arr: 14_985_000,
   planBreakdown: [
-    { plan: 'STARTER', count: 30, revenue: 1500000 },
-    { plan: 'PROFESSIONAL', count: 12, revenue: 1800000 },
-    { plan: 'ENTERPRISE', count: 2, revenue: 1000000 },
-    { plan: 'CUSTOM', count: 3, revenue: 450000 },
+    { plan: 'STARTER',      count: 30, revenue: 558_750 },
+    { plan: 'PROFESSIONAL', count: 12, revenue: 598_500 },
+    { plan: 'ENTERPRISE',   count:  2, revenue: 249_750 },
+    { plan: 'CUSTOM',       count:  3, revenue: 0 },
   ],
 }
 
@@ -135,7 +136,7 @@ const MOCK_SUBSCRIPTIONS = [
     name: 'Sea and Soul Resorts',
     plan: 'ENTERPRISE',
     active: true,
-    monthlyValue: 500000,
+    monthlyValue: 124_875,
     createdAt: '2025-01-15T10:00:00Z',
     expiresAt: '2026-12-31T23:59:59Z',
   },
@@ -144,7 +145,7 @@ const MOCK_SUBSCRIPTIONS = [
     name: 'Palmeira Hotel',
     plan: 'PROFESSIONAL',
     active: true,
-    monthlyValue: 150000,
+    monthlyValue: 49_875,
     createdAt: '2025-03-01T08:00:00Z',
     expiresAt: '2026-03-01T00:00:00Z',
   },
@@ -153,7 +154,7 @@ const MOCK_SUBSCRIPTIONS = [
     name: 'Sangano Lodge',
     plan: 'PROFESSIONAL',
     active: true,
-    monthlyValue: 150000,
+    monthlyValue: 49_875,
     createdAt: '2025-04-10T08:00:00Z',
     expiresAt: '2026-04-10T00:00:00Z',
   },
@@ -162,7 +163,7 @@ const MOCK_SUBSCRIPTIONS = [
     name: 'Cabo Ledo Surf Camp',
     plan: 'STARTER',
     active: false,
-    monthlyValue: 50000,
+    monthlyValue: 18_625,
     createdAt: '2025-06-01T00:00:00Z',
     expiresAt: '2025-12-01T00:00:00Z',
   },
@@ -171,7 +172,7 @@ const MOCK_SUBSCRIPTIONS = [
     name: 'Demo Resort',
     plan: 'STARTER',
     active: true,
-    monthlyValue: 50000,
+    monthlyValue: 18_625,
     createdAt: '2025-07-20T00:00:00Z',
     expiresAt: '2027-01-01T00:00:00Z',
   },
